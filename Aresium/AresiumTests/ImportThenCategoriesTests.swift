@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import Aresium
 
-/// Brief 27 (Patrik, 2026-10-27: the file first): Import data opens the file picker at once; the category picker opens
+/// Brief 27 (owner, 2026-10-27) (the file first): Import data opens the file picker at once; the category picker opens
 /// when an import in phone mode ended and added payments while no category is chosen, whatever brought the files in
 /// (the file picker, the share sheet, the file check window), once per import. Not after a cancelled picker, a failed
 /// file, a file whose payments were all there already, a restore, the tour, or with categories chosen. Ticking sorts the

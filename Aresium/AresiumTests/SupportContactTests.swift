@@ -4,7 +4,7 @@ import Testing
 
 /// Contact & support without a login (brief 22, Aresium only): the message goes to the account server's open `contact`
 /// collection with an email to answer to, a short footer naming the app and the phone, the language and the empty
-/// honeypot; no token is sent. Always, also while an Ares login exists (brief 25, Patrik 2026-10-27); the other apps
+/// honeypot; no token is sent. Always, also while an Ares login exists (brief 25 (owner, 2026-10-27)); the other apps
 /// keep the account-linked `feedback` record.
 @MainActor
 struct SupportContactTests {

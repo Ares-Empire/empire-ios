@@ -295,7 +295,7 @@ final class VaultStore {
         await perform(.setConfidence(note: note, confidence: confidence, version: version), reportsFailure: reportsFailure)
     }
 
-    /// Patrik agrees with one of Claude's callouts: it becomes a normal paragraph. Names the note's version as shown.
+    /// The owner agrees with one of Claude's callouts: it becomes a normal paragraph. Names the note's version as shown.
     @discardableResult
     func adoptCallout(_ callout: Int, of note: String, version: String,
                        reportsFailure: Bool = true) async -> EditOutcome {
@@ -506,7 +506,7 @@ final class VaultStore {
         return true
     }
 
-    /// A quick note the server refused (or one Patrik no longer wants sent) is deleted from the phone.
+    /// A quick note the server refused (or one the owner no longer wants sent) is deleted from the phone.
     @discardableResult
     func deleteQuickNote(_ id: UUID) -> Bool {
         let remaining = pendingQuickNotes.filter { $0.id != id }

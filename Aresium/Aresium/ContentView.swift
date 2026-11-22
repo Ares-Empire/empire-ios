@@ -358,7 +358,7 @@ struct ContentView: View {
             // says that letting go imports them (over the import's result too).
             .fileDrops(enabled: takesDrops, palette: palette, dropped: receiveDropped)
             .sheet(isPresented: $showsSettings, onDismiss: importPickedInGuide) {
-                // Brief 215: no sign-in while signed out (an Ares account is only Patrik's, for his server); the "Ares
+                // Brief 215: no sign-in while signed out (an Ares account is only the owner's, for his server); the "Ares
                 // account" section shows only while a login of the Ares apps exists on this iPhone.
                 SettingsScreen(app: SettingsApp(name: "Aresium", offersSignIn: false,
                                                 licences: [.shopList(), .localPlaces()] + BundledLicence.enginePackages()),

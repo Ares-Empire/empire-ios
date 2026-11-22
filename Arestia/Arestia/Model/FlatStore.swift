@@ -131,7 +131,7 @@ final class FlatStore {
     // MARK: what the screens read
 
     var fans: [Device] { devices.filter { $0.kind == .fan } }
-    /// The lamps (Patrik, 2026-11-20: "put the lamp under 'Lighting' in Arestia").
+    /// The lamps (owner, 2026-11-20) ("put the lamp under 'Lighting' in Arestia").
     var lights: [Device] { devices.filter { $0.kind == .light } }
     var rollos: [Device] { devices.filter { $0.kind == .rollo } }
     /// Devices the home screen has no section of their own for (plugs, kinds a newer flatd may bring): listed quietly.

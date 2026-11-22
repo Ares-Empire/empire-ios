@@ -21,10 +21,10 @@ enum DiscussSubject: Hashable, Sendable {
 }
 
 /// Discuss with Claude (ares-empire/docs/ARESTOTELES-APP.md): no AI in the app. The app writes a prompt for a Claude
-/// Code session on the vault repo, copies it, and opens Claude, where Patrik pastes it. The prompt is a message to
-/// Claude, not interface text, so it is English like the vault (only Patrik's own question is as he types it).
+/// Code session on the vault repo, copies it, and opens Claude, where the owner pastes it. The prompt is a message to
+/// Claude, not interface text, so it is English like the vault (only the owner's own question is as he types it).
 enum DiscussPrompt {
-    /// Where Discuss sends Patrik. One constant, so the lead can change the target after trying it on the phone
+    /// Where Discuss sends the owner. One constant, so the lead can change the target after trying it on the phone
     /// (the Claude app's own link, or the web page that hands over to it).
     static let target = URL(string: "https://claude.ai/code")!
 

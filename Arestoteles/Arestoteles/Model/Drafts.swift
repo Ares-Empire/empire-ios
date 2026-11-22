@@ -129,7 +129,7 @@ final class PositionDraft {
 
 /// The free editor of one note: loads its Markdown (`GET /notes/{id}/source`), saves the whole body with the version
 /// it was loaded at. When the note changed elsewhere meanwhile (409), the typed text stays on screen, saving stops,
-/// and Patrik can load the current version (giving up his text, after copying it if he wants).
+/// and the owner can load the current version (giving up his text, after copying it if he wants).
 @MainActor @Observable
 final class NoteEditor {
     enum State: Equatable {

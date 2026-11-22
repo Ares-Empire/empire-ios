@@ -4,7 +4,7 @@ import SwiftUI
 import UIKit
 import WebKit
 
-/// The second tab: the flat in 3D, full-bleed, made for a thumb (Patrik: "the flat model but well made for easy
+/// The second tab: the flat in 3D, full-bleed, made for a thumb (the owner: "the flat model but well made for easy
 /// navigation on an iphone … phone model actions should affect things too … live state yes, also displayed in model").
 /// The page is flatd's `GET /viewer` (private, never bundled): the app fetches it itself, over the connection pinned to
 /// flatd's identity, keeps one copy for the pairing, and hands it to the web view, which never talks to the network.

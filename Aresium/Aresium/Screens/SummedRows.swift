@@ -194,7 +194,7 @@ struct StackTile<Label: View>: View {
     }
 }
 
-/// The category's icon in the header of its payments (brief 53, Patrik: "a little icon at the top of each that shows if
+/// The category's icon in the header of its payments (brief 53, the owner: "a little icon at the top of each that shows if
 /// its summed up or not"): the header's button (`IconButton`), a stack of tiles; on, it is filled (the second ink, the
 /// wall's colour on it), off as the other header buttons, so the two differ in light, dark and red. A tap adds up every
 /// name there, or none.

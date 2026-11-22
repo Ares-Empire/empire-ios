@@ -5,7 +5,7 @@ import VisionKit
 
 /// Connecting once: flatd's pairing code, scanned from the QR code `flatd pair` shows on flatd's own machine (or pasted).
 /// The code holds flatd's key and its identity (`FlatdPin`); the app then talks only to the server that proves that
-/// identity, wherever Bonjour or the code's address say it is. No account (Patrik, 2026-11-19: "no account needed, just
+/// identity, wherever Bonjour or the code's address say it is. No account (owner, 2026-11-19) ("no account needed, just
 /// me"): the pairing is flatd's own and stays on this iPhone, in the Keychain. Full screen while the app has no
 /// pairing; a sheet from Settings for a new code of the same flat (another flat's code is refused: Forget comes first).
 struct ConnectScreen: View {

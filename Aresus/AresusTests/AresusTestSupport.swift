@@ -86,7 +86,7 @@ func sample<T: Decodable>(_ name: String, as type: T.Type = T.self) throws -> T 
     try AresusJSON.decoder().decode(T.self, from: sampleData(name))
 }
 
-/// A fixed place and time for formatting: Berlin, where Patrik reads the app.
+/// A fixed place and time for formatting: Berlin, where the owner reads the app.
 nonisolated let berlin: Calendar = {
     var calendar = Calendar(identifier: .gregorian)
     calendar.timeZone = TimeZone(identifier: "Europe/Berlin")!

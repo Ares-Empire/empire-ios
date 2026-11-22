@@ -52,7 +52,7 @@ struct SignInSheet: View {
                 }
                 .glassCard(accent: accent).padding(.top, note == nil ? 0 : 20)
                 // No "One Ares account for all Ares apps" under the fields: it went from the logins on 2026-10-31
-                // (Patrik), and from this sheet with brief 215.
+                // (the owner), and from this sheet with brief 215.
             }
             .padding(.horizontal, 18).padding(.top, 16).padding(.bottom, 24)
         }

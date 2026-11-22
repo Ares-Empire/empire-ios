@@ -1,7 +1,7 @@
 import Foundation
 
 /// The account server's `feedback` collection (ares-empire/docs/ACCOUNTS.md → Contact & support): a signed-in account
-/// creates a message, the server mails it to Patrik. At most 10 an hour (429 after that).
+/// creates a message, the server mails it to the owner. At most 10 an hour (429 after that).
 struct SupportAPI {
     var transport: any HTTPTransport = URLSessionTransport()
     static let url = URL(string: "https://auth.ares-empire.de/api/collections/feedback/records")!

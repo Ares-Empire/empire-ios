@@ -4,7 +4,7 @@ import SwiftUI
 /// row's swipe left or its long press. Pushed on the dashboard's stack (`DashboardRoute.name`), under the header with the
 /// name as its title, so the header's arrow and the back swipe go back. The totals (money out; in only when there is
 /// any) and the count, the switch that adds the name up in every category (brief 53), the graph above the months as on a
-/// category's page, then the months with payments as a category's months (brief 55, Patrik: "make each month just as
+/// category's page, then the months with payments as a category's months (brief 55, the owner: "make each month just as
 /// the other months"): a month's row or its point on the graph opens that month's payments of the name
 /// (`NameMonthScreen`). The numbers come from `NamePage`, built once per dashboard (`DashboardStore.namePage`).
 struct NameScreen: View {

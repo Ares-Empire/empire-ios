@@ -227,7 +227,7 @@ struct ProblemLine: View {
     }
 }
 
-/// The search's own name, first in every search form (brief 135; Patrik: "only what's necessary"): one field whose grey
+/// The search's own name, first in every search form (brief 135; the owner: "only what's necessary"): one field whose grey
 /// placeholder is the name the search gets while the field stays empty (its automatic name, following the form), at
 /// most 60 characters. Nothing else explains it.
 struct NameField: View {

@@ -55,7 +55,7 @@ struct AppearanceTests {
         #expect(contrast(Ink.muted, wall, .light) >= 3.8)        // small grey captions, as the dark wall's 4.2
     }
 
-    /// Brief 47 (Patrik's phone: "on" was a pale grey track under the white knob, read as off): a switch that is on is
+    /// Brief 47 (the owner's phone: "on" was a pale grey track under the white knob, read as off): a switch that is on is
     /// a colour, where the off track is grey, and its white knob shows on it at least as on iOS's own green (#30D158,
     /// 1.97:1); in light it is deep. Every app: the ink-only ones (Aresium, Empire) and the accents.
     @Test func switchesThatAreOnStandApartFromTheKnobAndTheOffTrack() {

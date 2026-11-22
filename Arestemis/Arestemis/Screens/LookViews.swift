@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A look hunt on screen (brief 268, on the server's brief 267): the judge's verdict on a finding's page, and Patrik's
+/// A look hunt on screen (brief 268, on the server's brief 267): the judge's verdict on a finding's page, and the owner's
 /// thumbs that teach it, there and on each filtered-out listing of the hunt. Words in `Model/LookPresentation.swift`.
 
 /// A finding's look on its page, under the price, title and site, as the page's other verdict line (`PriceVerdictLine`):

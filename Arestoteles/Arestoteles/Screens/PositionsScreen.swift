@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The start tab: what Patrik thinks, as `vault.positions` groups them ("Across topics" first, then each topic). Each
+/// The start tab: what the owner thinks, as `vault.positions` groups them ("Across topics" first, then each topic). Each
 /// card opens the position's page; "Add a position" opens the add sheet (across topics, or a topic picked there). The
 /// search field filters the positions by their title and text (`TabSearch`). The ARESTOTELES band ends the scroll
 /// (`WordmarkScrollView`).
@@ -197,7 +197,7 @@ struct PositionScreen: View {
         }
     }
 
-    /// Patrik's positions are considered, not changed on the go (2026-10-24): the page offers discussing (now or
+    /// The owner's positions are considered, not changed on the go (owner, 2026-10-24): the page offers discussing (now or
     /// later), fixing the wording, and a note for later; a draft can be confirmed.
     private func actions(_ position: Position) -> some View {
         VStack(alignment: .leading, spacing: 10) {

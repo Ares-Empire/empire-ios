@@ -1,6 +1,6 @@
 import Foundation
 
-/// A listing's page (brief 142, Patrik 2026-11-03, after builds 12 and 13: the long reasoning "not really needed …
+/// A listing's page (brief 142 (owner, 2026-11-03), after builds 12 and 13: the long reasoning "not really needed …
 /// it fits because of the filter. If anything short notes on what couldn't be confirmed … and an overview of the stats
 /// … not text explaining it but kinda like listings do it"; "the flat description is cut off"; and "the Bewerbung
 /// button is colorful and confusing … whereas the button to the listing is less visible"). Decided here, so the page
@@ -71,7 +71,7 @@ enum ListingButton: Equatable, Hashable {
     }
 }
 
-/// The star in a listing's top bar, beside its state menu (brief 180, Patrik 2026-11-05: "add a little star to each
+/// The star in a listing's top bar, beside its state menu (brief 180 (owner, 2026-11-05): "add a little star to each
 /// findings page so it's easy to favorite them"): off while the listing is new, on (filled, in the accent) while it is a
 /// favorite, the state `saved`; a tap turns one into the other. An applied or dismissed listing has none: it is dealt
 /// with, and the state menu still offers everything.

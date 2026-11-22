@@ -46,9 +46,9 @@
       "domain": "aresium.de",
       "blurb": "Personal finance from your bank's own exports — imported, sorted and understood.",
       "detail": {
-        "about": "The empire's personal-finance command. Aresium reads the exports of 25 German banks and PayPal, with no bank login and no aggregator in between, sorts every payment into a category by itself and learns from each correction. It shows spending and income by month and category, the monthly average and the fixed costs. A website and an iPhone app; on the iPhone the data stays on the device.",
+        "about": "The empire's personal-finance command. Aresium reads the exports of 17 banks and PayPal, and CAMT and MT940 files from any bank, with no bank login and no aggregator in between, sorts every payment into a category by itself and learns from each correction. It shows spending and income by month and category, the monthly average and the fixed costs. A website and an iPhone app; on the iPhone the data stays on the device.",
         "features": [
-          "CSV, CAMT and MT940 from 25 German banks, and PayPal",
+          "CSV from 17 banks, CAMT and MT940 from any bank, PayPal, Excel and ZIP files",
           "Sorts by itself with known shops and local places, learns from every correction",
           "Spending and income by month and category, each day's payments",
           "The monthly average and the fixed costs, found on their own",
@@ -68,6 +68,16 @@
     }
   ],
   "chronicle": [
+    {
+      "at": "2026-11-12",
+      "project": "arestemis",
+      "text": "Arestemis can now search for a look, not only for words. For a search with a described look, Claude looks at each listing's photos, scores how close it comes to that look and says why; listings below the chosen minimum go to Filtered out with that reason. Thumbs up or down on a finding or a filtered-out listing teach it what is meant. Such a search also works through everything already for sale, ten listings at a time behind new ones, and its text checks run on Claude Haiku, so the other searches keep the free models. In the app, every listing page now opens with its photos."
+    },
+    {
+      "at": "2026-11-07",
+      "project": "arestemis",
+      "text": "Arestemis now says what a thing usually costs: for each search it keeps the asking prices of the listings that fit, shows the usual range and the cheapest of the week, and marks a listing as cheap, expensive or unusually cheap (often bait). Its checks got fairer too: a listing is no longer sorted out for a distance it never had or for a wish it simply does not mention, and a Vinted search now asks the site itself for the right size and colour, so its pages show mostly candidates."
+    },
     {
       "at": "2026-11-06",
       "project": "arestemis",
@@ -101,7 +111,7 @@
     {
       "at": "2026-11-02",
       "project": "arestemis",
-      "text": "Arestemis explains itself now: a tour of eight steps, shown once after the first login and again from Settings, walks through sample searches in the app's own language, from starting a search to what a Preismonitor and a page watch are for. Patrik asked for it when \"Webseite beobachten\" read as too vague; the tour's frame is shared with Aresium's, whose tour looks exactly as before. App build 13."
+      "text": "Arestemis explains itself now: a tour of eight steps, shown once after the first login and again from Settings, walks through sample searches in the app's own language, from starting a search to what a Preismonitor and a page watch are for. The tour was added because \"Webseite beobachten\" read as too vague, and the tour's frame is shared with Aresium's, whose tour looks exactly as before. App build 13."
     },
     {
       "at": "2026-11-02",
@@ -131,7 +141,7 @@
     {
       "at": "2026-10-31",
       "project": "arestemis",
-      "text": "Arestemis is on Patrik's iPhone, and its notifications arrive by push, so its Telegram copy is switched off. After his first look its sentences no longer mention the AI (the search fields are “filled in automatically”), and the hunt's start button says “Suche starten”; both reached the phone with build 2."
+      "text": "Arestemis is on an iPhone, and its notifications arrive by push, so its Telegram copy is switched off. After the first iPhone test its sentences no longer mention the AI (the search fields are “filled in automatically”), and the hunt's start button says “Suche starten”; both reached the phone with build 2."
     },
     {
       "at": "2026-10-24",

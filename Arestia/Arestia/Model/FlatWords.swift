@@ -165,7 +165,7 @@ enum FlatWords {
     }
 }
 
-/// A fan's quick timers: 15, 30, 60 minutes, or until switched off (Patrik, 2026-11-19: "fans with timers is good").
+/// A fan's quick timers: 15, 30, 60 minutes, or until switched off (owner, 2026-11-19) ("fans with timers is good").
 enum FanTimer: Hashable, CaseIterable, Identifiable {
     case fifteen, thirty, sixty, untilOff
 

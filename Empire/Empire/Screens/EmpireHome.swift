@@ -26,7 +26,7 @@ struct EmpireHomeStatus {
 }
 
 /// The throne room, as approved on the phone hub (ares-empire web/app/mobile.jsx): header (crest · THE EMPIRE ·
-/// quiet icons), the faded marble bust, the desktop's wheel with one quiet line under it, and the chronicle (Patrik)
+/// quiet icons), the faded marble bust, the desktop's wheel with one quiet line under it, and the chronicle (the owner)
 /// or "What's new" (everyone else), ending in THE EMPIRE in gold (`WordmarkScrollView`). No slogans, gold only as an
 /// accent.
 struct EmpireHome: View {
@@ -180,7 +180,7 @@ struct EmpireHome: View {
                 caption.frame(minHeight: 18).padding(.horizontal, 40)
             }
         }
-        .padding(.top, 46).padding(.bottom, 16)   // lower than the website (Patrik, 2026-10-24)
+        .padding(.top, 46).padding(.bottom, 16)   // lower than the website (owner, 2026-10-24)
     }
 
     @ViewBuilder private var caption: some View {

@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// The first tab: what the flat is doing and the few things to do about it (Patrik, 2026-11-19: "not many buttons and
+/// The first tab: what the flat is doing and the few things to do about it (owner, 2026-11-19) ("not many buttons and
 /// big menu but just easy navigation"). From the top: the state in one line; cooking while it runs, with Done cooking as
 /// the one big button, else the modes and scenes as three tiles; the fans with their timers; the lights; the blinds;
 /// then the other devices. Ends with the ARESTIA band (`WordmarkScrollView`). A long press on a device renames it
-/// (`DeviceNameViews.swift`). The Automations card at the end is gone (Patrik, 2026-11-20: "why are there these text
+/// (`DeviceNameViews.swift`). The Automations card at the end is gone (owner, 2026-11-20) ("why are there these text
 /// boxes for automations at the bottom? I dont think we need them.").
 struct HomeScreen: View {
     let store: FlatStore
@@ -143,7 +143,7 @@ private struct StatusSummary: View {
 
 // MARK: - cooking
 
-/// Cooking while it runs (Patrik: "in the app it shows that cooking is active and one click deactivates fans and rolls
+/// Cooking while it runs (the owner: "in the app it shows that cooking is active and one click deactivates fans and rolls
 /// blind to fav spot"): since when, what its devices do right now, and Done cooking.
 private struct CookingCard: View {
     let store: FlatStore

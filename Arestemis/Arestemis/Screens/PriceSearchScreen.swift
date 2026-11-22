@@ -5,7 +5,7 @@ import SwiftUI
 /// product's name once found). **One shop** is brief 137's form: the product's link (the URL keyboard; a whole shared
 /// text pasted in keeps its first link) with the server's preview under it once the link looks complete and typing
 /// pauses ("Found: NINTENDO Switch 2 · €483.99 · in stock", or the server's refusal in its words, `PricePreviewModel`).
-/// **Everywhere**: the product in words and its details in one optional line (colour, size or variant; no menu, Patrik:
+/// **Everywhere**: the product in words and its details in one optional line (colour, size or variant; no menu, the owner:
 /// "the search could just as well be a microphone, bike, helmet"), the server's look under the product once typing
 /// pauses ("Found: Apple AirPods Max (2nd gen.)" over "in 11 shops, from €529.00", `ProductPreviewModel`), then the
 /// quiet line "Looks on 11 sites · Change", which opens "Where it looks" (`PriceSitesScreen`). Then, in both, what it
@@ -15,7 +15,7 @@ import SwiftUI
 /// for one monitor, or a new one (empty, or from one of New search's examples), which it creates paused. Unsaved edits
 /// are kept per monitor.
 ///
-/// **Saving never waits for the preview** (brief 180, Patrik 2026-11-05: "allow the user to save it asap and then send a
+/// **Saving never waits for the preview** (brief 180 (owner, 2026-11-05): "allow the user to save it asap and then send a
 /// msg if not found"): the product the preview found for the words as they are is sent as the confirmed identity, else
 /// none, and the server finds it in the background (the card says "Looking for the product…" meanwhile, the server's
 /// refusal when none fits). The preview stays the quick hint while typing.

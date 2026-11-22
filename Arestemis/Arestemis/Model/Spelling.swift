@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// `POST /search/spelling` (the Arestemis repo's brief 177, this app's brief 178; Patrik, 2026-11-05, after a thing
+/// `POST /search/spelling` (the Arestemis repo's brief 177, this app's brief 178 (owner, 2026-11-05), after a thing
 /// search for "Zenga Krawatte" where the brand is Zegna: "a false suggestion isn't that bad"): the server's guess at a
 /// misspelled brand, model or product word among a thing search's words. The user decides: a suggestion is a chip under
 /// the words, taken with a tap or left as it is; nothing is changed or saved by itself.

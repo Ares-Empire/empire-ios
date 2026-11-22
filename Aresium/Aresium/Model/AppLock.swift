@@ -5,7 +5,7 @@ import Observation
 import Security
 import os
 
-// Aresium's optional lock (Patrik, 2026-10-27; off by default; Settings → Lock): Face ID (Touch ID on such phones) and/or
+// Aresium's optional lock (owner, 2026-10-27) (off by default; Settings → Lock): Face ID (Touch ID on such phones) and/or
 // a 6-digit code of its own. With Face ID alone the iPhone's code is the fallback; with an own code, only Face ID or
 // that code opens Aresium. It locks at launch and after more than 10 seconds in the background (being inactive, as
 // under the Files picker, the share sheet or Control Center, does not lock). While it is on, the widgets show no

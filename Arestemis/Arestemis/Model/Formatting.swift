@@ -293,7 +293,7 @@ struct ListingFact: Equatable, Identifiable {
 }
 
 extension Listing {
-    /// A flat's page, its facts as a portal lists them (brief 142, Patrik 2026-11-03: "make it look like a normal listing
+    /// A flat's page, its facts as a portal lists them (brief 142 (owner, 2026-11-03): "make it look like a normal listing
     /// with our metrics and just fill them in or have a '-' … if empty"): the rent the big figure does not show (cold
     /// beside a warm figure, warm beside a cold one; none when the listing gives no rent, which the big figure says),
     /// Size (the room's for a WG room), Rooms (a flat) or Flatmates (a WG room), Move-in, Until, Furnished, Location (the

@@ -33,7 +33,7 @@ extension View {
 // MARK: - Create account
 
 /// "Create account": email, password twice, an optional name (`SignUpForm`). Afterwards one calm screen: confirm the
-/// email by the link just sent, then Patrik approves the account and an email says so; back to the login.
+/// email by the link just sent, then the owner approves the account and an email says so; back to the login.
 struct SignUpSheet: View {
     let accent: AppAccent?
     let created: (String) -> Void
@@ -68,7 +68,7 @@ struct SignUpSheet: View {
     private var fields: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Text("One Ares account for all Ares apps. Once you have confirmed your email, Patrik approves it.",
+                Text("One Ares account for all Ares apps. Once you confirm your email, your account can be approved.",
                      tableName: "Shared")
                     .font(AppFont.text(14)).foregroundStyle(Ink.secondary).lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 4)
@@ -97,7 +97,7 @@ struct SignUpSheet: View {
                           kind: .name)
                     .focused($focus, equals: .name).submitLabel(.done).onSubmit(send)
                     .glassCard(accent: accent).padding(.top, 24)
-                FormNote(text: String(localized: LocalizedStringResource("Patrik sees it when he approves the account.",
+                FormNote(text: String(localized: LocalizedStringResource("Your name is shown when your account is reviewed.",
                                                                          table: "Shared", locale: .appLanguage)))
                     .padding(.top, 10)
             }
@@ -112,7 +112,7 @@ struct SignUpSheet: View {
     private var done: some View {
         CalmDone(symbol: "envelope",
                  title: Text("Confirm your email", tableName: "Shared"),
-                 text: Text("A link is on its way to \(form.email). Open it to confirm your address. Then Patrik approves your account, and an email tells you once it's ready.",
+                 text: Text("A link is on its way to \(form.email). Open it to confirm your address. Then your account is approved. You'll get an email when it's ready.",
                             tableName: "Shared"),
                  highlight: accent?.color ?? Ink.secondary)
     }

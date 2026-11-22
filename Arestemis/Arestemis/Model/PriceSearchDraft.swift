@@ -7,7 +7,7 @@ import Foundation
 /// them as they were; the name, the switches and how often are the monitor's in both. Only what the contract asks is
 /// checked here; whether a link or a product can be read is the server's to say (its preview, its refusal on save).
 struct PriceSearchDraft {
-    /// Ein Shop or Überall; a new form opens on Überall (Patrik's case: a product in words, no link to find first).
+    /// Ein Shop or Überall; a new form opens on Überall (the owner's case: a product in words, no link to find first).
     var mode: PriceSearch.Mode = .everywhere
     /// The monitor's own name; empty = the product's name once read, else the host (Ein Shop) or the words (Überall).
     var name = ""
@@ -278,7 +278,7 @@ extension PriceSearchDraft: Equatable {
     }
 }
 
-/// The two switches on a monitor's page (brief 137, Patrik: "changeable anytime in the app"): each change makes the whole
+/// The two switches on a monitor's page (brief 137, the owner: "changeable anytime in the app"): each change makes the whole
 /// search that is saved at once (`PUT`), or is refused with the switches' line. Turning off the last of the two is
 /// refused ("At least one of the two."); an alarm whose conditions are both off cannot be saved ("Say when the alarm
 /// should ring.") and is kept on the page until it has one.

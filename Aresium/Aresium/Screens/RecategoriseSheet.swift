@@ -3,7 +3,7 @@ import UIKit
 
 /// Switch or Add for one payment or, from a category's month list, for the payments selected there (brief 82): one view
 /// over `CategoryWindow`, so both windows look and behave alike. Like every iOS edit sheet, Cancel is top left and Save
-/// top right (brief 36, Patrik's phone test: Save at the bottom was far from a category at the top), in ink like the
+/// top right (brief 36, the owner's phone test: Save at the bottom was far from a category at the top), in ink like the
 /// app's other sheets. Save in Add first asks whether to remove the current category, then asks about the shop's other
 /// payments when applicable. Under "Currently in" one quiet line says why the payment is there (brief 47, from the
 /// payment's page); a selection's window names "10 payments" with their total instead. Opened from the payment's page

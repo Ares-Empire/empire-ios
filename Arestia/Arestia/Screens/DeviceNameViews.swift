@@ -1,6 +1,6 @@
 import SwiftUI
 
-// Renaming a device on Home (Patrik, 2026-11-20: "can we make the names of things changable so I can name rename
+// Renaming a device on Home (owner, 2026-11-20) ("can we make the names of things changable so I can name rename
 // things?"). The name lives in flatd (contract v1.3), so the app, its Shortcuts and controls, the 3D page, the desktop
 // viewer and Claude show one name. A long press on a device's row offers Rename (and, once renamed, its original name
 // back); the name then turns into a field where it stands, as Arestemis's and Aresium's names do: in the name's own

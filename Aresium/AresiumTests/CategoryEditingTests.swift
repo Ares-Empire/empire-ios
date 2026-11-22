@@ -79,7 +79,7 @@ struct CategoryEditingTests {
     }
 
     @Test(arguments: [AppLanguage.english, .german])
-    func patriksChangeWindowOffersAndPicksFriends(language: AppLanguage) async throws {
+    func theOwnersChangeWindowOffersAndPicksFriends(language: AppLanguage) async throws {
         try await AppLanguage.$scoped.withValue(language) {
             let phone = try await PhoneTest.backend(chosen: ["salary", "friends"])
             try await phone.setOtherSide(false, for: "friends")

@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import Aresium
 
-/// Only one month of payments (Patrik, 2026-10-27: an unknown bank's file with one week of February, then Overview,
+/// Only one month of payments (owner, 2026-10-27) (an unknown bank's file with one week of February, then Overview,
 /// the graph and a category showed an empty plot). The dashboard's months span the data, so every graph gets one
 /// point, which a line and its area cannot draw: `SeriesChart` draws it as a stem with a dot around
 /// `ChartAxis.singlePointDomain`, and the range names the month once.

@@ -3,7 +3,7 @@ import Testing
 
 /// The app switcher cover's rule (brief 47, `Shared/Design/PrivacyCover.swift`): it covers the app for the app switcher,
 /// Control Center and the background, but not behind a prompt the app asked for itself (the notification permission,
-/// Face ID), which made "Aresium" flash on Patrik's phone.
+/// Face ID), which made "Aresium" flash on the owner's phone.
 @Suite(.serialized)
 struct PrivacyCoverTests {
     @Test func theBackgroundIsAlwaysCovered() {

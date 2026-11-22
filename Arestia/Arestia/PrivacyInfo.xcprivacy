@@ -32,7 +32,7 @@
 	     optional name typed into the form (the account server's `contact` collection), used only to answer. -->
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array>
-		<!-- Email address: typed into Contact & support (Shared/Support, `ContactMessage`), so Patrik can answer. -->
+		<!-- Email address: typed into Contact & support (Shared/Support, `ContactMessage`), so the owner can answer. -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeEmailAddress</string>

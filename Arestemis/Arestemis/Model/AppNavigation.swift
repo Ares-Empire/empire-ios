@@ -6,7 +6,7 @@ enum AppTab: String, Hashable, CaseIterable {
     case hunt, listings
 }
 
-/// The Listings tab's two parts (brief 133, Patrik's choice): everything new across the searches, grouped by search, or
+/// The Listings tab's two parts (brief 133, the owner's choice): everything new across the searches, grouped by search, or
 /// one row per search, each opening that search's listings.
 enum ListingsPart: String, CaseIterable, Hashable, Identifiable {
     case new, searches
@@ -115,8 +115,8 @@ enum MatchFilter: String, CaseIterable, Hashable, Identifiable {
         }
     }
 
-    /// The `seen=` query: New holds only unread listings; one opened leaves it for Recently viewed (Patrik, 2026-11-05:
-    /// "It should leave neu", brief 182; build 20 kept read ones in New without their dot). The other filters hold read
+    /// The `seen=` query: New holds only unread listings; one opened leaves it for Recently viewed (owner, 2026-11-05)
+    /// ("It should leave neu", brief 182; build 20 kept read ones in New without their dot). The other filters hold read
     /// and unread alike.
     var seen: Bool? { self == .new ? false : nil }
 

@@ -3,7 +3,7 @@ import Testing
 @testable import Empire
 
 /// The ring shows every app the account has, "+" the others with their access state, and an app the account has may
-/// carry its install link (Patrik, 2026-10-25; ares-empire docs/EMPIRE-APP.md → Whose ring shows what).
+/// carry its install link (owner, 2026-10-25) (ares-empire docs/EMPIRE-APP.md → Whose ring shows what).
 @MainActor
 struct RingAccessTests {
     private func decode(_ json: String) throws -> EmpireData {

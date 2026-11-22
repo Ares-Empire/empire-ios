@@ -1,6 +1,6 @@
 import Foundation
 
-/// A device's own name (Patrik, 2026-11-20: "can we make the names of things changable so I can name rename things?").
+/// A device's own name (owner, 2026-11-20) ("can we make the names of things changable so I can name rename things?").
 /// The name lives in flatd (contract v1.3, "Renaming a device"), so the app, its Shortcuts and Control Center controls,
 /// the 3D page, the desktop viewer and Claude all show one name. These are flatd's rules as the rename field applies
 /// them while typing and before sending, so flatd refuses nothing the field let through. Pure, so the tests pin them.

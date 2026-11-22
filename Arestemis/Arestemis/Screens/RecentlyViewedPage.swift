@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Recently viewed (brief 182; Patrik, 2026-11-05, on read listings that stayed in New: "It should leave neu … Like a past
+/// Recently viewed (brief 182 (owner, 2026-11-05), on read listings that stayed in New: "It should leave neu … Like a past
 /// / history sort of thing but limited time maybe? Because if you want to look at it again just favor it"): the listings
 /// opened in the last 7 days that are still new, of every search (from the row in New) or of one (from the row on its
 /// listings), the latest opened first; the server decides the 7 days. Under the title one quiet line says what it holds

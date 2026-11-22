@@ -1,6 +1,6 @@
 import Foundation
 
-// The search (brief 77, Patrik 2026-11-01: "A small search icon. Im thinking search by names which uses own given and
+// The search (brief 77 (owner, 2026-11-01): "A small search icon. Im thinking search by names which uses own given and
 // also original names organized by best match"): a magnifying glass in the start screen's header (phone mode, where
 // payments have names) opens a page on the dashboard's stack with a field; the results are brief 76's ranking
 // (`DashboardStore.searchNames(_:)`), each opening the name's page. This file decides what the page and its rows say;

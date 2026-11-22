@@ -1,6 +1,6 @@
 import Foundation
 
-/// What Patrik scans (with Arestia's own scanner) or pastes once to connect the app: flatd's pairing code, as
+/// What the owner scans (with Arestia's own scanner) or pastes once to connect the app: flatd's pairing code, as
 /// `flatd pair` shows it on flatd's own machine. One JSON object:
 ///
 ///     {"url": "https://<address>:8788", "token": "<key>", "spki_sha256": "<64 hex digits>"}

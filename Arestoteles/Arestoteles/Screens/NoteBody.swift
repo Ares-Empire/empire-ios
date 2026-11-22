@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A note's body for looking things up (Patrik, 2026-10-24: "usually I just want to quickly look up a fact"): a long
+/// A note's body for looking things up (owner, 2026-10-24) ("usually I just want to quickly look up a fact"): a long
 /// note shows its sections closed, each with its heading and first sentence; tapping one opens it. "My position" stays
 /// open (the positions are one line each). A link to a passage opens its section and marks the passage. Pressing and
 /// holding a paragraph or list item offers editing just that passage, a note about the note, and copying.

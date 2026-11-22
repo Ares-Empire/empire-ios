@@ -1,6 +1,6 @@
 import CoreGraphics
 
-// Selecting by sliding a finger over a category's month list while it selects (brief 200, Patrik 2026-11-02: "like mail
+// Selecting by sliding a finger over a category's month list while it selects (brief 200 (owner, 2026-11-02): "like mail
 // so you can basically just slide your finger up and down and it keeps selecting statements or when going up deselecting
 // them"). Mail's and Photos' rule, pure so tests pin it: where a slide may start, which rows it ticks, and how fast the
 // list scrolls by itself while the finger is near its top or bottom edge. The gesture and the scrolling are

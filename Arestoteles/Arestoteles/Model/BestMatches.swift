@@ -2,7 +2,7 @@ import Foundation
 import Observation
 
 /// The Search tab's best matches: the server's passages for the query (`GET /search`), found by their words and by
-/// their meaning (Patrik asked for search "kinda like Google"), shown above the device's own results.
+/// their meaning (the owner asked for search "kinda like Google"), shown above the device's own results.
 ///
 /// - Asked once typing pauses (`Timing.pause`) and the query has at least three letters; a newer query cancels the
 ///   request before it. The device's results never wait for it.

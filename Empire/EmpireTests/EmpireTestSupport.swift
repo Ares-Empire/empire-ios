@@ -110,7 +110,7 @@ enum EmpireFixtures {
                          province("aresium", state: "coming-soon", access: "none")])
     }
 
-    /// `catalog()` once Patrik approved Arestemis: it moved into the ring.
+    /// `catalog()` once the owner approved Arestemis: it moved into the ring.
     static let catalogApproved = member(
         projects: [province("aresolus", state: "open", access: "granted",
                             install: #""https://testflight.apple.com/join/FICTION1""#),

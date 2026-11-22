@@ -1,6 +1,6 @@
 import Foundation
 
-/// New search (brief 135, Patrik 2026-11-02: the kind menu "is not pretty"): a page of its own instead of iOS's action
+/// New search (brief 135 (owner, 2026-11-02): the kind menu "is not pretty"): a page of its own instead of iOS's action
 /// sheet, one card per kind this build can open, each with what it does in one short line and an example that opens its
 /// form filled in (one per kind since brief 142: less to read). Decided here, so the page only lays it out.
 
@@ -27,7 +27,7 @@ struct NewSearchCard: Equatable, Identifiable {
 }
 
 extension SearchKind {
-    /// New search's line for the kind: what it does, in six to eight words (brief 142, Patrik 2026-11-03: "lots of
+    /// New search's line for the kind: what it does, in six to eight words (brief 142 (owner, 2026-11-03): "lots of
     /// concentrated reading"); the sites are the form's to show.
     func pitch(language: AppLanguage = .current) -> String {
         switch self {
@@ -40,7 +40,7 @@ extension SearchKind {
 }
 
 /// An example on New search, one per kind (brief 142; the WG room, the road bike, back in stock, a new job and the
-/// canteen menu went with it; brief 157: the Preismonitor's is Patrik's own case, a product everywhere, in place of
+/// canteen menu went with it; brief 157: the Preismonitor's is the owner's own case, a product everywhere, in place of
 /// "Price under € …", whose link the person still had to find): a tap opens its kind's form filled in as its words say. Places and addresses stay for the
 /// user (a flat's town, a watched page's address); the name stays empty, so the form shows the automatic one. The
 /// tour's step 2 names these four (`TourStep.newSearch`).

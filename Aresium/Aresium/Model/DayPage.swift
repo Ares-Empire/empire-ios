@@ -1,6 +1,6 @@
 import Foundation
 
-// A day's page (brief 77, Patrik 2026-11-01: "Lets make days clickable too and lead to a screen with that days expenses
+// A day's page (brief 77 (owner, 2026-11-01): "Lets make days clickable too and lead to a screen with that days expenses
 // and income (in two tabs with swipe)"): a tap on a day of a day graph (the start screen's Current, a month's page)
 // opens the day as a sheet, on the side of the graph that was tapped. The data is brief 76's (`DashboardStore.day(_:)`,
 // `dayDate(atChartIndex:scope:)`); this file decides which tap opens what and how the page reads. The look is

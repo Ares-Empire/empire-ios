@@ -317,7 +317,7 @@ nonisolated enum PhotoDate {
 }
 
 /// A small picture of a photo for the strip (an 88 pt tile), never the photo itself in memory. The share extension may
-/// use 220 MB on Patrik's iPhone, and iOS ended it at 240 MB with six photos shared from Photos (its log, 2026-11-03:
+/// use 220 MB on the owner's iPhone, and iOS ended it at 240 MB with six photos shared from Photos (its log, 2026-11-03:
 /// "exceeded mem limit: ActiveHard 220 MB (fatal)"), because every tile's thumbnail was made at once from the full
 /// picture. So QuickLook makes it, in its own process, whose memory never counts against the extension's; only when it
 /// cannot does ImageIO make it here, one at a time and from the small picture a photo carries.

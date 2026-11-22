@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Arestia: the flat (Patrik's own service flatd on the home network) on the iPhone. No Ares account (Patrik,
-/// 2026-11-19: "no account needed, just me"): without flatd's key the app shows the connect screen, with it two tabs,
+/// Arestia: the flat (the owner's own service flatd on the home network) on the iPhone. No Ares account (owner, 2026-11-19)
+/// ("no account needed, just me"): without flatd's key the app shows the connect screen, with it two tabs,
 /// Home and the 3D flat, and Settings behind the gear. Links: `arestia://home`, `arestia://flat` (never one with the
 /// key: flatd's QR code is scanned inside the app).
 ///

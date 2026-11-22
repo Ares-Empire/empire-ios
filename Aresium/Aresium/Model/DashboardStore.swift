@@ -39,7 +39,7 @@ enum DashboardScope: Hashable {
     var isMonth: Bool { self != .overview }
 }
 
-/// Where a tap on a category leads (Patrik, 2026-10-27): in the Current view straight to this month's payments of it,
+/// Where a tap on a category leads (owner, 2026-10-27): in the Current view straight to this month's payments of it,
 /// since the row showed this month; in Overview to its months first. Without a known month, to its months.
 enum CategoryRoute {
     static func route(category: String, side: DashboardSide, current: Bool, currentMonth: String?) -> DashboardRoute {

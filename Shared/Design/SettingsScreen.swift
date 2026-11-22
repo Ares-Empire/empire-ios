@@ -25,11 +25,11 @@ struct SettingsApp {
     var accent: AppAccent? = nil        // the wall's light and the one highlight; nil = ink only (Aresium, Empire)
     var sendsNotifications = false      // a Notifications row, opening the app's notification page in iOS Settings
     /// The app's `DELETE …/me` when its server keeps data per account (today only Arestemis): leaving the app deletes it
-    /// there first. nil: the server keeps nothing per account (Aresium, Aresus, Arestoteles hold only Patrik's data).
+    /// there first. nil: the server keeps nothing per account (Aresium, Aresus, Arestoteles hold only the owner's data).
     var serverData: URL? = nil
     /// In an app that works without an account (`EmpireAppIdentity.accountOptional`): whether Settings offers to sign
     /// in while no Ares app on the iPhone is logged in (an "Ares account" section with Sign in, `SignInSheet`). Aresium
-    /// does not (brief 215, Patrik 2026-11-02: an Ares account there is only for his own server, so testers met a sign-in
+    /// does not (brief 215 (owner, 2026-11-02): an Ares account there is only for his own server, so testers met a sign-in
     /// they could not use); its "Ares account" section shows only while a login exists.
     var offersSignIn = true
     /// The line under the signed-out "Ares account" row: what an account is for in this app.

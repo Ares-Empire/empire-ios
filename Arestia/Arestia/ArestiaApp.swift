@@ -12,7 +12,7 @@ struct ArestiaApp: App {
 
 /// Siri phrases and the Shortcuts app's ready-made actions (the intents themselves are in `ArestiaShared`, shared with
 /// the Control Center controls). An NFC tag runs any of them through a personal automation (Shortcuts → Automation →
-/// NFC), which is how Patrik's cooking tag works: "Start cooking".
+/// NFC), which is how the owner's cooking tag works: "Start cooking".
 struct ArestiaShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(intent: StartCookingIntent(),

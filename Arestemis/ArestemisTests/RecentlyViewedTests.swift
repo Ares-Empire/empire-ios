@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import Arestemis
 
-/// Brief 182 (Patrik, 2026-11-05: an opened listing "should leave neu … Like a past / history sort of thing but limited
+/// Brief 182 (owner, 2026-11-05) (an opened listing "should leave neu … Like a past / history sort of thing but limited
 /// time"; the server's brief 181): New asks for unread listings only, an opened listing leaves it when its page closes
 /// and goes on top of Recently viewed (`GET /matches?recent=true`), which holds the listings opened in the last 7 days
 /// that are still new, the latest opened first; a favorite, an application or a dismissal takes one out. The rows at a

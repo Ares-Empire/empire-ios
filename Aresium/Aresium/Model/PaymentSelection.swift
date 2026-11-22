@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-// Several payments changed at once, the screens' side (brief 82, Patrik 2026-11-01: "make expenses / incomes selectable
+// Several payments changed at once, the screens' side (brief 82 (owner, 2026-11-01): "make expenses / incomes selectable
 // and then moveable / changable at the same time … like in Mail when selecting mails"; the data is brief 81's
 // `BatchChanges.swift`). A category's month list turns into selection with the header's icon: what is ticked
 // (`PaymentSelection`, kept in `DashboardPlace`), the header's and the bar's words and states, the change window for the
