@@ -22,6 +22,9 @@ Searches that run on the server: flats, things for sale, price monitors, page wa
 - Comfort item 6 (Add place's keyboard key, the owner's list no. 18): the owner did not follow it, so explain it to him
   first and let him choose (the item in `docs/reviews/2026-10-30-swipe-and-comfort.md` has both options).
 - No editor for look hunts yet.
+- Up to 60 filter words (brief 313, a19c30d) is merged but not in an uploaded build; the server already takes 60.
+- A Dinge search's `require` ("the title must contain one of", the Arestemis repo's brief 326) has no place in the app
+  yet. The server keeps it when the app saves without the field; its screen needs a Claude design.
 
 ## As built
 
