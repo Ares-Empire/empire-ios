@@ -19,8 +19,7 @@ Searches that run on the server: flats, things for sale, price monitors, page wa
 
 ## Open
 
-- Comfort item 6 (Add place's keyboard key, the owner's list no. 18): the owner did not follow it, so explain it to him
-  first and let him choose (the item in `docs/reviews/2026-10-30-swipe-and-comfort.md` has both options).
+- On the phone: comfort item 6, Add place's keyboard key saying Done (option (b), brief 49), tried once.
 - No editor for look hunts yet.
 - Up to 60 filter words (brief 313, a19c30d) is merged but not in an uploaded build; the server already takes 60.
 - A Dinge search's `require` ("the title must contain one of", the Arestemis repo's brief 326) has no place in the app
@@ -258,7 +257,7 @@ offers`, `-suggestShop`. Tests: `PriceEverywhereTests`, Shared's in `EmpireTests
 
 **The tour** (brief 139, the owner 2026-11-02: "it's not actually clear what Seite beobachten is for … add a tour to
 Arestemis (like Aresium has)"; eight steps from the sketch's section 6; `Model/Tour.swift`, `Screens/TourScreens.swift`
-on the shared pieces, below): the real tabs (`MainTabs`) on a world of its own, `TourWorld`: its own data in the app's
+on the shared pieces, `docs/SHARED.md` → Tours): the real tabs (`MainTabs`) on a world of its own, `TourWorld`: its own data in the app's
 language (`Model/TourData.swift`, as Aresium's `TourData`; the main session's review: the English contract samples
 showed in the German tour) served by `SampleBackend` in memory (no longer DEBUG-only; it takes a `SampleContent`, the
 contract's files for `-sampleData` and the tests, `SampleContent.contract`, or the tour's; `ArestemisStore.isSample`

@@ -14,6 +14,8 @@ The owner's own servers and machines at a glance, its widget, the board's For yo
 
 ## Open
 
+- Aresync drops, step 2: receipts filed into Rechnungen with their inventory line
+  (`ares-empire/docs/ARESYNC-DROP.md`).
 - On the phone: the Aresus widget on the home and lock screen (refreshes by itself; the medium one's rows open their
   province).
 

@@ -23,8 +23,9 @@ Read this page, then only the topic file for your task.
 
 ## Decisions and rules in force
 
-- No account: Aresium opens in phone mode without a login, and everyone's data stays on their own iPhone: imports,
-  categories, storage; no bank data on the server (owner, 2026-10-25 and 2026-10-27). It offers no sign-in (owner,
+- No account: Aresium opens in phone mode without a login. Phone-mode data stays on the iPhone (imports, categories,
+  storage); other people's bank data never reaches the server; the owner's own aresium.de data stays on the server
+  (owner, 2026-10-25 and 2026-10-27). It offers no sign-in (owner,
   2026-11-02). Server mode stays in the code, unused since 2026-10-31 (`APP_SERVER_MODE_USERS` is empty).
 - The data belongs to the iPhone, not to a login: logout, Leave and deleting the account never touch it; only Delete
   Aresium data or the lock's "Forgot the code?" removes it, together with sums, message settings and history and the
@@ -32,8 +33,8 @@ Read this page, then only the topic file for your task.
 - It never registers a push device: messages are local only (`UNUserNotificationCenter`, alert and sound, no badge).
 - A SwiftData model change always adds the next schema version, never edits one in place; every older export keeps
   restoring.
-- The bank's original fields (`place`, merchant keys) never change; display names and shop identities never reach
-  the engine or a stored key.
+- The bank's original fields stay as they came: sorting, learning and receipt matching use them, and stored learning
+  and rename rules stay keyed by merchant (display grouping may use a shop identity or an own name).
 - The engine bundle is never edited by hand and its patterns are never copied into Swift; a new engine layout field
   needs a Swift twin, or saving drops it.
 - Counting as it happened: every payment counts once, in the direction it went; no netting, no Refunds row; the only
@@ -49,12 +50,15 @@ Read this page, then only the topic file for your task.
   never "payees" or "Absender".
 - Adding up names changes only how a list shows: totals, the export and the engine never change, and the choice is
   kept outside the export.
-- The tour is never offered by itself; it explains everything coherently, so a new feature gets a step (owner,
+- The tour is never offered by itself; it explains everything coherently, so it is updated when a feature changes what the app does (owner,
   2026-10-31); its veil stays light (owner, 2026-10-27). Its made-up data never shows outside it, and it never opens
   the person's store, changes settings, sets a lock, schedules a message, asks iOS anything or sends anything.
-- Import opens the file picker at once; categories are chosen after the import (owner, 2026-10-27).
-- Screens never say "CSV", column names or format names, and the bank guide names no sources (owner, 2026-10-27).
-- Info.plist document types exclude `.txt` and `.zip`, so Aresium isn't offered for every text file or zip.
+- Import opens the file picker at once; in phone mode the category picker is offered after an import adds payments,
+  only while no categories have been chosen (owner, 2026-10-27).
+- Import texts use plain words, never "CSV" or format names, and the bank guide names no sources (owner, 2026-10-27);
+  the fallback column picker shows the file's own headers, and the guide may quote the bank's own labels.
+- Info.plist document types exclude `.txt`, so Aresium isn't offered for every text file; ZIP, XLSX and XLS are
+  declared since the engine reads them (build 25).
 - A receipt's total and card-or-cash choice are never learned; cash entries never join bank payments and never teach
   a category. A receipt image is never written and is released after reading; only the read rows and confirmed
   values are kept.
@@ -64,10 +68,11 @@ Read this page, then only the topic file for your task.
 - Security: the store uses complete file protection. The lock code is a salted PBKDF2-SHA256 hash (310,000 rounds) in
   Aresium's own Keychain group, named explicitly, `AfterFirstUnlockThisDeviceOnly`; wrong codes cause growing waits
   that survive a restart, and a clock set back never shortens one; a Keychain lock left from a deleted install is
-  removed; the app locks after more than 10 seconds in the background; "Forgot the code?" deletes the data.
-- While the lock is on: widgets show only "Locked" and no numbers are kept, shared files wait unread, messages hide
+  removed; the lock is optional and off by default; when on, it takes effect at launch and after more than 10 seconds in the
+  background; "Forgot the code?" deletes the data.
+- While the lock is on: widgets show only "Locked" and no numbers are kept; while the app is locked, shared files wait unread; messages hide
   amounts and day counts; turning the lock on clears delivered messages. Message progress stores no amounts.
-- Sharing a bank's format sends only the confirmed layout, bank name, app version and language, without a token; a
+- Sharing a bank's format is offered only for a confirmed layout that passes `shareableLayout`, and sends only the layout, bank name, app version and language, without a token; a
   name that looks like personal data (IBAN, email, date, amount, long number) is not sent, and the server checks
   again. Bank requests go without a token.
 - Copies of shared files are removed once read; leftovers are cleared at the next launch.

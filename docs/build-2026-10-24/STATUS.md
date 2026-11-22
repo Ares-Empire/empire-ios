@@ -43,7 +43,7 @@ Stop only for a genuine problem.
       to `push/` (the ares-empire Aresync hook must do this). PushCenter wiring into the apps: step 10.
 - [x] 8. Review + merge T (266 tests pass; ownership checks reviewed). Server move `/root/flatsniper` → `/root/Arestemis`, `arestemis.service`, Caddy route,
       Groq model, delete old config/db, live test with the test account. Done 05:08: `arestemis.service` from
-      `/root/Arestemis` (fresh clone), `.env` from the old one + gpt-oss-120b + TELEGRAM_FALLBACK_USER=the owner, Caddy
+      `/root/Arestemis` (fresh clone), `.env` from the old one + gpt-oss-120b + TELEGRAM_FALLBACK_USER set to the owner's account, Caddy
       `/api/arestemis/*` (backup `Caddyfile.bak-20261024-arestemis`), server Aresync REPOS + `hooks/Arestemis`,
       flatsniper.service removed. Live: places Germany-wide OK; TEST hunt id 1 on the test account started 05:08
       (München, broad) — **pause + delete it after checking matches**. `/root/flatsniper` still there: delete after.

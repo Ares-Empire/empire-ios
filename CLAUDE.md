@@ -29,7 +29,8 @@ public files the owner is "the owner", never his name.
 - Each app uses its service's existing JSON API; if the API lacks something, change the service (its own repo), don't
   work around it in the app. A good structure is worth more work now: a copy of a service's logic or a workaround in
   the app is usually the wrong call (`ares-empire/EMPIRE.md` → How we build apps).
-- Read server answers leniently: an unknown value, kind or site is kept or read as unknown and never breaks a screen.
+- Read server answers leniently: an unknown value, kind or site never breaks a screen; it is kept or read as unknown,
+  or follows the endpoint's documented fallback (the app's file in `docs/apps/`).
 - Log in via the Empire account system, never a service's own password (`docs/SHARED.md` → One login for all apps).
   Exceptions: Aresium works without an account and Arestia has none.
 - Differences between apps go into `EmpireAppIdentity`, never into checks inside a view.
@@ -73,9 +74,10 @@ public files the owner is "the owner", never his name.
   (`Shared/Design/EmpireDesign.swift`) in place of its `ScrollView`; the band scrolls with the content and shows only
   when you scroll down (owner, 2026-10-24). Its launch argument for screenshots: `-scrollToEnd` (Arestemis
   `-scrollBottom`).
-- An alert's confirm button is a plain button in ink, never Apple's filled default button (it draws system blue
-  whatever the tint).
-- A line that does not fit wraps onto a second line, never into a smaller font. Tap areas are at least 44 pt.
+- An alert's ordinary confirm button is a plain button in ink, never Apple's filled default button (it draws system
+  blue whatever the tint); a destructive one stays destructive.
+- A line that does not fit wraps onto a second line, never into a smaller font (fixed-size day tiles may shrink their
+  labels at the largest accessibility sizes). Tap areas are at least 44 pt.
 - Every motion has a Reduce Motion fallback (none or a fade).
 - The back swipe stays the system's own.
 - Screens follow the existing website and app components, not new decoration.
@@ -93,7 +95,7 @@ and the simulators are set to German, so the apps open in German there.
   numbers-only text use `Text(verbatim:)`. Never keep a looked-up text in a `static let` or anywhere else that outlives
   a language switch.
 - **One catalog per folder that more than one target compiles** (`Shared/Shared.xcstrings`,
-  `Aresium/AresiumShared/AresiumShared.xcstrings`, `Aresus/AresusShared/AresusShared.xcstrings`); code there names its
+  `Aresium/AresiumShared/AresiumShared.xcstrings`, `Aresus/AresusShared/AresusShared.xcstrings`, `Arestia/ArestiaShared/ArestiaShared.xcstrings`); code there names its
   table, or the widget misses the string. Everything else uses the target's own `Localizable.xcstrings`.
 - A word that means different things in two apps gets its own key.
 - **After changing text:** `scripts/strings.py sync`, write the German (`scripts/strings.py fill de.json`, only new
@@ -126,21 +128,26 @@ and the simulators are set to German, so the apps open in German there.
   `scripts/new-app-project.py`; the full list of places a new app touches is in `ares-empire/docs/IPHONE-APPS.md` → A
   new app touches.
 - Upload with `scripts/testflight.sh <App>`; a new bundle id is first registered with a signing-only `--export-only`
-  archive. App Store Connect is driven only through `scripts/asc.py`. Resources that exist only for samples are marked
+  archive. App Store Connect API calls go through `scripts/asc.py`. Resources that exist only for samples are marked
   `debug_only` in `scripts/release-resources.json`.
 - Server samples and fixtures are copies of the servers' own samples, refreshed by script, never edited by hand
   (`npm run sample` + `aresium-fixtures.mjs`, `empire-fixtures.sh`, `aresium-engine.sh`).
 - Gestures, long presses, context menus, menus and drag-and-drop are checked with real touches: AXe, or a temporary UI
   test in `Aresus/AresusUITests` that drives the app, passes 3 of 3 runs and is deleted afterwards. DEBUG launches that
   push screens distort gesture measurements: count the pushes and make launch actions run once.
-- Screenshots of every new screen go in `build/<brief>-*.png`: English and German, light and dark, red mode where the
-  app has it, and the largest text size. Take them with `axe screenshot` (`simctl io` sometimes caught the launch
-  screen). After a screen changes, run `scripts/showcase.py <app>` again and look at the images before committing.
+- Screenshots of every new screen go in `build/<brief>-*.png` (the brief's number, or a short slug for small work
+  without a brief): English and German, light and dark, red mode where the app has it, and the largest text size
+  (`xcrun simctl ui <udid> content_size accessibility-extra-extra-extra-large`; `large` is the default). Take them
+  with `axe screenshot` (`simctl io` sometimes caught the launch screen). When a screen in the showcase changes (the
+  screens are listed in `scripts/showcase.py`), run `scripts/showcase.py <app>` again and look at the images before
+  committing.
 
 ## Workflow
 
-**Who builds** (owner, 2026-10-26 and 2026-10-31): design work (screens, the look, visual assets) goes to Claude agents
-(the Agent tool); everything else (data, plumbing, scripts, tests, server code) goes to Codex. Codex may build a
+**Who builds** (owner, 2026-10-26 and 2026-10-31): design work (screens, the look, visual assets) is Claude's: the
+session itself for small work, a Claude agent (the Agent tool) for a bigger build; everything else (data, plumbing,
+scripts, tests, server code) that is worth delegating goes to Codex, which continues after its first month (renewed,
+owner, 2026-11-18). Codex may build a
 screen's structure and logic; Claude does the look, starting from the existing website and app components (owner,
 2026-10-24). Where the look already exists in the website and the app, Codex may build the screens from those
 components and Claude checks the look (owner, 2026-11-03). Models: global CLAUDE.md ("Codex models", "Claude models").
@@ -157,7 +164,7 @@ server briefs in the private Arestemis repo's `docs/briefs/`, numbered in the sa
 in `AGENTS.md` here and `aresium/AGENTS.md`; they hold for Codex and Claude agents alike: a worktree, a full brief, and
 Claude (not the builder) checks and merges. Work merged through a pull request follows the global CLAUDE.md →
 Merging. A Claude agent stopped by the usage limit is continued after the reset by a fresh agent from its commits and
-a short handoff.
+a short handoff (global CLAUDE.md: a fresh agent per step, owner, 2026-11-14).
 
 ### Running Codex
 

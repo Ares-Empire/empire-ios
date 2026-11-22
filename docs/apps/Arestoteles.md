@@ -4,8 +4,8 @@ The owner's Weltbild on the phone: positions, topics, library; read, search, not
 
 ## Decisions and rules in force
 
-- Lookups: position cards are one line; a position page offers Discuss, Edit and Note; nothing can be changed or
-  dropped on the phone (owner, 2026-10-24).
+- Lookups: position cards are one line; a position page offers Discuss, Edit and Note; wording and passage edits
+  work on the phone, the position-level Change and Drop stay off it (owner, 2026-10-24).
 - A note is saved and the sheet closes at once; sending happens in the background (owner, 2026-11-01).
 - `-sampleVaultFile` with real notes is DEBUG only and never committed. The saved vault is used only for the saved
   login's account; files and Spotlight are forgotten on logout; a late answer never outlives a logout.

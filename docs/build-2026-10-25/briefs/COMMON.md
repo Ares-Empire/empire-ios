@@ -1,7 +1,7 @@
 # Rules for every build agent (2026-10-25)
 
 You are one of several Claude build agents. Claude (the lead) wrote your brief, reviews your work, merges it and
-deploys it. The owner (the owner) is away; do not ask him anything.
+deploys it. The owner is away; do not ask him anything.
 
 ## Where you work
 

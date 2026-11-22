@@ -26,7 +26,7 @@ shown before the app is seen when it comes back; it is the cover's wall and band
 when Face ID is on; "Forgot the code?" deletes Aresium's data on this iPhone and the lock, and in server mode also
 logs out, so the lock never opens the server's data to someone without the code) or, with Face ID alone, one Face ID
 button under the band where the cover has it. Face ID is offered once by itself when locked and active. A file shared
-into Aresium (or dropped on it) while locked waits unread until it is unlocked (brief 204, below). While the lock is
+into Aresium (or dropped on it) while locked waits unread until it is unlocked (brief 204, `first-run-and-import.md` → Files from outside). While the lock is
 on, the widgets show only "Locked" (no numbers are kept for them: `widget-locked.json` in the App Group).
 `NSFaceIDUsageDescription` in `Info.plist`, German in
 `InfoPlist.xcstrings`. **Contact & support** always without a login: the `contact` path (above). **Push:** Aresium never

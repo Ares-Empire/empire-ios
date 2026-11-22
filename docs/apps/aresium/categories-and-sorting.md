@@ -131,7 +131,7 @@ Without a question call `request.save()`. The returned `BatchChangeResult.follow
 follow-up; its original undo also restores an applied answer. Remove switches only selected rows whose primary is
 the list's category; the others get extras. Unsorted selected rows switch automatically. The lower-level
 `addCategory(ids:name:removingCurrent:)` and `addCategories(ids:names:removing:removingCurrent:)` save an already
-answered choice. The selection screens are brief 82's (below).
+answered choice. The selection screens are brief 82's (`selecting-several.md`).
 
 DEBUG (with `-samplePhone -sampleCategory Groceries -sampleMonth 2026-10 -samplePhoneTransaction REWE
 -sampleRecategorise add`): `-samplePick Clothes -sampleAddSave` picks and taps Save after the sheet opens;

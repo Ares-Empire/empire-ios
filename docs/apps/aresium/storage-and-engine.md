@@ -84,7 +84,7 @@ bank file as if picked, so on the empty store the category picker opens after it
 `-sampleSignedIn` (signed in on the made-up account server), `-sampleOverview` (Overview, not Current) and
 the graph (Settings → Dashboard → Graph, `aresium.graph`, on by default since brief 42, `Model/GraphSetting.swift`; on
 a category's page above its months; whether it moves away while its list scrolls, `aresium.graphMoves`, brief 56,
-above; `-toggleGraph` flips the saved setting once; with only one month of data each graph is one point, drawn as a stem with a dot,
+`dashboard-and-graph.md` → The graph moves away; `-toggleGraph` flips the saved setting once; with only one month of data each graph is one point, drawn as a stem with a dot,
 `ChartAxis.singlePointDomain`, `OneMonthTests`), `-openSheet settings`, in the picker
 `-sampleTick <id,id,…>` (ticks those), `-sampleUntick <category id>`, `-scrollToCategory <id>` and
 `-samplePickerDone` (then Done: the dashboard with the result line counted again), `-sampleLayout` (an unknown bank's
@@ -129,6 +129,9 @@ the paid team).
 picked inside the app; not `.zip` (brief 204): the engine reads no ZIP, it only answers "Unzip the file first", so
 Aresium would be offered for every zip on the phone just to refuse it; the picker and a drop still take a `.zip` to
 say so); it is merged with the generated plist and excluded from the folder's resources in the project file.
+
+Since build 25 (aresium brief 240) the engine reads ZIP and Excel files, and the Info.plist also declares `.zip`,
+`.xlsx` and `.xls`; the `.zip` sentence above is from brief 204.
 
 ## Local places memory gate (briefs 95 and 98, 2026-11-01)
 

@@ -50,7 +50,7 @@ counted again after every change; in muted ink before the tick, under the name a
 out as "34 payments"; with numbers on the rows the picker's note adds "The number by a category is how many of your
 payments it has, or would get once ticked."; in every picker: after an import, Settings → Categories, the tour's
 Settings; one's own rows say their side and every ticked row whether it is also offered the other way, brief 70's
-"Category sides on screen" above), after a Switch the alert "Also the other payments from <shop>?" (the count on its button), the store's
+"Category sides on screen" in `categories-and-sorting.md`), after a Switch the alert "Also the other payments from <shop>?" (the count on its button), the store's
 opening state.
 
 ## An unknown bank's file

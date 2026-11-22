@@ -7,7 +7,8 @@ support, the switcher cover, tours, privacy files. Read the section for what you
 
 - Login token: a Keychain item in the shared group; the App Group's `LoginMarker` holds only an account id, never a
   token; a 401 deletes a login only while it is still the refused token.
-- Central logout: widget snapshots carry their account and are deleted on a mismatch; logout removes every recorded
+- Central logout: account-bound widget snapshots (Aresus's status, Aresium's server mode) carry their account and are
+  deleted on a mismatch (Aresium's phone-mode snapshot belongs to the phone's store); logout removes every recorded
   push device.
 - The app-switcher cover hides an app while it is inactive; `SystemPrompt.begin()`/`end()` keeps it out of the way of
   the app's own iOS prompts.
@@ -39,7 +40,7 @@ registered: Apple issues no profile while a team has no device,
 so `xcodebuild archive` failed until it was. All five apps (and both widgets) are registered with Apple: the other four by
 a signing-only archive on 2026-10-30 (`scripts/testflight.sh <App> --export-only`, `-allowProvisioningUpdates`), so
 App Store Connect's New App could offer their bundle ids; the signed Arestemis carries `aps-environment` production
-and the time-sensitive entitlement. Uploads: `scripts/testflight.sh <App>` (README → Releasing).
+and the time-sensitive entitlement. Uploads: `scripts/testflight.sh <App>` (`docs/DEVELOPMENT.md` → Releasing to the phone).
 
 ### App Store Connect API
 
@@ -277,7 +278,7 @@ German or English. The Mac and the simulators are set to German, so the apps ope
   and numbers-only text use `Text(verbatim:)`. Never keep a looked-up text in a `static let` or anywhere else that
   outlives a restart.
 - **One catalog per folder that more than one target compiles:** `Shared/Shared.xcstrings`,
-  `Aresium/AresiumShared/AresiumShared.xcstrings`, `Aresus/AresusShared/AresusShared.xcstrings`. Code in those folders
+  `Aresium/AresiumShared/AresiumShared.xcstrings`, `Aresus/AresusShared/AresusShared.xcstrings`, `Arestia/ArestiaShared/ArestiaShared.xcstrings`. Code in those folders
   names its table (`Text("Log in", tableName: "Shared")`, `String(localized: LocalizedStringResource("…", table:
   "AresusShared", locale: .appLanguage))`), or the widget would miss the string. Everything else uses the target's own
   `Localizable.xcstrings` (each app, each widget).
@@ -314,7 +315,7 @@ confirmation dialog, as Leave and Delete, "Log out?" / "You'll be logged out of 
 that works without an account plus "Your data in <app> stays."; Log out, destructive, and Cancel, which iOS 26 shows as a
 popover from the row, cancelled by a tap outside) and then does what the
 app's log-out did before (in sample mode it leaves the sample, as before); then, in the hub's soft red, Leave
-<app> and Delete Ares account: pages in `Shared/Design/AccountScreens.swift`, see "Accounts in every app" below). An app
+<app> and Delete Ares account: pages in `Shared/Design/AccountScreens.swift`, see "Accounts in every app" above). An app
 whose server keeps data per account passes its `DELETE …/me` as `SettingsApp(serverData:)` (today only Arestemis:
 `ArestemisAPI.accountDataURL`); leaving deletes it there first. An app that works without an account
 (`EmpireAppIdentity.accountOptional`, only Aresium, brief 22) shows, while no Ares app is logged in, a quiet "Ares
