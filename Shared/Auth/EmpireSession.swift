@@ -6,16 +6,16 @@ import os
 struct EmpireAppIdentity: Equatable, Sendable {
     let service: String
     let name: String
-    /// The app works without an Ares account (Aresium, Patrik 2026-10-27): it never shows a login screen, any login
+    /// The app works without an Ares account (Aresium (owner, 2026-10-27)): it never shows a login screen, any login
     /// (or none) opens it, and its service matters only to the app itself (Aresium's server mode for the owner). Every
     /// other app needs a login with its service.
     var accountOptional = false
     /// Contact & support always goes as a contact message without the login (the account server's open `contact`
     /// collection, the website's form's: an email to answer to, an optional name), also while an Ares login exists
-    /// (Aresium, Patrik 2026-10-27: the privacy policy handles its messages like the website's contact form, without
+    /// (Aresium (owner, 2026-10-27): the privacy policy handles its messages like the website's contact form, without
     /// accounts). Every other app sends the account-linked `feedback` record with its login.
     var supportWithoutLogin = false
-    /// The app has no Ares account at all (Arestia, Patrik 2026-11-19: "no account needed, just me"): it never restores
+    /// The app has no Ares account at all (Arestia (owner, 2026-11-19): "no account needed, just me"): it never restores
     /// or offers a login, and Settings shows no account section. It still sends the contact form, without a login.
     var hasAccount = true
     static let aresium = EmpireAppIdentity(service: "aresium", name: "Aresium", accountOptional: true,

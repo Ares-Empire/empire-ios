@@ -3,7 +3,7 @@ import Testing
 import UIKit
 @testable import Aresium
 
-/// One's own categories' looks (brief 36, Patrik's phone test 2026-10-30: every own category had the same grey tag): an
+/// One's own categories' looks (brief 36, the owner's phone test 2026-10-30: every own category had the same grey tag): an
 /// icon that fits the name (English and German words), else a spare one; a colour of its own; chosen once and stored
 /// with the category; given to the own categories of an older store (schema 3) in the order they were made.
 @MainActor

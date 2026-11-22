@@ -1,7 +1,7 @@
 import SwiftUI
 
 // Money paid back on screen (brief 203; words and logic in `Model/PaybackPage.swift`): the section on a payment's page
-// and the window that makes or changes a link. Quiet and optional (Patrik, 2026-11-02): one action in the secondary ink
+// and the window that makes or changes a link. Quiet and optional (owner, 2026-11-02): one action in the secondary ink
 // below what the page had, like its other quiet rows; nothing elsewhere asks for it. The app's own pieces only: the page's
 // cards (the "All from" card's look), the pen beside what a tap changes, the search field, the change window's bar.
 // Brief 206: the same window links several at once, opened from a payment's page or a selection's bar; its rows tick

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!-- Merged with the generated Info.plist. Marks this target as a WidgetKit extension (Control Center controls only;
-     no home-screen widgets yet, Patrik 2026-11-19). -->
+     no home-screen widgets yet (owner, 2026-11-19)). -->
 <plist version="1.0">
 <dict>
 	<!-- The team prefix of Arestia's Keychain group (ArestiaShared/FlatdConnection.swift): the controls read flatd's key. -->

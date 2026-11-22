@@ -1,6 +1,6 @@
 import Foundation
 
-/// What the Listings tab shows (brief 133, Patrik's choice of 2026-11-02: "New | Searches"), decided here so the screens
+/// What the Listings tab shows (brief 133, the owner's choice of 2026-11-02: "New | Searches"), decided here so the screens
 /// only lay it out: New's groups and their order, the rows of Searches, the quiet rows at a list's end (Recently viewed,
 /// Filtered out and Not checked in time), and the words of the search over listings, of Recently viewed and of Not
 /// checked in time.

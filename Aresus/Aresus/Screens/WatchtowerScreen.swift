@@ -165,7 +165,7 @@ struct ProvinceBox: View {
     let province: Province
     let mark: UIImage?
 
-    /// Inactive and planned provinces are quieter and slimmer, so the running ones lead the list (Patrik: "simple,
+    /// Inactive and planned provinces are quieter and slimmer, so the running ones lead the list (the owner: "simple,
     /// clean, not bloated").
     private var compact: Bool { province.state == .inactive }
 

@@ -3,8 +3,8 @@ import Observation
 
 /// Where a notification takes the Empire app. The app declares no URL scheme: its links come only in a notification's
 /// payload (`url`, read by `PushCenter`). Today one: `empire://ring`, "<App> is ready" (thread `access`), sent to a
-/// member when Patrik approved a request (ares-empire docs/EMPIRE-APP.md → Notifications); the app is in the ring now.
-/// Patrik's sign-ups and requests come by email, not as a push (Patrik, 2026-10-26).
+/// member when the owner approved a request (ares-empire docs/EMPIRE-APP.md → Notifications); the app is in the ring now.
+/// The owner's sign-ups and requests come by email, not as a push (owner, 2026-10-26).
 enum EmpireLink: Equatable {
     case ring
 

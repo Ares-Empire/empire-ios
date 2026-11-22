@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-// A swipe left on a row of a list (brief 44, Patrik: "like Mail", left only, no setting): the row slides and shows its
+// A swipe left on a row of a list (brief 44, the owner: "like Mail", left only, no setting): the row slides and shows its
 // actions at its end (Aresium's payment lists: one, "All"; in a category's list two since brief 53, "Add up" or
 // "Separate" before "All"; Aresus's drops since brief 93: Delete); a tap on one does it, a full swipe past the threshold
 // does the last one at once, with a tap of the haptics as the threshold is crossed. The lists are a `LazyVStack` or a

@@ -1,6 +1,6 @@
 import Foundation
 
-// Quick sort (brief 99, Patrik 2026-11-01, after seeing that most of what stays Not sorted on day one is personal and no
+// Quick sort (brief 99 (owner, 2026-11-01), after seeing that most of what stays Not sorted on day one is personal and no
 // rule can know it: "a way to see the top not sorted factors and going through them"). What is Not sorted is gone
 // through name by name, the biggest first: one card per name and direction, and a tap on a category sorts all of that
 // name's payments at once and teaches Aresium the name (brief 81's switch with its learning, never a copy of it). Here:

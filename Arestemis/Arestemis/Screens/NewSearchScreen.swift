@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// New search (brief 135, Patrik 2026-11-02, from the sketch's section 1; brief 142, 2026-11-03: "lots of concentrated
+/// New search (brief 135 (owner, 2026-11-02), from the sketch's section 1; brief 142, 2026-11-03: "lots of concentrated
 /// reading because all text is in the same colour, small symbols and the screen is not really guiding"): pushed on the
 /// Hunts tab by New search, in the app's own pieces. The question, then one glass card per kind this build can open, in
 /// `/kinds`' order (`NewSearchCard.cards`), each read in one order: the kind's mark large in a calm tile, the server's

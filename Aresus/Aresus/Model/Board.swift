@@ -14,7 +14,7 @@ nonisolated struct BoardItem: Codable, Equatable, Identifiable, Sendable {
     var due: String?
     var source: String
     var session: String?
-    /// The session cannot go on until Patrik answers (since 2026-11-07; absent from an older server: false).
+    /// The session cannot go on until the owner answers (since 2026-11-07; absent from an older server: false).
     var blocking: Bool
     var key: String?
     var since: Date?
@@ -134,7 +134,7 @@ nonisolated enum BoardWords {
         return date <= calendar.startOfDay(for: now)
     }
 
-    /// The server takes 1–1000 characters of Patrik's own words.
+    /// The server takes 1–1000 characters of the owner's own words.
     static let ownAnswerLimit = 1000
     /// From here the field shows how many characters are left.
     static let ownAnswerWarning = 900

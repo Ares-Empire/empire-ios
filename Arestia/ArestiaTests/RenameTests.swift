@@ -2,8 +2,8 @@ import Foundation
 import Testing
 @testable import Arestia
 
-// Renaming a device (flatd contract v1.3; Patrik, 2026-11-20: "can we make the names of things changable so I can name
-// rename things?"), and the lights' own section (Patrik, 2026-11-20: "put the lamp under 'Lighting' in Arestia").
+// Renaming a device (flatd contract v1.3 (owner, 2026-11-20): "can we make the names of things changable so I can name
+// rename things?"), and the lights' own section (owner, 2026-11-20) ("put the lamp under 'Lighting' in Arestia").
 
 /// A device as flatd v1.3 sends it: its shown name and the config's.
 private func named(_ object: [String: Any], _ label: String, default original: String) -> [String: Any] {

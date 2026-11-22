@@ -113,7 +113,7 @@ struct FormField: View {
 }
 
 /// Every switch in an app's Settings (brief 47): Apple's own switch with an on colour that stands apart from its white
-/// knob and from the grey off track, in light, dark and Aresium's red mode (which holds dark). Patrik's phone, build 4:
+/// knob and from the grey off track, in light, dark and Aresium's red mode (which holds dark). The owner's phone, build 4:
 /// the ink tint drew "on" as a pale track under the white knob in dark mode, so on and off could not be told apart. The
 /// colour is the app's accent where it has one, else the Empire's green for on and running (`StatusTone.activeColor`,
 /// the hub's CONQUERED, and the colour iOS gives a switch that is on), a shared pair, not a new colour. `SettingsScreen`

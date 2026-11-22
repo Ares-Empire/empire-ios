@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import Aresium
 
-/// The numbers in the category picker (brief 27, Patrik 2026-10-27): a ticked category and one's own show the payments
+/// The numbers in the category picker (brief 27 (owner, 2026-10-27)): a ticked category and one's own show the payments
 /// in them; a default category not ticked shows how many of the waiting payments ticking it would sort there (a dry run,
 /// nothing stored); no number at 0 or before any payment; counted again after every tick. Made-up payments only.
 @MainActor

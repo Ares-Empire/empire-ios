@@ -61,7 +61,7 @@ struct Province: Codable, Equatable, Identifiable, Sendable {
     let live: String?              // one live line from the province, e.g. "€1,339 spent in October"
     let app: String?               // iPhone app URL scheme, e.g. "aresium://"
     /// What this account has of the app (contract addition 2026-10-25). In `projects` always granted; in `addable`
-    /// requested (asked, waiting for Patrik) or not requested.
+    /// requested (asked, waiting for the owner) or not requested.
     var access: Access = .granted
     /// Where to install the app's iPhone app (a TestFlight public link while testing, the App Store later); only for
     /// apps the account has, nil when the hub sends none.
@@ -143,7 +143,7 @@ struct Idea: Codable, Equatable, Hashable, Sendable {
     let note: String
 }
 
-/// One account waiting for Patrik (`GET /api/empire/approvals`, admin only): a new sign-up (`approved == false`), or an
+/// One account waiting for the owner (`GET /api/empire/approvals`, admin only): a new sign-up (`approved == false`), or an
 /// approved account asking for more apps. `requested` names the apps it asked for (service ids); approving grants them,
 /// declining deletes a new sign-up or only clears an approved account's request (ares-empire docs/ACCOUNTS.md).
 struct PendingAccount: Codable, Equatable, Identifiable, Sendable {

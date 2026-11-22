@@ -249,7 +249,7 @@ struct ItemSearchScreen: View {
 
     // MARK: wishes
 
-    /// The two places for wishes (brief 187; Patrik: the app asks whether a wish must be or would be nice), in one card
+    /// The two places for wishes (brief 187; the owner: the app asks whether a wish must be or would be nice), in one card
     /// as the search words and the words to leave out: Must have (`extra`), then Nice to have (`nice`), each with the
     /// line that says what it does and what is wrong with it under that.
     private var wishes: some View {

@@ -3,7 +3,7 @@ import UIKit
 
 /// The look the province apps share (Arestemis, Aresus, and the ones after them): the Aresium/Arestoteles wall, glass
 /// cards and type (aresium/web/public/index.html `html[data-theme="dark"]` and `html[data-theme="light"]`), with one
-/// accent colour per app instead of their red. Patrik, 2026-10-24: each app may have its own accent so the apps can be
+/// accent colour per app instead of their red. Each app may have its own accent (owner, 2026-10-24) so the apps can be
 /// told apart, but only as an accent ("I don't want to see completely green apps"); red is the special mode.
 /// Every colour here is a light/dark pair, so a screen built from them follows the app's appearance by itself
 /// (Settings → Appearance, `Appearance`). Aresium and the Empire app keep their own styles (Palette, EmpireStyle).
@@ -192,7 +192,7 @@ struct ProvinceWall: View {
 /// Nothing of the card is drawn offscreen while something on it moves (brief 87). Under `.shadow`, SwiftUI gives every
 /// layer below it a shadow of its own without a path, and Core Animation draws that shadow from the layer's pixels in an
 /// offscreen pass, again in every frame in which anything over it changes. With the hunt's dot pulsing (`StatusDot`),
-/// one of those passes came out on Patrik's iPhone (iOS 27.0.1) as a black rectangle the size of the pulse's shadow.
+/// one of those passes came out on the owner's iPhone (iOS 27.0.1) as a black rectangle the size of the pulse's shadow.
 /// So the card is drawn in the old order, from the bottom up, without such shadows:
 /// 1. the blur, its shadow part of its style (no pass), as dark as the blur's and the fill's together outside the card
 ///    (`CardShadow.outside`); the blur is never inside a shadow, mask or group (brief 67);
@@ -379,7 +379,7 @@ struct WordmarkBand: View {
     }
 }
 
-/// The main screen's scroll view, ending with the app's wordmark: the rule for every app (Patrik, 2026-10-24). Use it
+/// The main screen's scroll view, ending with the app's wordmark: the rule for every app (owner, 2026-10-24). Use it
 /// in place of the screen's `ScrollView`. The band scrolls with the content and is never fixed on screen. Below
 /// content shorter than the screen the gap grows to the scroll view's bottom edge, so the band starts just below it
 /// and shows only when you scroll down; longer content is followed by the band (`WordmarkEnd` spacing).

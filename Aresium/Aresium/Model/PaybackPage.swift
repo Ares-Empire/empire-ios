@@ -4,8 +4,8 @@ import os
 
 // Money paid back on screen (brief 203; the engine is brief 201, the data and the API brief 202, `Paybacks.swift`): a
 // payment that came in pays back a payment that went out, all of it or a part, because the person linked them by hand
-// from either payment's page. Those euros come off the expense and are not income. Wholly optional (Patrik,
-// 2026-11-02): one quiet action on a payment's page and one tour step; no prompts, badges or offers anywhere else.
+// from either payment's page. Those euros come off the expense and are not income. Wholly optional (owner, 2026-11-02).
+// The app offers one quiet action on a payment's page and one tour step; no prompts, badges or offers anywhere else.
 // This file decides what the screens say and does what their buttons ask; the look is `Screens/PaybackScreens.swift`.
 
 /// The words of paying back, in the app's language (pure, so tests pin them in both).

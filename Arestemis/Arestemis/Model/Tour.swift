@@ -2,7 +2,7 @@ import Foundation
 import Observation
 import os
 
-// The tour (brief 139, Patrik 2026-11-02: "it's not actually clear what Seite beobachten is for … We should add a tour
+// The tour (brief 139 (owner, 2026-11-02): "it's not actually clear what Seite beobachten is for … We should add a tour
 // to Arestemis (like Aresium has) that explains it"; eight steps, the sketch's section 6). It runs the app's real tabs
 // on a world of its own: its own searches and listings in the app's language (`TourData`) as a server in memory
 // (`SampleBackend`), its own store, a session that is never logged in and its own navigation, so the account's searches,

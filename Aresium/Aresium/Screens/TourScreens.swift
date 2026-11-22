@@ -2,7 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 // The tour's look (the logic is `Model/TourModel.swift`). The real dashboard runs on the tour's made-up store; each
-// step lays a light veil in the wall's colour over the screen (the app stays easy to read under it, Patrik 2026-10-27),
+// step lays a light veil in the wall's colour over the screen (the app stays easy to read under it (owner, 2026-10-27)),
 // leaves the control it points at clear at full strength with an ink ring (anchor preferences, so the ring follows the
 // control), and shows one card in Aresium's glass at the bottom: the step, one sentence, Next, End tour. Ink only.
 // Reduce Motion: nothing moves, the ring and the card change in place.

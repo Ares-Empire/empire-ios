@@ -56,7 +56,7 @@ class PushAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenter
 
 /// How every app's notification delegate answers a tap: UIKit's completion handler must be called on the main thread,
 /// or UIKit aborts the app. The `async` form of `userNotificationCenter(_:didReceive:)` finished on a background thread
-/// and so crashed every tap (Arestemis builds up to 20, Patrik's crash reports of 2026-11-05); its compiler-made bridge
+/// and so crashed every tap (Arestemis builds up to 20, the owner's crash reports of 2026-11-05); its compiler-made bridge
 /// calls the handler wherever the method ends. So the completion-handler form, with both steps on the main actor.
 nonisolated enum NotificationTap {
     static func answer(_ completionHandler: @escaping () -> Void, open: @escaping @MainActor () -> Void) {

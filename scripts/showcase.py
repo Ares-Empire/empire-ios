@@ -11,7 +11,7 @@ case the file stays a plain optimised PNG. Last it writes `showcase/README.md` f
 contact sheet of every image in `showcase/` to `build/showcase/contact-sheet.png` (git-ignored) to look at.
 
 Needs: Xcode 27 with the iOS 27.0 simulator runtime, Python 3 with Pillow, pngquant (/opt/homebrew/bin/pngquant).
-The iPhone is drawn here (no Apple or third-party device artwork). Patrik's own simulators are never touched.
+The iPhone is drawn here (no Apple or third-party device artwork). The owner's own simulators are never touched.
 
 Options: --skip-build (use the apps already built in build/showcase), --keep-simulator (reuse `claude-showcase` and
 leave it running, for trying shots).

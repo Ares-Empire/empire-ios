@@ -86,7 +86,7 @@ struct ModeStatusScreen: View {
 
 // MARK: - the first screen
 
-/// Phone mode without data (brief 25, Patrik 2026-10-27): a calm empty state a little above the middle, as the store's
+/// Phone mode without data (brief 25 (owner, 2026-10-27)): a calm empty state a little above the middle, as the store's
 /// own states look (`ModeStatusScreen`: a mark in a thin circle, a title, a line): "No data yet", what Aresium does and
 /// that it all stays on this iPhone, then Import data (the main button: Import's menu, `ImportMenu`, whose Choose file
 /// opens the file picker; the category picker follows an import that added payments while none is chosen,

@@ -2,7 +2,7 @@ import Foundation
 
 /// Which mode Aresium is in: phone mode (the default, no account needed: the data stays on this iPhone and the shared
 /// engine computes there), or server mode for an account the Aresium server keeps the data of (`GET /api/mode`,
-/// aresium/docs/API-DATA.md → Mode: Patrik's owner list).
+/// aresium/docs/API-DATA.md → Mode: the owner list).
 nonisolated enum AresiumMode: String, Codable, Sendable {
     case server, phone
 }

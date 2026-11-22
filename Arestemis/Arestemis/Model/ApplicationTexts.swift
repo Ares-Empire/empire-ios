@@ -1,6 +1,6 @@
 import Foundation
 
-/// Settings → Application (brief 61, Patrik 2026-10-31): a switch between automatic texts and the own text, a row that
+/// Settings → Application (brief 61 (owner, 2026-10-31)): a switch between automatic texts and the own text, a row that
 /// follows it (the own text, or the notes every automatic text includes) and About you, each opening a page with one
 /// text field. The words and which text each page edits live here; `SettingsSheet` draws them.
 enum ApplicationPage: String, CaseIterable, Identifiable, Hashable, Sendable {

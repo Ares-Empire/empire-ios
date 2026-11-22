@@ -2,7 +2,7 @@ import SwiftUI
 
 /// A price monitor's page under its card (brief 137): the chart large over 30 · 90 · 365 days while the history is on
 /// (`PriceChartView`: steps, the stretches out of stock dashed, the alarm's limit; the lowest and highest price named
-/// under it), what it should do (the form's switches, changeable right here and saved as they change, Patrik: "changeable
+/// under it), what it should do (the form's switches, changeable right here and saved as they change, the owner: "changeable
 /// anytime in the app"; `MonitorSwitches` refuses turning off the last one with its line), and the alarms it found while
 /// it has an alarm or found some. "Open in shop" stands beside Edit above (`HuntPage`). An everywhere monitor's page
 /// (brief 157, the plan's sketch): the chart of the cheapest price, then its shops' offers cheapest first (`OffersCard`:

@@ -1,7 +1,7 @@
 import Foundation
 
 /// The day of the month in a day tile (`DayTile`): a payment's row, the Cash page's movements, the receipt check's and
-/// the file check's payments. Written as the app's language writes a day alone (brief 55, Patrik: next to a summed row's
+/// the file check's payments. Written as the app's language writes a day alone (brief 55, the owner: next to a summed row's
 /// "3×" a bare "4" did not read as a date): German with its dot, "4.", English without, "4" (English puts no dot after
 /// a day; the summed tile stays apart by its stack and its ×). Foundation writes a lone day as "4" in German too
 /// (`Date.FormatStyle().day()`, checked 2026-10-31), so the dot is added here. Every tile asks this one function.

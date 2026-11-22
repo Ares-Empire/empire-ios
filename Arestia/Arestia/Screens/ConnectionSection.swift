@@ -92,7 +92,7 @@ struct ConnectionSection: View {
     }
 }
 
-/// Settings → 3D flat: always daylight, or the sun where it really is now (time of day and season; Patrik, 2026-11-19:
+/// Settings → 3D flat: always daylight, or the sun where it really is now (time of day and season (owner, 2026-11-19):
 /// "Real time of day but also accurately depending on season and stuff. But with a setting toggle to always day").
 struct FlatViewSection: View {
     @AppStorage(PageScript.alwaysDaylightKey) private var alwaysDaylight = false

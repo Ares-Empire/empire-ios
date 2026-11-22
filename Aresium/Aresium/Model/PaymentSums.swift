@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-// Adding up the payments of one name inside a category's list (brief 53, Patrik's D after build 4, 2026-10-30): ten
+// Adding up the payments of one name inside a category's list (brief 53, the owner's D after build 4, 2026-10-30): ten
 // Vinted purchases in Clothes in October show as one row with their sum and a mark that they are several; a tap opens
 // them in place, and the swipe or the long press makes them single rows again. Only how a list shows: totals, the
 // category's numbers, the export and the engine never change.
@@ -10,7 +10,7 @@ import Observation
 /// top of its payments), a name (the switch on the name's page), a name in a category (the swipe and the long press).
 /// Every level but everywhere is on, off or not set; a choice equal to what the levels above give is not set, so making
 /// a name "normal again" (Separate after Add up, a switch back) leaves nothing behind that would outvote a later choice
-/// (fix 58, Patrik 2026-10-31: the icon did nothing after Vinted was added up and separated by hand). Categories are keyed
+/// (fix 58 (owner, 2026-10-31): the icon did nothing after Vinted was added up and separated by hand). Categories are keyed
 /// by `DashboardStore.sumCategoryKey` (their stable id), names by the rows' opaque `nameKey`, never parsed.
 nonisolated struct SumChoices: Codable, Equatable, Sendable {
     var everywhere = false
@@ -301,7 +301,7 @@ extension DashboardStore {
 enum SumWording {
     /// The swipe's and the long press's action on a single payment ("Summieren").
     static func addUp(language: AppLanguage = .current) -> String { language.string("Add up") }
-    /// On a summed row: back to single payments ("Auflösen", Patrik's word).
+    /// On a summed row: back to single payments ("Auflösen", the owner's word).
     static func separate(language: AppLanguage = .current) -> String { language.string("Separate") }
 
     /// The summed row's mark: "10×".

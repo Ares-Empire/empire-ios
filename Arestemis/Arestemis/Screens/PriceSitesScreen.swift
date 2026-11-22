@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// "Where it looks" ("Wo gesucht wird", brief 157, the plan's section 4: Patrik's idea, "a screen that shows all sites it
+/// "Where it looks" ("Wo gesucht wird", brief 157, the plan's section 4: the owner's idea, "a screen that shows all sites it
 /// would check, also makes user suggestions easier"): every site an everywhere monitor checks for its product, the ones
 /// that have it first (`PriceSites.ordered`), each with its name, a quiet word for its state and a switch; turning off
 /// the last one is refused with a line. "Suggest a shop" at the end opens Settings' Contact & support form as an idea or

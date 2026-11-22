@@ -4,7 +4,7 @@ import SwiftUI
 struct BoardScreen: View {
     let board: BoardStore
     let openSettings: () -> Void
-    /// What Patrik typed per ask. Kept until the ask leaves the server's list, so Undo brings it back with the card.
+    /// What the owner typed per ask. Kept until the ask leaves the server's list, so Undo brings it back with the card.
     @State private var drafts: [Int: String] = [:]
     @FocusState private var focused: Int?
     @Environment(\.openURL) private var openURL
@@ -138,7 +138,7 @@ struct BoardScreen: View {
         .accessibilityLabel(Text("Claude is waiting"))
     }
 
-    /// Patrik's own words, on every ask (Patrik, 2026-11-07: "a way for me to enter free text"): a field that grows to
+    /// The owner's own words, on every ask (owner, 2026-11-07) ("a way for me to enter free text"): a field that grows to
     /// five lines; the send arrow shows once there is something to send. It goes the way a tapped answer goes (the undo
     /// bar first), and the session gets the words exactly as typed, trimmed.
     private func ownWords(_ item: BoardItem) -> some View {

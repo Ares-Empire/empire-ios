@@ -97,7 +97,7 @@ struct SupportMessage: Encodable, Equatable, Sendable {
 /// One message for "Contact & support" without a login: the second path, only for an app that works without an account
 /// (Aresium; every other app always has a login and sends a `SupportMessage`). As the account server's open `contact`
 /// collection takes it (`POST /api/collections/contact/records`, which the website's contact form uses too;
-/// ares-empire accounts/pb_migrations/1793200000_contact.js, mailed to Patrik by pb_hooks/contact.pb.js): an email to
+/// ares-empire accounts/pb_migrations/1793200000_contact.js, mailed to the owner by pb_hooks/contact.pb.js): an email to
 /// answer to, an optional name, the message with a short footer naming the app, the phone and the topic (the collection
 /// has no fields for them), the language, and the honeypot `website`, always empty (any text in it is refused).
 struct ContactMessage: Encodable, Equatable, Sendable {
@@ -115,7 +115,7 @@ struct ContactMessage: Encodable, Equatable, Sendable {
 
     /// - Parameters:
     ///   - text: what the person wrote; the footer is added below it.
-    ///   - email: where Patrik answers; it must look like an email address.
+    ///   - email: where the owner answers; it must look like an email address.
     ///   - name: optional; cut to the server's limit.
     init(kind: SupportKind, text: String, email: String, name: String, app: EmpireAppIdentity, device: SupportDevice,
          language: AppLanguage = .current) throws(Invalid) {
@@ -133,7 +133,7 @@ struct ContactMessage: Encodable, Equatable, Sendable {
     }
 
     /// "— Aresium 1.0 (12) · iOS 27.0 · iPhone · Problem": the app, its version, the phone and the topic, in English (for
-    /// Patrik, like the `feedback` emails' words).
+    /// the owner, like the `feedback` emails' words).
     static func footer(kind: SupportKind, app: EmpireAppIdentity, device: SupportDevice) -> String {
         "— \(app.name) \(device.appVersion) · \(device.system) · \(kind.englishName)"
     }

@@ -11,7 +11,7 @@ struct EmpireAccountClient {
 
     // MARK: without a login (the login screen)
 
-    /// `POST …/users/records`: a new account asking for this app; Patrik approves it after the email is confirmed.
+    /// `POST …/users/records`: a new account asking for this app; the owner approves it after the email is confirmed.
     func signUp(_ account: NewAccount) async throws(AccountFailure) {
         _ = try await send("POST", Self.users.appendingPathComponent("records"), body: account)
     }

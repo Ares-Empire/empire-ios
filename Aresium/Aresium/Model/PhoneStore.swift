@@ -1617,7 +1617,7 @@ typealias StoredPaymentName = LedgerSchemaV8.PaymentName
 typealias StoredFixedCostExclusion = LedgerSchemaV8.FixedCostExclusion
 
 /// Where the phone's one store lives (`Application Support/Aresium/local/`), opening and deleting it, and moving an
-/// older per-account store over. Aresium's data belongs to the iPhone, not to an account (Patrik, 2026-10-27): until
+/// older per-account store over. Aresium's data belongs to the iPhone, not to an account (owner, 2026-10-27): until
 /// then each Ares account had its own store in `Application Support/Aresium/<account id>/`.
 nonisolated struct PhoneStorage: Sendable {
     let root: URL

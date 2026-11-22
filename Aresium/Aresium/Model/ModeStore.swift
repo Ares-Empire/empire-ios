@@ -17,11 +17,11 @@ extension APIClient {
 
 private nonisolated struct ModeAnswer: Decodable { let mode: AresiumMode }
 
-/// Which mode the app is in, and the backend that goes with it (Patrik, 2026-10-27: Aresium needs no account).
+/// Which mode the app is in, and the backend that goes with it (owner, 2026-10-27) (Aresium needs no account).
 ///
 /// - **Phone mode** is Aresium: the phone's one store (`PhoneStorage`), opened at launch without asking anyone. No login
 ///   is needed, and none changes it: logging in or out, here or in another Ares app, never closes or deletes it.
-/// - **Server mode** is for the server's `APP_SERVER_MODE_USERS` only (empty since 2026-10-31, so nobody, Patrik
+/// - **Server mode** is for the server's `APP_SERVER_MODE_USERS` only (empty since 2026-10-31, so nobody, the owner
 ///   neither), through the shared Ares login: while a login whose account has the
 ///   Aresium service exists, the app asks `GET /api/mode` once per session and remembers the answer per account id in
 ///   the app's defaults. `server` → today's server dashboard; anything else (`phone`, 401, 403, an error, offline without

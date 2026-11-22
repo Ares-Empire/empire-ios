@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The Listings tab ("Angebote", brief 133, Patrik's choice of 2026-11-02): the header with the search over listings
+/// The Listings tab ("Angebote", brief 133, the owner's choice of 2026-11-02): the header with the search over listings
 /// (the magnifying glass), then two parts, New | Searches, the user's choice remembered across launches.
 /// - **New:** every search's unread new listings, grouped under each search's name with its count (no headings while
 ///   there is one search), the search with the newest finding first, newest first within it; a listing opened leaves

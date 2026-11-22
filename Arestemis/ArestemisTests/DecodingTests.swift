@@ -33,7 +33,7 @@ struct DecodingTests {
 
     @Test func overviewSample() throws {
         let overview = try sample(Overview.self, "overview")
-        #expect(overview.version == 2 && overview.me.name == "Patrik")
+        #expect(overview.version == 2 && overview.me.name == "Alex")
         let hunt = try #require(overview.hunt)
         #expect(hunt.id == 1 && hunt.kind == .flat && hunt.active)
         #expect(hunt.search.flat!.kinds == [.flat, .wg] && hunt.search.flat!.people == 1)

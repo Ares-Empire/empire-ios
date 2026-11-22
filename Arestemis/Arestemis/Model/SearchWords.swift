@@ -1,6 +1,6 @@
 import Foundation
 
-/// A thing search's words (brief 149, the Arestemis repo's brief 148; Patrik 2026-11-03: ties from several makers in one
+/// A thing search's words (brief 149, the Arestemis repo's brief 148 (owner, 2026-11-03): ties from several makers in one
 /// search): up to five, each 2–100 characters, none repeating another. The first is sent as `query`, the rest as
 /// `more_queries`; every word is searched on every chosen site, and the description (`extra`) says what fits per word.
 /// The rules are the server's (Arestemis/docs/API.md → `ItemSearch.more_queries`), so the form refuses what the server

@@ -2,7 +2,7 @@ import AppIntents
 import SwiftUI
 import WidgetKit
 
-/// Arestia's Control Center controls (iOS 18 `ControlWidget`; Patrik, 2026-11-19: "shortcuts good idea, especially
+/// Arestia's Control Center controls (iOS 18 `ControlWidget` (owner, 2026-11-19): "shortcuts good idea, especially
 /// control center (widgets not needed yet)"): Cooking and Fans as toggles, and one Blind control per blind chosen when
 /// it is added. Each reads its state from flatd when Control Center shows it and acts through the intents
 /// (`ControlIntents.swift`), with the key from Arestia's Keychain group; the app need not run. They act on the flat

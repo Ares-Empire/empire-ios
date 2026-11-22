@@ -7,7 +7,7 @@ import SwiftUI
 // are ticked, with All (or None) and Done; a bar at the bottom offers Category, Name and money paid back (brief 206). Ink
 // only, from the palette, in light, dark and red mode.
 //
-// The motion (brief 200, Patrik on build 14: "quite bouncy … should be less bouncy"; measured on a recording of build
+// The motion (brief 200, the owner on build 14: "quite bouncy … should be less bouncy"; measured on a recording of build
 // 14: every tick slid the new circle in from up to 29 pt left of its place, and the header's count rolled letter by
 // letter for 0.56 s): only the rows and their circles slide, once, in a short ease-out (`SelectionMotion`); the header
 // and the bar fade in place; a tick changes the circle and the row's background with a very short fade and nothing

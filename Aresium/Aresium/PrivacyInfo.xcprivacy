@@ -45,7 +45,7 @@
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array>
 		<!-- Email address: the Empire login (Shared/Auth), kept by the account server; or the address typed into Contact &
-		     support without a login (Shared/Support, `ContactMessage`), so Patrik can answer. -->
+		     support without a login (Shared/Support, `ContactMessage`), so the owner can answer. -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeEmailAddress</string>

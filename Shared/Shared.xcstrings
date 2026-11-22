@@ -47,12 +47,12 @@
         }
       }
     },
-    "A link is on its way to %@. Open it to confirm your address. Then Patrik approves your account, and an email tells you once it's ready." : {
+    "A link is on its way to %@. Open it to confirm your address. Then your account is approved. You'll get an email when it's ready." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ein Link ist unterwegs an %@. Öffne ihn, um deine Adresse zu bestätigen. Dann gibt Patrik dein Konto frei, und eine E-Mail sagt dir, sobald es bereit ist."
+            "value" : "Ein Link ist unterwegs an %@. Öffne ihn, um deine Adresse zu bestätigen. Danach wird dein Konto freigegeben. Du erhältst eine E-Mail, sobald es so weit ist."
           }
         }
       }
@@ -740,12 +740,12 @@
         }
       }
     },
-    "One Ares account for all Ares apps. Once you have confirmed your email, Patrik approves it." : {
+    "One Ares account for all Ares apps. Once you confirm your email, your account can be approved." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ein Ares-Konto für alle Ares-Apps. Sobald du deine Adresse bestätigt hast, gibt Patrik es frei."
+            "value" : "Ein Ares-Konto für alle Ares-Apps. Sobald du deine E-Mail-Adresse bestätigst, kann dein Konto freigegeben werden."
           }
         }
       }
@@ -776,16 +776,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Passwort geändert"
-          }
-        }
-      }
-    },
-    "Patrik sees it when he approves the account." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Patrik sieht ihn, wenn er das Konto freigibt."
           }
         }
       }
@@ -1391,6 +1381,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "App-Version, iOS-Version und Sprache werden mitgeschickt. Die Antwort kommt per E-Mail an die Adresse deines Kontos."
+          }
+        }
+      }
+    },
+    "Your name is shown when your account is reviewed." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Name ist bei der Prüfung deines Kontos sichtbar."
           }
         }
       }

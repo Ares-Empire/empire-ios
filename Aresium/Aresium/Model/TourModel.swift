@@ -4,7 +4,7 @@ import os
 
 // The tour (briefs 24, 25, 42, 59, 77, 82, 99, 203 and 229): the real dashboard on a made-up store of its own, twenty-three
 // steps (twenty-two while the graph is hidden in Settings), each pointing at one real control with one short sentence; it goes on
-// when the person does the thing or taps Next. One walk through what Aresium does (brief 59, Patrik 2026-10-31:
+// when the person does the thing or taps Next. One walk through what Aresium does (brief 59 (owner, 2026-10-31):
 // "explains everything and is coherent"): the start screen, its average and fixed costs, its graph and its search,
 // a category, a payment and what can be done with it (money paid back too, brief 203), selecting several payments, a list's swipe and adding up, then Settings' places in their real order,
 // the import button, going through what an import left Not sorted (brief 99), done. Everything the tour shows and

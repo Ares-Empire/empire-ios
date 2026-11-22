@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// "Does this look right?" for a bank file Aresium does not know (brief 23; Patrik, 2026-10-27: most people don't know
+/// "Does this look right?" for a bank file Aresium does not know (brief 23 (owner, 2026-10-27): most people don't know
 /// what a CSV is, so they are never asked about columns first). The window shows the first payments as the app would
 /// show them, read the engine's best way (`FileReading`). Yes saves that reading's layout and imports the file; No shows
 /// the next reading, with a short line on what changed; after the last one, No opens the column check

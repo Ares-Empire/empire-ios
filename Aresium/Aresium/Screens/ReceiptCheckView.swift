@@ -3,7 +3,7 @@ import SwiftUI
 // A receipt's check window and its question (brief 31), in the file check window's look and wording style
 // (FileCheckSheet: `Ink`, the Settings cards, the dashboard's payment rows, "Does this look right?" at the bottom with
 // the main button). Apple's own controls for the values: text fields, the date picker, the segmented Card / Cash, menus
-// for the currency and the category. Every value looks like something to tap (brief 33, Patrik 2026-10-28: the window
+// for the currency and the category. Every value looks like something to tap (brief 33 (owner, 2026-10-28): the window
 // asked "Does this look right?" but seemed to offer nothing to do when it was not): the text fields sit in the fields'
 // box (`Ink.field`, a thin line), the menus are the column check's `MenuChip`, the date picker and the segmented control
 // are Apple's own. The logic is `ReceiptCheckModel` and `PhoneBackend`'s receipt work.

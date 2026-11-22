@@ -1,7 +1,7 @@
 import Foundation
 import os
 
-/// Reading a graph by sliding over it (brief 56, Patrik 2026-10-31: "slowly sliding over the graph it shows each month's
+/// Reading a graph by sliding over it (brief 56 (owner, 2026-10-31): "slowly sliding over the graph it shows each month's
 /// number", as the website's tooltip): the point nearest the finger and what the chip above the plot says. Pure, so tests
 /// pin it; `SeriesChart` draws it.
 enum ChartReading {

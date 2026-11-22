@@ -223,7 +223,7 @@ struct Hairline: View {
 }
 
 /// The hunt's status dot: accent with a soft pulse while hunting (still with Reduce Motion), grey when paused. The ring
-/// stays close and faint (Patrik, 2026-11-02: at 2.6 times the dot it "gets quite big"; it should stay calm).
+/// stays close and faint (owner, 2026-11-02) (at 2.6 times the dot it "gets quite big"; it should stay calm).
 struct StatusDot: View {
     let active: Bool
     var size: CGFloat = 8

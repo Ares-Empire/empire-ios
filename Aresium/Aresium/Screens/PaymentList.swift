@@ -128,7 +128,7 @@ struct PaymentRow<Label: View>: View {
             case .rename:
                 Button("Rename", systemImage: "pencil") { menu.rename(transaction, open: open) }
             case .allFromName:
-                // Short whatever the name (brief 47, Patrik: "Alle von MGP Vinted - Kleiderkreisel …" could not be read):
+                // Short whatever the name (brief 47, the owner: "Alle von MGP Vinted - Kleiderkreisel …" could not be read):
                 // the lifted row above the menu already shows the name.
                 Button("All with this name", systemImage: "rectangle.stack") {
                     if let route = nameRoute { allFrom?(route) }

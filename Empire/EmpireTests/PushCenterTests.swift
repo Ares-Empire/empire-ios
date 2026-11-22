@@ -501,7 +501,7 @@ struct PushCenterTests {
     }
 
     /// iOS calls the delegate through its Objective-C method and hands it UIKit's completion handler, which aborts the
-    /// app when called off the main thread (Patrik's crash reports of 2026-11-05: every tap on a notification crashed
+    /// app when called off the main thread (the owner's crash reports of 2026-11-05: every tap on a notification crashed
     /// Arestemis builds up to 20, as the `async` form of this method finished on a background thread).
     @Test func aTapFinishesOnTheMainThreadAfterTheURLIsOpened() async throws {
         let delegate = PushAppDelegate()

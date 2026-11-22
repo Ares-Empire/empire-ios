@@ -1,6 +1,6 @@
 import Foundation
 
-/// The search fields of the Positions, Topics and Library tabs (Patrik, 2026-10-24: search "within the individual tabs
+/// The search fields of the Positions, Topics and Library tabs (owner, 2026-10-24) (search "within the individual tabs
 /// for quicker and better access"). Each filters its own tab as it is typed, with the matching of `VaultSearch`
 /// (`VaultSearch.Query`: case and accents ignored, every word must appear). Built once per vault, like `VaultSearch`;
 /// pure, so the tests pin it.

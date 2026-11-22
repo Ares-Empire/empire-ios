@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 import os
 
-// Selecting by sliding a finger over the rows (brief 200, Patrik 2026-11-02, Mail's slide in its Edit mode): while a
+// Selecting by sliding a finger over the rows (brief 200 (owner, 2026-11-02), Mail's slide in its Edit mode): while a
 // category's month list selects, a drag that starts on a row's circle column ticks the row it started on and every row
 // the finger passes on its way; going back unticks the rows it leaves again (back to how they were before). A drag that
 // starts sideways elsewhere on a row and then turns up or down does the same (Photos'); a vertical drag there scrolls,

@@ -387,7 +387,7 @@ extension ItemSearchDraft {
     }
 }
 
-/// The thing form's two wishes (brief 187; Patrik, asked whether a wish like "Rot" must be or would be nice: the app
+/// The thing form's two wishes (brief 187; the owner, asked whether a wish like "Rot" must be or would be nice: the app
 /// should ask the person). Must have is sent as `extra`: a listing that clearly breaks one is filtered out; Nice to have
 /// as `nice`: it never filters one out (the server decides what each does, server brief 185). Their words are here, so
 /// the form only lays them out, Must have first.

@@ -1,9 +1,9 @@
 import Foundation
 
-// The first screen (brief 25, Patrik 2026-10-27): while phone mode has no data, Aresium shows a clear empty state ("No
+// The first screen (brief 25 (owner, 2026-10-27)): while phone mode has no data, Aresium shows a clear empty state ("No
 // data yet", Import data, Start tour) instead of the dashboard, and it comes back after the tour as long as there is no
 // data, so the tour's made-up data is never seen outside the tour. `MainScreen` decides what shows. Import data opens
-// the file picker at once (brief 27, Patrik 2026-10-27: the file first); the category picker follows an import that
+// the file picker at once (brief 27 (owner, 2026-10-27): the file first); the category picker follows an import that
 // added payments while none is chosen (`ImportStore.asksForCategories`). The look is `PhoneFirstScreen`
 // (Screens/PhoneScreens.swift).
 

@@ -40,7 +40,7 @@ struct PrivacyCoverView: View {
 
 /// A system prompt the app asked for itself is up: iOS's notification permission, Face ID. iOS makes the app inactive
 /// while one shows, or as it goes, which is no reason to cover it: the person is answering the app's own question, over
-/// the app (brief 47, Patrik's phone: "Aresium" flashed for a moment when turning on Messages or the lock's Face ID).
+/// the app (brief 47, the owner's phone: "Aresium" flashed for a moment when turning on Messages or the lock's Face ID).
 /// Every place that asks iOS calls `begin()` before and `end()` after (a count: two can overlap). Measured on the iOS
 /// 27.0 simulator (brief 47): Face ID keeps the app inactive while it checks; the notification permission does not, but
 /// iOS makes the app inactive once more for a moment about 0.42 s after the answer has reached it, so a prompt counts as

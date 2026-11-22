@@ -1,6 +1,6 @@
 import Foundation
 
-/// The Arestoteles API, version 1 (Arestoteles/docs/API.md): Patrik's Weltbild vault as the server indexed it. The server
+/// The Arestoteles API, version 1 (Arestoteles/docs/API.md): the owner's Weltbild vault as the server indexed it. The server
 /// applies every rule of the vault; the app displays and sends edits. Field names on the wire are the contract's
 /// (snake_case, in the CodingKeys). Texts marked `Text` in the contract are inline Markdown (`InlineMarkdown`).
 ///
@@ -174,7 +174,7 @@ nonisolated struct InboxInfo: Codable, Equatable, Sendable {
     }
 }
 
-/// A quick note is a thought for the Inbox, or a mark that Patrik wants to discuss something later.
+/// A quick note is a thought for the Inbox, or a mark that the owner wants to discuss something later.
 nonisolated enum QuickNoteKind: String, Codable, Equatable, Sendable {
     case note, discuss
 }
@@ -325,7 +325,7 @@ nonisolated struct Position: Codable, Equatable, Identifiable, Sendable {
     /// The short version: the bold part the vault marks ("Business wants labour as powerless as possible"); the whole
     /// text when all of it is bold, or from a server before titles.
     let title: String
-    let draft: Bool                     // worded by Claude, not yet confirmed by Patrik
+    let draft: Bool                     // worded by Claude, not yet confirmed by the owner
     let evidence: [String]              // note ids
     let history: [PositionChange]       // newest first
 

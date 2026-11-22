@@ -3,8 +3,8 @@ import Testing
 @testable import Empire
 
 /// The Empire app's notification (ares-empire docs/EMPIRE-APP.md → Notifications): a member is told "<App> is ready"
-/// when Patrik approved a request (`url` `empire://ring`, thread `access`). Tapping it shows the ring, asked for again.
-/// Patrik's sign-ups and requests come by email, not as a push (Patrik, 2026-10-26).
+/// when the owner approved a request (`url` `empire://ring`, thread `access`). Tapping it shows the ring, asked for again.
+/// The owner's sign-ups and requests come by email, not as a push (owner, 2026-10-26).
 @MainActor
 struct NotificationTests {
     @Test func theRingLinkIsFollowed() {

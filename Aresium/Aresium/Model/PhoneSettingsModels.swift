@@ -3,8 +3,8 @@ import Observation
 import os
 
 /// The category picker (after an import while no category is chosen, Settings → Categories, the tour's Settings): the
-/// default list by group with a toggle each, a field for one's own names; nothing is ticked at first (Patrik,
-/// 2026-10-26). Each row carries how many payments its category has, or would get if ticked (`counts`). Unticking a
+/// default list by group with a toggle each, a field for one's own names; nothing is ticked at first (owner, 2026-10-26).
+/// Each row carries how many payments its category has, or would get if ticked (`counts`). Unticking a
 /// category with payments asks where they go. Choices are saved per tap; sorting and counts wait until taps stop.
 /// The dashboard is refreshed when the picker closes, before returning to it.
 @MainActor @Observable

@@ -3,7 +3,7 @@ import Testing
 import UserNotifications
 @testable import Arestemis
 
-/// Brief 180 (Patrik's test of builds 18–19, 2026-11-05; the server's brief 179): an Überall monitor saves at once and
+/// Brief 180 (the owner's test of builds 18–19, 2026-11-05; the server's brief 179): an Überall monitor saves at once and
 /// the server finds its product (the card and page while it is finding it or found none, the chips on the page), the
 /// monitor's link and push, "Favorites" with a star on a listing's page, and a listing read as it is opened.
 @MainActor

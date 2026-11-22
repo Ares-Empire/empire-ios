@@ -1,7 +1,7 @@
 import Foundation
 import NaturalLanguage
 
-/// Quick lookups (Patrik, 2026-10-24: "usually I just want to quickly look up a fact, a figure or a source"): a note's
+/// Quick lookups (owner, 2026-10-24) ("usually I just want to quickly look up a fact, a figure or a source"): a note's
 /// passages and their sentences, the sentences that hold a figure or a date, the note's sources, and the first sentence
 /// of a position for its short card. Pure, so the tests pin it.
 nonisolated enum Lookup {
@@ -22,7 +22,7 @@ nonisolated enum Lookup {
         return sentences(plain).first ?? plain
     }
 
-    /// A card's line for a position (Patrik: "just one sentence per box, I know what's in there"): the first sentence,
+    /// A card's line for a position (the owner: "just one sentence per box, I know what's in there"): the first sentence,
     /// and when that is long, only its first clause, cut at ":", ";", " – " or ", and/but/even/so/while" and ended with
     /// "…" ("The West is only rich because it exploited the rest of the world for centuries…").
     static func cardLine(_ markdown: String, longerThan limit: Int = 66) -> String {

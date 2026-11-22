@@ -21,7 +21,7 @@ nonisolated struct PendingQuickNote: Codable, Equatable, Identifiable, Sendable 
     /// The referenced note as it was shown when written; nil in queues saved by older apps.
     var version: String?
     var needsConfirmation: Bool { about != nil && version == nil }
-    /// The server refused it (409/428/422): it stays, with the reason, until Patrik deletes it; it is not sent again.
+    /// The server refused it (409/428/422): it stays, with the reason, until the owner deletes it; it is not sent again.
     var problem: String?
 
     init(id: UUID = UUID(), text: String, created: Date = .now, about: String? = nil, kind: QuickNoteKind = .note,

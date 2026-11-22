@@ -129,7 +129,7 @@ enum PageScript {
         return (try? JSONSerialization.data(withJSONObject: message, options: [.sortedKeys])) ?? Data()
     }
 
-    /// Settings → 3D flat → Always daylight (Patrik, 2026-11-19: the real time of day and season, "but with a setting
+    /// Settings → 3D flat → Always daylight (owner, 2026-11-19) (the real time of day and season, "but with a setting
     /// toggle to always day"); off by default.
     static let alwaysDaylightKey = "arestia.alwaysDaylight"
 

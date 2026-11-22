@@ -14,7 +14,7 @@ struct IconButton: View {
     }
 }
 
-/// How the header's buttons are drawn (brief 56, Patrik 2026-10-31: "remove their block outline, just have them on the
+/// How the header's buttons are drawn (brief 56 (owner, 2026-10-31): "remove their block outline, just have them on the
 /// background"): the symbol alone on the wall, no card and no outline, every header alike (the back arrow, the gear, the
 /// import button, red mode's X, a category's icon of adding up). Drawn in a 42 pt square that takes taps over 44 pt
 /// (`minimumTapArea`); side by side 44 pt apart, as the bar buttons of iOS.

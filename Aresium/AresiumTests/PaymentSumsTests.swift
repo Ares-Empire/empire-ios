@@ -52,7 +52,7 @@ struct SumChoicesTests {
         #expect(choices.sums(name: "new", category: "groceries"), "other categories keep everywhere's")
     }
 
-    /// Patrik, 2026-10-31, Oct 2026 Kleidung: Vinted added up and separated by hand, then the icon did nothing.
+    /// Oct 2026 Kleidung (owner, 2026-10-31): Vinted added up and separated by hand, then the icon did nothing.
     @Test func theIconWorksAfterAddUpAndSeparateByHand() {
         var choices = SumChoices()
         choices.setName("vinted", in: "clothes", sums: true)

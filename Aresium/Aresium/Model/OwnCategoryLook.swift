@@ -1,6 +1,6 @@
 import Foundation
 
-/// The look of a category of one's own (brief 36, Patrik's first phone test, 2026-10-30): the engine gives every one
+/// The look of a category of one's own (brief 36, the owner's first phone test, 2026-10-30): the engine gives every one
 /// the same grey tag (`CUSTOM_CATEGORY_LOOK`), so they all looked alike. Now each gets an icon and a colour when it is
 /// made, chosen here on the iPhone (nothing is sent anywhere), and kept with it (`StoredChosen.icon`/`color`), so it
 /// never changes afterwards:

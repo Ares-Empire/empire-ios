@@ -10,7 +10,7 @@ struct ChronicleList: View {
     let entries: [ChronicleEntry]
     let marks: [String: UIImage]       // by province slug; "empire" → the crest
 
-    // Smaller than the website's phone layout (Patrik, 2026-10-24: the chronicle took too much room).
+    // Smaller than the website's phone layout (owner, 2026-10-24) (the chronicle took too much room).
     private let lineX: CGFloat = 27     // the busts' centre on the line (LINE_Y on the desktop, transposed)
     private let coin: CGFloat = 38      // the website's 50
     private let column: CGFloat = 60    // the website's 78

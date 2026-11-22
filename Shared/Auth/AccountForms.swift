@@ -140,7 +140,7 @@ final class PasswordResetForm {
 
 // MARK: - asking for this app (the no-access screen)
 
-/// "Ask for access": adds this app to the apps the account asked for; Patrik approves it, and an email follows. The
+/// "Ask for access": adds this app to the apps the account asked for; the owner approves it, and an email follows. The
 /// account is read first, so a request made meanwhile in another app is kept.
 @MainActor @Observable
 final class AccessRequest {
