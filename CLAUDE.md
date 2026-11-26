@@ -180,7 +180,7 @@ a short handoff (global CLAUDE.md: a fresh agent per step, owner, 2026-11-14).
      --brief "$WT/prompts/NN-slug.md" --wait
    ```
    Pick the model per job (global CLAUDE.md) and say which and why in the brief. Always pass `-m`: the Mac's Codex
-   default is not kept current. When the wait exits 0, save Codex's final message (turn 1) to
+   default is not kept current. When the wait exits 0, save the report it printed to
    `~/empire-ios/codex-runs/NN-slug.md` (gitignored; `mkdir -p` it first; `~/aresync/TOOLS.md` → "Saving a report"). Steering, fix rounds and the raw
    `codex exec` fallback: TOOLS.md → codex-job. Run `codex-job` with the Bash sandbox off.
 4. **Check** (below), commit in the worktree, merge to `main` and push it, remove the worktree, set the brief's
