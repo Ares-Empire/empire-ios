@@ -33,7 +33,7 @@ nonisolated enum FlatdError: Error, Equatable, Sendable {
     func message(language: AppLanguage = .current) -> String {
         switch self {
         case .unreachable:
-            language.string(LocalizedStringResource("Can't reach the flat. The Mac may be asleep, or you're not at home.",
+            language.string(LocalizedStringResource("Can't reach the flat. You may not be at home, or the flat service isn't answering.",
                                                     table: "ArestiaShared"))
         case .noAnswer:
             language.string(LocalizedStringResource("The flat service didn't answer in time. It may still have done it.",

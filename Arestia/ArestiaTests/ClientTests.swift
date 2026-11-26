@@ -116,8 +116,8 @@ struct ClientTests {
     }
 
     @Test func messagesInBothLanguages() {
-        #expect(FlatdError.unreachable.message(language: .english).contains("Mac may be asleep"))
-        #expect(FlatdError.unreachable.message(language: .german).contains("Mac schläft"))
+        #expect(FlatdError.unreachable.message(language: .english).contains("flat service isn't answering"))
+        #expect(FlatdError.unreachable.message(language: .german).contains("Wohnungsdienst antwortet nicht"))
         #expect(FlatdError.failed(status: 400, message: "flatd's own words").message() == "flatd's own words")
     }
 }
