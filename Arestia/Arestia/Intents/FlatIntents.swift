@@ -1,7 +1,7 @@
 import AppIntents
 import Foundation
 
-// Siri, Shortcuts and NFC personal automations (Shortcuts → Automation → NFC → run "Start cooking"). Every intent runs
+// Siri, Shortcuts and NFC personal automations (Shortcuts → Automation → NFC → run "Toggle cooking"). Every intent runs
 // without opening the app: it reads the saved address and key (`FlatdConnection.live`) and calls flatd directly. Only
 // in the app target (see `ArestiaShared/IntentSupport.swift` for why).
 
@@ -77,6 +77,23 @@ struct EndCookingIntent: AppIntent {
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let change = try await performFlatIntent { try await FlatActions.live.setCooking(false) }
+        return .result(dialog: IntentDialog(stringLiteral: CookingDialog.text(change)))
+    }
+}
+
+struct ToggleCookingIntent: AppIntent {
+    static let title = LocalizedStringResource("Toggle cooking", table: "ArestiaShared")
+    static let description = IntentDescription(LocalizedStringResource(
+        "Ends cooking if it is on, starts it if it is off.", table: "ArestiaShared"))
+
+    private let actions: FlatActions?
+
+    init() { actions = nil }
+    init(actions: FlatActions) { self.actions = actions }
+
+    func perform() async throws -> some IntentResult & ProvidesDialog {
+        let actions = actions ?? .live
+        let change = try await performFlatIntent { try await actions.toggleCooking() }
         return .result(dialog: IntentDialog(stringLiteral: CookingDialog.text(change)))
     }
 }

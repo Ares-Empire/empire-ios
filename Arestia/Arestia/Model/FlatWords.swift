@@ -31,6 +31,32 @@ enum FlatWords {
         return FanTimer.timed.first { Double($0.minutes ?? 0) >= left - 0.5 }
     }
 
+    // MARK: lighting
+
+    static func levelName(_ level: String, language: AppLanguage = .current) -> String {
+        switch level {
+        case "low": language.string("Low")
+        case "mid": language.string("Mid")
+        case "high": language.string("High")
+        default: level.prefix(1).uppercased(with: language.locale) + level.dropFirst()
+        }
+    }
+
+    static func switchStatus(_ device: Device, settingLevel: String?, now: Date,
+                             language: AppLanguage = .current) -> String {
+        if device.hasLevels {
+            if let settingLevel {
+                return language.string("Setting to \(levelName(settingLevel, language: language))…")
+            }
+            if device.state.online, device.state.on == true {
+                let name = device.selectedLevel.map { levelName($0, language: language) }
+                    ?? language.string("Level unknown")
+                return language.string("On · \(name)")
+            }
+        }
+        return fanStatus(device.state, now: now, language: language)
+    }
+
     // MARK: blinds
 
     /// "Open", "Closed", "40 % closed", "Going up", "Going down to 60 %", "At its favourite spot", "Offline".

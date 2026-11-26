@@ -149,8 +149,26 @@ nonisolated struct FlatdClient: Sendable {
     }
 
     func modes() async throws -> [FlatMode] {
-        struct Answer: Decodable { let modes: [FlatMode] }
-        return try decode(Answer.self, try await send(request("api/modes", timeout: readTimeout))).modes
+        try await readModes(FlatMode.self)
+    }
+
+    /// The Cooking control and Toggle cooking need an explicit state to act on.
+    func cookingActive() async throws -> Bool {
+        struct ModeState: Decodable {
+            let id: String
+            let active: JSONValue?
+        }
+        let modes = try await readModes(ModeState.self)
+        guard case let .bool(active)? = modes.first(where: { $0.id == FlatMode.cookingID })?.active else {
+            throw FlatdError.invalidAnswer
+        }
+        return active
+    }
+
+    private struct ModeList<Mode: Decodable>: Decodable { let modes: [Mode] }
+
+    private func readModes<Mode: Decodable>(_ type: Mode.Type) async throws -> [Mode] {
+        try decode(ModeList<Mode>.self, try await send(request("api/modes", timeout: readTimeout))).modes
     }
 
     func scenes() async throws -> [FlatScene] {
@@ -162,10 +180,12 @@ nonisolated struct FlatdClient: Sendable {
 
     /// Sends a command and returns the device as flatd confirmed it.
     func send(_ command: DeviceCommand, to id: String) async throws -> Device {
-        let body = try JSONEncoder().encode(command.body)
-        let data = try await send(request("api/devices/" + Self.pathID(id), method: "POST", body: body,
-                                          timeout: commandTimeout))
-        return try decode(Device.self, data)
+        try await send(body: JSONEncoder().encode(command.body), to: id)
+    }
+
+    /// flatd steps the lamp and waits for its confirmation before replying.
+    func setLevel(id: String, level: String) async throws -> Device {
+        try await sendDevice(body: JSONEncoder().encode(["level": level]), to: id, timeout: 40)
     }
 
     /// Turns a mode on or off. flatd changes the mode even when a device fails; those come back in `failed`.
@@ -203,8 +223,12 @@ nonisolated struct FlatdClient: Sendable {
 
     /// A device command with a body as the 3D page sent it (BRIDGE.md: `request.body` is exactly flatd's body).
     func send(body: Data, to id: String) async throws -> Device {
+        try await sendDevice(body: body, to: id, timeout: commandTimeout)
+    }
+
+    private func sendDevice(body: Data, to id: String, timeout: TimeInterval) async throws -> Device {
         let data = try await send(request("api/devices/" + Self.pathID(id), method: "POST", body: body,
-                                          timeout: commandTimeout))
+                                          timeout: timeout))
         return try decode(Device.self, data)
     }
 

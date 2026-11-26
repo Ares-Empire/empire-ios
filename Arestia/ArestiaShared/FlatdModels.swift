@@ -1,6 +1,6 @@
 import Foundation
 
-// The flat service's data, as flatd sends it (contract: flatd's API.md, v1.3). Everything here is read leniently: a
+// The flat service's data, as flatd sends it (contract: flatd's API.md, v1.6). Everything here is read leniently: a
 // field the app does not know is kept and ignored, a missing optional field is nil, and an unknown device kind or event
 // type is carried along instead of failing the whole answer ("Unknown fields are ignored by clients, so new fields can
 // be added without breaking anything"). No device, room or flat name is ever written into the app: they all come from
@@ -88,6 +88,7 @@ nonisolated struct DeviceState: Equatable, Sendable, Codable {
     }
 
     var on: Bool? { if case let .bool(value)? = fields["on"] { value } else { nil } }
+    var level: String? { if case let .string(value)? = fields["level"] { value } else { nil } }
     /// Offline only when flatd says so; a device without the field counts as online.
     var online: Bool { if case let .bool(value)? = fields["online"] { value } else { true } }
     var powerW: Double? { number("power_w") }
@@ -142,23 +143,26 @@ nonisolated struct Device: Identifiable, Equatable, Sendable, Codable {
     /// before v1.3, which cannot rename.
     private(set) var defaultLabel: String?
     let room: String?
-    /// What a POST may change: `on`, `for_s` for switches; `command`, `position` for Rollos.
+    /// What a POST may change: `on`, `for_s` or `level` for switches; `command`, `position` for Rollos.
     let controls: [String]
+    /// A light's levels in stepping order, when flatd advertises them (contract v1.6).
+    let levels: [String]?
     var state: DeviceState
 
     init(id: String, kind: Kind, label: String, defaultLabel: String? = nil, room: String? = nil,
-         controls: [String] = [], state: DeviceState = DeviceState()) {
+         controls: [String] = [], levels: [String]? = nil, state: DeviceState = DeviceState()) {
         self.id = id
         self.kind = kind
         self.label = label
         self.defaultLabel = defaultLabel
         self.room = room
         self.controls = controls
+        self.levels = levels
         self.state = state
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, kind, label, room, controls, state
+        case id, kind, label, room, controls, levels, state
         case defaultLabel = "default_label"
     }
 
@@ -172,6 +176,7 @@ nonisolated struct Device: Identifiable, Equatable, Sendable, Codable {
         self.defaultLabel = defaultLabel.flatMap { $0.isEmpty ? nil : $0 }
         room = try? container.decodeIfPresent(String.self, forKey: .room)
         controls = (try? container.decodeIfPresent([String].self, forKey: .controls)) ?? []
+        levels = try? container.decodeIfPresent([String].self, forKey: .levels)
         state = (try? container.decodeIfPresent(DeviceState.self, forKey: .state)) ?? DeviceState()
     }
 
@@ -183,11 +188,21 @@ nonisolated struct Device: Identifiable, Equatable, Sendable, Codable {
         try container.encodeIfPresent(defaultLabel, forKey: .defaultLabel)
         try container.encodeIfPresent(room, forKey: .room)
         try container.encode(controls, forKey: .controls)
+        try container.encodeIfPresent(levels, forKey: .levels)
         try container.encode(state, forKey: .state)
     }
 
     /// A Rollo that can go to its stored favourite spot.
     var hasFavourite: Bool { kind == .rollo && state.favourite != nil }
+
+    var hasLevels: Bool { (levels?.count ?? 0) >= 2 && controls.contains("level") }
+
+    /// The level that can be selected in the picker, while the light is on and flatd knows the level.
+    var selectedLevel: String? {
+        guard hasLevels, state.on == true, let level = state.level, level != "unknown",
+              levels?.contains(level) == true else { return nil }
+        return level
+    }
 
     /// Renamed: its name is not flatd's config name (false from a flatd that cannot rename).
     var hasOwnName: Bool { defaultLabel.map { $0 != label } ?? false }

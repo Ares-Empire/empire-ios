@@ -653,6 +653,16 @@
         }
       }
     },
+    "High" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hoch"
+          }
+        }
+      }
+    },
     "Home" : {
       "localizations" : {
         "de" : {
@@ -693,6 +703,26 @@
         }
       }
     },
+    "Level" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stufe"
+          }
+        }
+      }
+    },
+    "Level unknown" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stufe unbekannt"
+          }
+        }
+      }
+    },
     "Lighting" : {
       "localizations" : {
         "de" : {
@@ -719,6 +749,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Die Wohnung lädt"
+          }
+        }
+      }
+    },
+    "Low" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Niedrig"
+          }
+        }
+      }
+    },
+    "Mid" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mittel"
           }
         }
       }
@@ -839,6 +889,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "An, bis du ausschaltest"
+          }
+        }
+      }
+    },
+    "On · %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An · %@"
           }
         }
       }
@@ -999,6 +1059,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wird gesendet: offen"
+          }
+        }
+      }
+    },
+    "Setting to %@…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stelle auf %@…"
           }
         }
       }

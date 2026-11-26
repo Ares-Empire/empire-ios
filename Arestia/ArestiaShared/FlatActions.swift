@@ -14,11 +14,20 @@ nonisolated struct FlatActions: Sendable {
 
     /// Starts or ends cooking. What flatd confirmed comes back: whether cooking is on now, and the devices that did not
     /// follow, by name (flatd changes the mode anyway). Those are also kept for the Cooking control and the app
-    /// (`ModeTrouble`), since this runs outside the app; a change where all followed clears them. Only flatd's answer
-    /// counts: nothing is read before (a reading could be stale by the time the command arrives).
+    /// (`ModeTrouble`), since this runs outside the app; a change where all followed clears them.
     func setCooking(_ active: Bool) async throws -> CookingChange {
+        try await setCooking { _ in active }
+    }
+
+    /// Both requests use the same pairing, so Forget between the read and write stops the change.
+    func toggleCooking() async throws -> CookingChange {
+        try await setCooking { client in try await !client.cookingActive() }
+    }
+
+    private func setCooking(resolving active: @Sendable (FlatdClient) async throws -> Bool) async throws -> CookingChange {
         let connection = reach.connection
         let (change, pairing) = try await reach.run { client in
+            let active = try await active(client)
             let (mode, failed) = try await client.setMode(FlatMode.cookingID, active: active)
             let names = connection.names(failed, pairing: client.pairingID)
             return (CookingChange(isActive: mode.active, failed: names), client.pairingID)
@@ -38,7 +47,7 @@ nonisolated struct FlatActions: Sendable {
     /// changed outside the app, while that still describes it.
     func cookingState() async throws -> CookingState {
         let (active, pairing) = try await reach.run { client in
-            (try await client.modes().first { $0.id == FlatMode.cookingID }?.active ?? false, client.pairingID)
+            (try await client.cookingActive(), client.pairingID)
         }
         let trouble = pairing.flatMap { reach.connection.trouble(mode: FlatMode.cookingID, active: active, pairing: $0) }
         return CookingState(active: active, notFollowed: trouble?.names ?? [])
