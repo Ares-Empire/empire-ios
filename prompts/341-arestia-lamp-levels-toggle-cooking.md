@@ -1,6 +1,6 @@
 # 341: Arestia: lamp levels and Toggle cooking
 
-Status: running
+Status: merged 2026-11-26 (a72f60e); not uploaded (waits for flatd 1.6 live and the owner's OK)
 Branch: `codex/341-lamp-levels` · Worktree: `../empire-ios-341-lamp-levels` · Model: `gpt-6.2-sol`, effort `high`
 (a well-scoped app change against a written contract; no new trust or pairing code)
 
