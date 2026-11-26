@@ -59,7 +59,7 @@ struct HomeScreen: View {
                 .padding(.top, 22)
         case (_, false) where store.link == .offline:
             CalmCard(symbol: "moon.zzz", title: String(localized: "Can't reach the flat"),
-                     text: String(localized: "The Mac may be asleep, or you're not at home. Arestia keeps trying by itself."),
+                     text: String(localized: "You may not be at home, or the flat service isn't answering. Arestia keeps trying by itself."),
                      action: (String(localized: "Try again"), { store.retry() }))
                 .padding(.top, 22)
         case (_, false):
@@ -119,7 +119,7 @@ private struct StatusSummary: View {
                     .padding(.top, 6)
                 if store.link != .live, let seen = store.lastSeen {
                     Text(verbatim: store.link == .offline
-                         ? FlatWords.lastSeen(seen, now: .now) + " · " + String(localized: "The Mac may be asleep, or you're not at home.")
+                         ? FlatWords.lastSeen(seen, now: .now) + " · " + String(localized: "You may not be at home, or the flat service isn't answering.")
                          : FlatWords.lastSeen(seen, now: .now))
                         .font(AppFont.text(13)).foregroundStyle(Ink.muted).lineSpacing(2)
                         .fixedSize(horizontal: false, vertical: true).padding(.top, 4)

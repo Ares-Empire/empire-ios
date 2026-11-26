@@ -84,12 +84,12 @@
         }
       }
     },
-    "Can't reach the flat. The Mac may be asleep, or you're not at home." : {
+    "Can't reach the flat. You may not be at home, or the flat service isn't answering." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die Wohnung ist nicht erreichbar. Der Mac schläft vielleicht, oder du bist nicht zu Hause."
+            "value" : "Die Wohnung ist nicht erreichbar. Vielleicht bist du nicht zu Hause, oder der Wohnungsdienst antwortet nicht."
           }
         }
       }

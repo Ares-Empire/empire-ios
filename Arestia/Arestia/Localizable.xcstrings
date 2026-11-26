@@ -1123,26 +1123,6 @@
         }
       }
     },
-    "The Mac may be asleep, or you're not at home." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Der Mac schläft vielleicht, oder du bist nicht zu Hause."
-          }
-        }
-      }
-    },
-    "The Mac may be asleep, or you're not at home. Arestia keeps trying by itself." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Der Mac schläft vielleicht, oder du bist nicht zu Hause. Arestia versucht es von selbst weiter."
-          }
-        }
-      }
-    },
     "The flat service isn't answering. Check that this iPhone is on the home Wi-Fi and flatd is running. If flatd was set up anew, scan a new code." : {
       "localizations" : {
         "de" : {
@@ -1209,6 +1189,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hoch"
+          }
+        }
+      }
+    },
+    "You may not be at home, or the flat service isn't answering." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vielleicht bist du nicht zu Hause, oder der Wohnungsdienst antwortet nicht."
+          }
+        }
+      }
+    },
+    "You may not be at home, or the flat service isn't answering. Arestia keeps trying by itself." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vielleicht bist du nicht zu Hause, oder der Wohnungsdienst antwortet nicht. Arestia versucht es von selbst weiter."
           }
         }
       }
