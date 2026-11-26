@@ -100,6 +100,11 @@ started wrong can't freeze the app. The Toggle cooking shortcut reads the cookin
 mode and sends the opposite state to the same paired service. Its dialog reports the confirmed state and any devices
 that did not follow.
 
+### Build 4 uploaded 2026-11-26 23:56
+
+**Build 4 uploaded 2026-11-26 23:56** (lamp levels and Toggle cooking for flatd 1.6; the offline text names the flat
+service, not the Mac, since flatd runs on its own always-on box; 239 tests, Release resource audit passed).
+
 ### Build 3 uploaded 2026-11-20 17:15
 
 **Build 3 uploaded 2026-11-20 17:15** (renaming in flatd 1.3, Lighting, no Automations card, 3D walk mode, the page kept

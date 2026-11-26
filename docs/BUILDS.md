@@ -19,3 +19,6 @@ upload a build. How to upload: `docs/SHARED.md` → TestFlight and App Store Con
    Content and samples are bundled in Release builds of all apps; a failed write of Arestoteles's quick-note queue
    was not reported: fixed by brief 243). So all five apps reach the owner's iPhone. App Store Connect records (owner, 2026-10-30: Arestemis, Aresus, Arestoteles, Ares Empire),
    each with an internal group that gets every build automatically (Arestemis's checked: the owner as tester). Original
+
+**Arestia** (its builds in `docs/apps/Arestia.md`): build 2 and build 3 uploaded 2026-11-20; **build 4 uploaded
+2026-11-26 23:56** (lamp levels, Toggle cooking, the offline text naming the flat service).
