@@ -175,12 +175,13 @@ a short handoff (global CLAUDE.md: a fresh agent per step, owner, 2026-11-14).
 3. **Run** as a `codex-job` in the background (`run_in_background`; `--wait` wakes Claude when it ends):
    ```
    WT=~/empire-ios-NN-slug
+   test -f "$WT/.git" &&   # a worktree from step 2 (its .git is a file), never the main checkout
    codex-job start empire-ios-bNN-build -C "$WT" -m "$MODEL" --effort high -s danger-full-access \
      --brief "$WT/prompts/NN-slug.md" --wait
    ```
    Pick the model per job (global CLAUDE.md) and say which and why in the brief. Always pass `-m`: the Mac's Codex
    default is not kept current. When the wait exits 0, save Codex's final message (turn 1) to
-   `codex-runs/NN-slug.md` (gitignored; `~/aresync/TOOLS.md` → "Saving a report"). Steering, fix rounds and the raw
+   `~/empire-ios/codex-runs/NN-slug.md` (gitignored; `mkdir -p` it first; `~/aresync/TOOLS.md` → "Saving a report"). Steering, fix rounds and the raw
    `codex exec` fallback: TOOLS.md → codex-job. Run `codex-job` with the Bash sandbox off.
 4. **Check** (below), commit in the worktree, merge to `main` and push it, remove the worktree, set the brief's
    status line. Push as soon as work is merged, in every Empire repo; aresync's daily run is only the backstop (owner,
