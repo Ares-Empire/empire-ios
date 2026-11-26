@@ -170,12 +170,12 @@ a short handoff (global CLAUDE.md: a fresh agent per step, owner, 2026-11-14).
 
 1. **Brief:** copy `prompts/TEMPLATE.md` to `prompts/NN-slug.md`. Settle the design choices in it; link to rules
    instead of restating them. Commit it to `main` before branching.
-2. **Worktree:** `git worktree add -b codex/NN-slug ../empire-ios-NN-slug main`. Never let Codex (or uncommitted work)
-   sit in `~/empire-ios` itself: aresync auto-commits and pushes that checkout.
+2. **Worktree:** a new one per brief, `~/empire-ios-NN-slug` on branch `codex/NN-slug` (created in step 3). Never let
+   Codex (or uncommitted work) sit in `~/empire-ios` itself: aresync auto-commits and pushes that checkout.
 3. **Run** as a `codex-job` in the background (`run_in_background`; `--wait` wakes Claude when it ends):
    ```
    WT=~/empire-ios-NN-slug
-   test -f "$WT/.git" &&   # a worktree from step 2 (its .git is a file), never the main checkout
+   git -C ~/empire-ios worktree add -b codex/NN-slug "$WT" main &&
    codex-job start empire-ios-bNN-build -C "$WT" -m "$MODEL" --effort high -s danger-full-access \
      --brief "$WT/prompts/NN-slug.md" --wait
    ```
