@@ -2,6 +2,7 @@
   "sourceLanguage" : "en",
   "strings" : {
     "Air out with ${applicationName}" : {
+      "extractionState" : "extracted_with_value",
       "localizations" : {
         "de" : {
           "stringSet" : {
@@ -22,6 +23,7 @@
       }
     },
     "All blinds down with ${applicationName}" : {
+      "extractionState" : "extracted_with_value",
       "localizations" : {
         "de" : {
           "stringSet" : {
@@ -42,6 +44,7 @@
       }
     },
     "End cooking in ${applicationName}" : {
+      "extractionState" : "extracted_with_value",
       "localizations" : {
         "de" : {
           "stringSet" : {
@@ -64,6 +67,7 @@
       }
     },
     "Fans off in ${applicationName}" : {
+      "extractionState" : "extracted_with_value",
       "localizations" : {
         "de" : {
           "stringSet" : {
@@ -86,6 +90,7 @@
       }
     },
     "Fans on in ${applicationName}" : {
+      "extractionState" : "extracted_with_value",
       "localizations" : {
         "de" : {
           "stringSet" : {
@@ -108,6 +113,7 @@
       }
     },
     "Move a blind with ${applicationName}" : {
+      "extractionState" : "extracted_with_value",
       "localizations" : {
         "de" : {
           "stringSet" : {
@@ -128,6 +134,7 @@
       }
     },
     "Start cooking in ${applicationName}" : {
+      "extractionState" : "extracted_with_value",
       "localizations" : {
         "de" : {
           "stringSet" : {
@@ -144,6 +151,27 @@
             "values" : [
               "Start cooking in ${applicationName}",
               "${applicationName} cooking"
+            ]
+          }
+        }
+      }
+    },
+    "Toggle cooking in ${applicationName}" : {
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "de" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Kochen umschalten in ${applicationName}"
+            ]
+          }
+        },
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "Toggle cooking in ${applicationName}"
             ]
           }
         }

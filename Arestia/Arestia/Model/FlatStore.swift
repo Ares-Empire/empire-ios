@@ -47,6 +47,8 @@ final class FlatStore {
     private(set) var lastSeen: Date?
     /// Requests on their way, by what they change ("power:fan:…", "mode:cooking", "scene:air_out").
     private(set) var working: Set<String> = []
+    /// The level requested for each light while flatd steps it there.
+    private(set) var settingLevel: [String: String] = [:]
     /// A blind's position while a finger drags it.
     private(set) var dragging: [String: Int] = [:]
     /// A blind's position sent when the finger let go, until flatd answered that very request or its state confirmed
@@ -199,6 +201,7 @@ final class FlatStore {
         modes = []
         scenes = []
         working = []
+        settingLevel = [:]
         dragging = [:]
         pending = [:]
         pendingRequest = [:]
@@ -445,7 +448,13 @@ final class FlatStore {
     /// A device as a command's answer brought it, unless the stream brought newer news of it since the command was sent
     /// (`stamp`), or the answer is older than what is shown.
     private func take(_ device: Device, since stamp: Stamp) {
-        guard stamp == self.stamp(device.id), let index = devices.firstIndex(where: { $0.id == device.id }) else { return }
+        guard stamp == self.stamp(device.id) else { return }
+        takeUnlessOlder(device)
+    }
+
+    /// A device as flatd reported it, unless what is shown is newer by flatd's own `updated_at`.
+    private func takeUnlessOlder(_ device: Device) {
+        guard let index = devices.firstIndex(where: { $0.id == device.id }) else { return }
         if let incoming = device.state.updatedAt, let current = devices[index].state.updatedAt, incoming < current {
             return
         }
@@ -601,11 +610,35 @@ final class FlatStore {
 
     /// A fan on (for `minutes`, nil: until off) or off.
     func setFan(_ id: String, on: Bool, minutes: Int? = nil) {
+        guard !isWorking("level:" + id) else { return }
         send("power:" + id, affects: id) { client in
             try await client.send(.power(on: on, seconds: minutes.map { $0 * 60 }), to: id)
         } done: { device, stamp in
             self.take(device, since: stamp)
         }
+    }
+
+    func setLevel(_ id: String, level: String) {
+        func needsLevel() -> Bool {
+            guard let light = device(id), light.hasLevels, light.levels?.contains(level) == true else { return false }
+            return light.selectedLevel != level
+        }
+        guard !isWorking("power:" + id), needsLevel() else { return }
+        let accepted = send("level:" + id, affects: id, stillWanted: needsLevel) { client in
+            try await client.setLevel(id: id, level: level)
+        } done: { device, stamp in
+            self.take(device, since: stamp)
+            self.settingLevel[id] = nil
+        } failed: {
+            self.settingLevel[id] = nil
+        } recover: { error, client, _ in
+            // After a 502 the stream may have missed flatd's final state, or brought only a snapshot taken while the
+            // lamp was still stepping: read it once and keep whichever state flatd wrote last.
+            guard case .failed(status: 502, _) = error,
+                  let device = try? await client.device(id), !self.isRetired else { return }
+            self.takeUnlessOlder(device)
+        }
+        if accepted { settingLevel[id] = level }
     }
 
     /// Up, down, favourite or Stop: after the blind's earlier commands, and in place of any still waiting.
@@ -800,13 +833,16 @@ final class FlatStore {
     /// also what the answer shows, for `stamp`), one at a time per `key` (`blocking`: a second tap while one is on its
     /// way is not taken), the failure as a calm line, a refused key back to the connect card, a lost flatd as a reason
     /// to reconnect. Dropped, its answer too, once the store retired. `stillWanted` is asked when its turn comes and
-    /// again just before it is sent (false: not sent, `failed` runs). False when it was not taken.
+    /// again just before it is sent (false: not sent, `failed` runs). After reporting a command error, `recover` can
+    /// read current state with the same client and stamp while the command still holds its place in line.
+    /// False when the command was not taken.
     @discardableResult
     private func send<Answer: Sendable>(_ key: String, affects: String, blocking: Bool = true,
                                         stillWanted: @escaping @MainActor () -> Bool = { true },
                                         _ work: @escaping @Sendable (FlatdClient) async throws -> Answer,
                                         done: @escaping @MainActor (Answer, Stamp) -> Void,
-                                        failed: @escaping @MainActor () -> Void = {}) -> Bool {
+                                        failed: @escaping @MainActor () -> Void = {},
+                                        recover: (@MainActor (FlatdError, FlatdClient, Stamp) async -> Void)? = nil) -> Bool {
         guard !isRetired, pairingID != nil else { return false }
         if blocking, working.contains(key) { return false }
         working.insert(key)
@@ -819,6 +855,7 @@ final class FlatStore {
                 return
             }
             var used: FlatdClient?
+            var sentAt: Stamp?
             do {
                 let client = try await readyClient()
                 used = client
@@ -828,6 +865,7 @@ final class FlatStore {
                     return
                 }
                 let stamp = stamp(affects)
+                sentAt = stamp
                 let answer = try await work(client)
                 guard !isRetired else { return }
                 done(answer, stamp)
@@ -838,6 +876,7 @@ final class FlatStore {
                 guard !isRetired else { return }
                 failed()
                 handle(error, client: used)
+                if let used, let sentAt { await recover?(error, used, sentAt) }
             } catch {
                 guard !isRetired else { return }
                 failed()

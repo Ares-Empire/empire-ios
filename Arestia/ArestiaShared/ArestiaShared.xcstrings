@@ -184,6 +184,16 @@
         }
       }
     },
+    "Ends cooking if it is on, starts it if it is off." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beendet das Kochen, wenn es läuft, sonst startet es es."
+          }
+        }
+      }
+    },
     "Ends cooking: the fans go off and its blind goes to its favourite spot." : {
       "localizations" : {
         "de" : {
@@ -570,6 +580,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Auf den Favoriten"
+          }
+        }
+      }
+    },
+    "Toggle cooking" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kochen umschalten"
           }
         }
       }

@@ -88,6 +88,18 @@ device alone (`rememberName`), a list a request read is kept only if nothing was
 (`remember(_:for:readSince:)`), and every consumer shows the name kept (`FlatActions.read`; `NameFileTests`). Lights have their own
 section, Lighting / Licht, after Fans; the Automations card is gone (owner: "I dont think we need them").
 
+### Lamp levels and Toggle cooking
+
+Lights that advertise the level control and at least two levels (flatd v1.6) show a picker in the service's stepping
+order, using the same segmented control as the fan timers. The row disables both controls while flatd confirms a
+change. The level command waits up to 40 seconds. If flatd cannot reach the target (502), Home shows the error and
+always reads the device once, applying the read unless the state shown is newer by flatd's `updated_at`. Known limit
+(lead's call, 2026-11-26): a stream snapshot taken during the run but delivered after that read still replaces it,
+until the next update; the stream deliberately applies states without an `updated_at` check, so a flatd whose clock
+started wrong can't freeze the app. The Toggle cooking shortcut reads the cooking
+mode and sends the opposite state to the same paired service. Its dialog reports the confirmed state and any devices
+that did not follow.
+
 ### Build 3 uploaded 2026-11-20 17:15
 
 **Build 3 uploaded 2026-11-20 17:15** (renaming in flatd 1.3, Lighting, no Automations card, 3D walk mode, the page kept

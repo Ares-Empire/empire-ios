@@ -330,26 +330,59 @@ private struct SwitchRow: View {
     let device: Device
     @Environment(RenameEditor.self) private var editor
 
+    private var on: Bool { device.state.on == true }
+    private var isEditing: Bool { editor.isEditing(device.id) }
+    private var settingLevel: Bool { store.isWorking("level:" + device.id) }
+    private var switchingPower: Bool { store.isWorking("power:" + device.id) }
+
     var body: some View {
-        let on = device.state.on == true
+        Group {
+            if device.hasLevels, let levels = device.levels {
+                VStack(spacing: 8) {
+                    switchLine.padding(.top, 14).renamable(device, store: store)
+                    if !isEditing {
+                        levelPicker(levels).padding(.horizontal, 16)
+                    }
+                }
+                .padding(.bottom, 14)
+            } else {
+                switchLine.padding(.vertical, 14).renamable(device, store: store)
+            }
+        }
+        .opacity(device.state.online ? 1 : 0.6)
+        .accessibilityElement(children: .contain)
+    }
+
+    private var switchLine: some View {
         HStack(spacing: 14) {
             VStack(alignment: .leading, spacing: 3) {
                 DeviceName(store: store, device: device)
-                Text(verbatim: FlatWords.fanStatus(device.state, now: .now))
+                Text(verbatim: FlatWords.switchStatus(device, settingLevel: store.settingLevel[device.id], now: .now))
                     .font(AppFont.text(13)).foregroundStyle(on ? AppAccent.arestia.color : Ink.muted)
                     .contentTransition(.opacity)
             }
             Spacer(minLength: 8)
-            if device.controls.contains("on"), !editor.isEditing(device.id) {
-                PowerButton(isOn: on, busy: store.isWorking("power:" + device.id), label: device.label) {
+            if device.controls.contains("on"), !isEditing {
+                PowerButton(isOn: on, busy: switchingPower, label: device.label) {
                     store.setFan(device.id, on: !on)
                 }
+                .disabled(settingLevel)
             }
         }
-        .padding(.horizontal, 16).padding(.vertical, 14)
-        .opacity(device.state.online ? 1 : 0.6)
-        .renamable(device, store: store)
+        .padding(.horizontal, 16)
+    }
+
+    private func levelPicker(_ levels: [String]) -> some View {
+        ChoiceSegments(items: levels, chosen: device.selectedLevel, accessibilityName: { FlatWords.levelName($0) },
+                       choose: { store.setLevel(device.id, level: $0) }) { level, isChosen in
+            Text(verbatim: FlatWords.levelName(level))
+                .font(AppFont.text(13, weight: isChosen ? .semibold : .medium))
+                .multilineTextAlignment(.center)
+        }
         .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text("Level"))
+        .accessibilityValue(Text(verbatim: device.selectedLevel.map { FlatWords.levelName($0) } ?? ""))
+        .disabled(settingLevel || switchingPower || !device.state.online)
     }
 }
 

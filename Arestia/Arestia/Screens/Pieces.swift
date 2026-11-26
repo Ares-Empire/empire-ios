@@ -122,36 +122,41 @@ struct Chip: View {
     }
 }
 
-/// A fan's timers as one segmented capsule: 15 min · 30 min · 1 h · ∞. The one running is lit in the ember's soft
-/// tone; a tap switches the fan on for that long (∞: until switched off).
-struct TimerSegments: View {
-    let chosen: FanTimer?
-    let choose: (FanTimer) -> Void
+/// The fan timers and lamp levels share the same capsule, dividers and selection treatment.
+struct ChoiceSegments<Item: Hashable, Face: View>: View {
+    let items: [Item]
+    let chosen: Item?
+    var hitHeight: CGFloat = 44
+    let accessibilityName: (Item) -> String
+    let choose: (Item) -> Void
+    @ViewBuilder let face: (Item, Bool) -> Face
     @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
         HStack(spacing: 0) {
-            ForEach(Array(FanTimer.allCases.enumerated()), id: \.element) { index, timer in
+            ForEach(Array(items.enumerated()), id: \.element) { index, item in
+                let isChosen = chosen == item
                 if index > 0 {
                     Rectangle().fill(Ink.line).frame(width: 1, height: 16)
-                        .opacity(chosen == timer || chosen == FanTimer.allCases[index - 1] ? 0 : 1)
+                        .opacity(isChosen || chosen == items[index - 1] ? 0 : 1)
                 }
-                Button { choose(timer) } label: {
-                    face(timer)
-                        .foregroundStyle(chosen == timer ? AppAccent.arestia.color : Ink.secondary)
+                Button { choose(item) } label: {
+                    face(item, isChosen)
+                        .foregroundStyle(isChosen ? AppAccent.arestia.color : Ink.secondary)
                         .frame(maxWidth: .infinity, minHeight: 34)
                         .background {
-                            if chosen == timer {
+                            if isChosen {
                                 Capsule().fill(AppAccent.arestia.color.opacity(0.15))
                                     .overlay(Capsule().strokeBorder(AppAccent.arestia.color.opacity(0.45), lineWidth: 1))
                             }
                         }
+                        .frame(minHeight: hitHeight)
                         .contentShape(Rectangle())
                         .frame(minHeight: 44)
                 }
                 .buttonStyle(PressedScale())
-                .accessibilityLabel(timer.accessibilityName())
-                .accessibilityAddTraits(chosen == timer ? .isSelected : [])
+                .accessibilityLabel(accessibilityName(item))
+                .accessibilityAddTraits(isChosen ? .isSelected : [])
             }
         }
         .padding(.horizontal, 3)
@@ -160,15 +165,27 @@ struct TimerSegments: View {
         .opacity(isEnabled ? 1 : 0.5)
         .animation(.easeOut(duration: 0.2), value: chosen)
     }
+}
 
-    @ViewBuilder private func face(_ timer: FanTimer) -> some View {
+/// A tap switches the fan on for the chosen time (∞ keeps it on until switched off).
+struct TimerSegments: View {
+    let chosen: FanTimer?
+    let choose: (FanTimer) -> Void
+
+    var body: some View {
+        ChoiceSegments(items: FanTimer.allCases, chosen: chosen, hitHeight: 34,
+                       accessibilityName: { $0.accessibilityName() },
+                       choose: choose, face: face)
+    }
+
+    @ViewBuilder private func face(_ timer: FanTimer, isChosen: Bool) -> some View {
         switch timer {
         case .untilOff:
             Image(systemName: "infinity").font(.system(size: 15, weight: .semibold))
         case .sixty:
-            Text("1 h").font(AppFont.text(13, weight: chosen == timer ? .semibold : .medium))
+            Text("1 h").font(AppFont.text(13, weight: isChosen ? .semibold : .medium))
         default:
-            Text("\(timer.minutes ?? 0) min").font(AppFont.text(13, weight: chosen == timer ? .semibold : .medium))
+            Text("\(timer.minutes ?? 0) min").font(AppFont.text(13, weight: isChosen ? .semibold : .medium))
         }
     }
 }

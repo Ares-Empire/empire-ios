@@ -10,6 +10,7 @@ final class FakeTransport: HTTPTransport, @unchecked Sendable {
         var body: Any = [String: Any]()
         var fails: URLError.Code?    // no answer: .cannotConnectToHost (flatd out of reach), .timedOut (too slow)
         var delay: Duration?         // a slow answer
+        var beforeReply: (@Sendable () async -> Void)?
     }
 
     private let lock = NSLock()
@@ -19,8 +20,12 @@ final class FakeTransport: HTTPTransport, @unchecked Sendable {
 
     /// `"POST /api/devices/fan:fan_1"` → answer.
     func answer(_ route: String, status: Int = 200, body: Any = [String: Any](), fails: Bool = false,
-                failure: URLError.Code = .cannotConnectToHost, delay: Duration? = nil) {
-        lock.withLock { answers[route] = Answer(status: status, body: body, fails: fails ? failure : nil, delay: delay) }
+                failure: URLError.Code = .cannotConnectToHost, delay: Duration? = nil,
+                beforeReply: (@Sendable () async -> Void)? = nil) {
+        lock.withLock {
+            answers[route] = Answer(status: status, body: body, fails: fails ? failure : nil, delay: delay,
+                                    beforeReply: beforeReply)
+        }
     }
 
     /// Every answer for this host: as if another device held the address (`host` "192.0.2.10").
@@ -36,6 +41,7 @@ final class FakeTransport: HTTPTransport, @unchecked Sendable {
         }
         guard let answer else { throw URLError(.cannotConnectToHost) }
         if let delay = answer.delay { try await Task.sleep(for: delay) }
+        await answer.beforeReply?()
         if let failure = answer.fails { throw URLError(failure) }
         let data = try JSONSerialization.data(withJSONObject: answer.body)
         let response = HTTPURLResponse(url: request.url!, statusCode: answer.status, httpVersion: nil, headerFields: nil)!
