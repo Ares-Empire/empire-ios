@@ -65,8 +65,15 @@ struct StartCookingIntent: AppIntent {
         "Turns on cooking: the fans run and its blind goes up, until you end it.", table: "ArestiaShared"))
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
+        #if DEBUG && ARESTIA_GATE
+        let timing = GateAction(String(describing: Self.self))
+        return try await performFlatIntent(timing: timing, { try await FlatActions.live.setCooking(true) }) { change in
+            IntentResultContainer.result(dialog: IntentDialog(stringLiteral: CookingDialog.text(change)))
+        }
+        #else
         let change = try await performFlatIntent { try await FlatActions.live.setCooking(true) }
         return .result(dialog: IntentDialog(stringLiteral: CookingDialog.text(change)))
+        #endif
     }
 }
 
@@ -76,8 +83,15 @@ struct EndCookingIntent: AppIntent {
         "Ends cooking: the fans go off and its blind goes to its favourite spot.", table: "ArestiaShared"))
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
+        #if DEBUG && ARESTIA_GATE
+        let timing = GateAction(String(describing: Self.self))
+        return try await performFlatIntent(timing: timing, { try await FlatActions.live.setCooking(false) }) { change in
+            IntentResultContainer.result(dialog: IntentDialog(stringLiteral: CookingDialog.text(change)))
+        }
+        #else
         let change = try await performFlatIntent { try await FlatActions.live.setCooking(false) }
         return .result(dialog: IntentDialog(stringLiteral: CookingDialog.text(change)))
+        #endif
     }
 }
 
@@ -92,9 +106,17 @@ struct ToggleCookingIntent: AppIntent {
     init(actions: FlatActions) { self.actions = actions }
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
+        #if DEBUG && ARESTIA_GATE
+        let timing = GateAction(String(describing: Self.self))
+        let actions = actions ?? .live
+        return try await performFlatIntent(timing: timing, { try await actions.toggleCooking() }) { change in
+            IntentResultContainer.result(dialog: IntentDialog(stringLiteral: CookingDialog.text(change)))
+        }
+        #else
         let actions = actions ?? .live
         let change = try await performFlatIntent { try await actions.toggleCooking() }
         return .result(dialog: IntentDialog(stringLiteral: CookingDialog.text(change)))
+        #endif
     }
 }
 
@@ -138,12 +160,25 @@ struct FansOnIntent: AppIntent {
     }
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
+        #if DEBUG && ARESTIA_GATE
+        let timing = GateAction(String(describing: Self.self), isFanBatch: true)
+        let minutes = minutes, only = fan.map { [$0.id] }
+        return try await performFlatIntent(timing: timing, {
+            try await FlatActions.live.setFans(on: true, minutes: minutes, only: only)
+        }) { _ in
+            let line = minutes.map {
+                AppLanguage.current.string(LocalizedStringResource("Fans on for \($0) min.", table: "ArestiaShared"))
+            } ?? AppLanguage.current.string(LocalizedStringResource("Fans on.", table: "ArestiaShared"))
+            return IntentResultContainer.result(dialog: IntentDialog(stringLiteral: line))
+        }
+        #else
         let minutes = minutes, only = fan.map { [$0.id] }
         _ = try await performFlatIntent { try await FlatActions.live.setFans(on: true, minutes: minutes, only: only) }
         let line = minutes.map {
             AppLanguage.current.string(LocalizedStringResource("Fans on for \($0) min.", table: "ArestiaShared"))
         } ?? AppLanguage.current.string(LocalizedStringResource("Fans on.", table: "ArestiaShared"))
         return .result(dialog: IntentDialog(stringLiteral: line))
+        #endif
     }
 }
 
@@ -156,10 +191,21 @@ struct FansOffIntent: AppIntent {
     var fan: FanEntity?
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
+        #if DEBUG && ARESTIA_GATE
+        let timing = GateAction(String(describing: Self.self), isFanBatch: true)
+        let only = fan.map { [$0.id] }
+        return try await performFlatIntent(timing: timing, {
+            try await FlatActions.live.setFans(on: false, only: only)
+        }) { _ in
+            IntentResultContainer.result(dialog: IntentDialog(stringLiteral: AppLanguage.current.string(
+                LocalizedStringResource("Fans off.", table: "ArestiaShared"))))
+        }
+        #else
         let only = fan.map { [$0.id] }
         _ = try await performFlatIntent { try await FlatActions.live.setFans(on: false, only: only) }
         return .result(dialog: IntentDialog(stringLiteral: AppLanguage.current.string(
             LocalizedStringResource("Fans off.", table: "ArestiaShared"))))
+        #endif
     }
 }
 
@@ -181,9 +227,17 @@ struct MoveRolloIntent: AppIntent {
     }
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
+        #if DEBUG && ARESTIA_GATE
+        let timing = GateAction(String(describing: Self.self))
+        let id = rollo.id, command = move.command
+        return try await performFlatIntent(timing: timing, { try await FlatActions.live.move(rollo: id, command) }) {
+            IntentResultContainer.result(dialog: IntentDialog(stringLiteral: RolloDialog.text($0)))
+        }
+        #else
         let id = rollo.id, command = move.command
         let device = try await performFlatIntent { try await FlatActions.live.move(rollo: id, command) }
         return .result(dialog: IntentDialog(stringLiteral: RolloDialog.text(device)))
+        #endif
     }
 }
 
@@ -195,9 +249,17 @@ struct AirOutIntent: AppIntent {
         "The fans run for 30 minutes and a blind goes up.", table: "ArestiaShared"))
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
+        #if DEBUG && ARESTIA_GATE
+        let timing = GateAction(String(describing: Self.self))
+        return try await performFlatIntent(timing: timing, { try await FlatActions.live.runScene(FlatScene.airOutID) }) {
+            IntentResultContainer.result(dialog: IntentDialog(stringLiteral: SceneDialog.text(
+                done: LocalizedStringResource("Airing out for 30 minutes.", table: "ArestiaShared"), failed: $0)))
+        }
+        #else
         let failed = try await performFlatIntent { try await FlatActions.live.runScene(FlatScene.airOutID) }
         return .result(dialog: IntentDialog(stringLiteral: SceneDialog.text(
             done: LocalizedStringResource("Airing out for 30 minutes.", table: "ArestiaShared"), failed: failed)))
+        #endif
     }
 }
 
@@ -206,8 +268,16 @@ struct AllDownIntent: AppIntent {
     static let description = IntentDescription(LocalizedStringResource("Sends every blind down.", table: "ArestiaShared"))
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
+        #if DEBUG && ARESTIA_GATE
+        let timing = GateAction(String(describing: Self.self))
+        return try await performFlatIntent(timing: timing, { try await FlatActions.live.runScene(FlatScene.allDownID) }) {
+            IntentResultContainer.result(dialog: IntentDialog(stringLiteral: SceneDialog.text(
+                done: LocalizedStringResource("All blinds are going down.", table: "ArestiaShared"), failed: $0)))
+        }
+        #else
         let failed = try await performFlatIntent { try await FlatActions.live.runScene(FlatScene.allDownID) }
         return .result(dialog: IntentDialog(stringLiteral: SceneDialog.text(
             done: LocalizedStringResource("All blinds are going down.", table: "ArestiaShared"), failed: failed)))
+        #endif
     }
 }

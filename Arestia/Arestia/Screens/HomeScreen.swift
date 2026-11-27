@@ -174,7 +174,12 @@ private struct CookingCard: View {
                     .padding(.top, 14)
             }
             Button {
+                #if DEBUG && ARESTIA_GATE
+                let timing = GateAction.cooking(mode.id)
+                GateAction.$current.withValue(timing) { store.setMode(mode.id, active: false) }
+                #else
                 store.setMode(mode.id, active: false)
+                #endif
             } label: {
                 BusyLabel(text: Text("Done cooking"), busy: store.isWorking("mode:" + mode.id))
             }
@@ -217,8 +222,15 @@ private struct ModeTiles: View {
             ForEach(tiles) { tile in
                 let key = (tile.kind == .mode ? "mode:" : "scene:") + tile.id
                 Button {
+                    #if DEBUG && ARESTIA_GATE
+                    let timing = GateAction.cooking(tile.kind == .mode ? tile.id : nil)
+                    #endif
                     switch tile.kind {
+                    #if DEBUG && ARESTIA_GATE
+                    case .mode: GateAction.$current.withValue(timing) { store.setMode(tile.id, active: true) }
+                    #else
                     case .mode: store.setMode(tile.id, active: true)
+                    #endif
                     case .scene: store.runScene(tile.id, title: tile.title)
                     }
                 } label: {

@@ -14,7 +14,11 @@ protocol FlatEventSource: Sendable {
 nonisolated struct WebSocketEvents: FlatEventSource {
     static let pingEvery: Duration = .seconds(20)
     /// flatd sends its snapshot at once; a stream without one this long is not flatd's (or flatd is stuck): it ends.
+    #if DEBUG && ARESTIA_GATE
+    static let snapshotWithin = FlatdRequestTimeout.duration
+    #else
     static let snapshotWithin: Duration = .seconds(10)
+    #endif
     private static let log = Logger(subsystem: "de.ares-empire.arestia", category: "events")
 
     func events(from request: URLRequest, pin: FlatdPin) -> AsyncThrowingStream<FlatEvent, Error> {
@@ -97,7 +101,11 @@ nonisolated struct WebSocketEvents: FlatEventSource {
             }
             task.sendPing { error in finish(error == nil) }
             Task {
+                #if DEBUG && ARESTIA_GATE
+                try? await Task.sleep(for: FlatdRequestTimeout.duration)
+                #else
                 try? await Task.sleep(for: .seconds(8))
+                #endif
                 finish(false)
             }
         }

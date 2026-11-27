@@ -91,6 +91,9 @@ private struct FlatRoot: View {
                 SettingsScreen(app: SettingsApp(name: "Arestia", accent: .arestia), session: account, logOut: {}) {
                     ConnectionSection(store: store, session: session)
                     FlatViewSection()
+                    #if DEBUG && ARESTIA_GATE
+                    GateTimingSection()
+                    #endif
                 }
             case let .connect(code):
                 ConnectScreen(store: store, code: code, closable: true) { navigation.tab = .home }

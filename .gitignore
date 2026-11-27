@@ -3,6 +3,7 @@ xcuserdata/
 *.xcuserstate
 DerivedData/
 build/
+arestia-gate.local.json
 *.ipa
 *.dSYM.zip
 *.dSYM

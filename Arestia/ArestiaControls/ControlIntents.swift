@@ -15,9 +15,17 @@ struct SetCookingIntent: SetValueIntent {
     var value: Bool
 
     func perform() async throws -> some IntentResult {
+        #if DEBUG && ARESTIA_GATE
+        let timing = GateAction(String(describing: Self.self))
+        let active = value
+        return try await performFlatIntent(timing: timing, { try await FlatActions.live.setCooking(active) }) { _ in
+            IntentResultContainer.result()
+        }
+        #else
         let active = value
         _ = try await performFlatIntent { try await FlatActions.live.setCooking(active) }
         return .result()
+        #endif
     }
 }
 
@@ -30,9 +38,17 @@ struct SetFansIntent: SetValueIntent {
     var value: Bool
 
     func perform() async throws -> some IntentResult {
+        #if DEBUG && ARESTIA_GATE
+        let timing = GateAction(String(describing: Self.self), isFanBatch: true)
+        let on = value
+        return try await performFlatIntent(timing: timing, { try await FlatActions.live.setFans(on: on) }) { _ in
+            IntentResultContainer.result()
+        }
+        #else
         let on = value
         _ = try await performFlatIntent { try await FlatActions.live.setFans(on: on) }
         return .result()
+        #endif
     }
 }
 

@@ -1,6 +1,12 @@
 import Foundation
 import os
 
+#if DEBUG && ARESTIA_GATE
+nonisolated enum FlatdRequestTimeout {
+    static let gate: TimeInterval = 120
+    static let duration = Duration.seconds(gate)
+}
+#endif
 /// Why a request to flatd failed, in the terms the app shows (never a raw error).
 nonisolated enum FlatdError: Error, Equatable, Sendable {
     /// No connection at all: the Mac is asleep, flatd is not running, or the phone is not on the home network.
@@ -86,9 +92,17 @@ nonisolated struct FlatdClient: Sendable {
     /// nil for a pairing code being tried, which belongs to no pairing yet.
     private(set) var gate: FlatdGate?
     /// Reads answer quickly or not at all (the service is on the home network).
+    #if DEBUG && ARESTIA_GATE
+    var readTimeout = FlatdRequestTimeout.gate
+    #else
     var readTimeout: TimeInterval = 6
+    #endif
     /// A command waits for the device to confirm (a Rollo's board, a plug), so it may take longer.
+    #if DEBUG && ARESTIA_GATE
+    var commandTimeout = FlatdRequestTimeout.gate
+    #else
     var commandTimeout: TimeInterval = 12
+    #endif
 
     /// `transport` nil: the real one, which accepts only a server holding the pin's key (the tests pass a fake).
     init(baseURL: URL, token: String, pin: FlatdPin, pairingID: UUID? = nil,
@@ -240,7 +254,11 @@ nonisolated struct FlatdClient: Sendable {
     var eventsRequest: URLRequest {
         var components = URLComponents(url: baseURL.appending(path: "api/events"), resolvingAgainstBaseURL: false)!
         components.scheme = "wss"
+        #if DEBUG && ARESTIA_GATE
+        var request = URLRequest(url: components.url!, timeoutInterval: FlatdRequestTimeout.gate)
+        #else
         var request = URLRequest(url: components.url!, timeoutInterval: 8)
+        #endif
         request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
         return request
     }
@@ -283,6 +301,9 @@ nonisolated struct FlatdClient: Sendable {
 
     func request(_ path: String, method: String = "GET", body: Data? = nil, timeout: TimeInterval,
                  authorized: Bool = true) -> URLRequest {
+        #if DEBUG && ARESTIA_GATE
+        let timeout = FlatdRequestTimeout.gate
+        #endif
         // The path is appended as written, so an encoded id is not encoded twice.
         let base = baseURL.absoluteString.hasSuffix("/") ? baseURL.absoluteString : baseURL.absoluteString + "/"
         var request = URLRequest(url: URL(string: base + path)!, cachePolicy: .reloadIgnoringLocalCacheData,

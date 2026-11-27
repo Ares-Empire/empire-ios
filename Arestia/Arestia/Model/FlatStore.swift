@@ -721,8 +721,17 @@ final class FlatStore {
                 self.offer = UndoOffer(message: line)
             } else if id == FlatMode.cookingID, !active {
                 self.offer = UndoOffer(message: FlatWords.cookingEnded()) { [weak self] in
+                    #if DEBUG && ARESTIA_GATE
+                    let timing = GateAction.cooking(id)
+                    guard let self, !self.isRetired else {
+                        timing?.ended(.cancelled)
+                        return
+                    }
+                    GateAction.$current.withValue(timing) { self.setMode(id, active: true) }
+                    #else
                     guard let self, !self.isRetired else { return }
                     self.setMode(id, active: true)
+                    #endif
                 }
             }
         }
@@ -843,10 +852,29 @@ final class FlatStore {
                                         done: @escaping @MainActor (Answer, Stamp) -> Void,
                                         failed: @escaping @MainActor () -> Void = {},
                                         recover: (@MainActor (FlatdError, FlatdClient, Stamp) async -> Void)? = nil) -> Bool {
+        #if DEBUG && ARESTIA_GATE
+        let timing = GateAction.current
+        guard !isRetired, pairingID != nil else {
+            timing?.ended(.notPaired)
+            return false
+        }
+        if blocking, working.contains(key) {
+            timing?.ended(.notPossible)
+            return false
+        }
+        #else
         guard !isRetired, pairingID != nil else { return false }
         if blocking, working.contains(key) { return false }
+        #endif
         working.insert(key)
         inLine(affects) { [weak self] in
+            #if DEBUG && ARESTIA_GATE
+            var outcome: GateOutcome?
+            defer {
+                if let outcome { timing?.resultReturned(outcome) }
+                else { timing?.ended(.cancelled) }
+            }
+            #endif
             guard let self else { return }
             defer { if !isRetired { working.remove(key) } }
             guard !isRetired, !Task.isCancelled else { return }
@@ -870,6 +898,9 @@ final class FlatStore {
                 guard !isRetired else { return }
                 done(answer, stamp)
                 reloadControls()
+                #if DEBUG && ARESTIA_GATE
+                outcome = .ok
+                #endif
             } catch is Retired {
                 return
             } catch let error as FlatdError {
@@ -877,9 +908,15 @@ final class FlatStore {
                 failed()
                 handle(error, client: used)
                 if let used, let sentAt { await recover?(error, used, sentAt) }
+                #if DEBUG && ARESTIA_GATE
+                outcome = GateOutcome(error)
+                #endif
             } catch {
                 guard !isRetired else { return }
                 failed()
+                #if DEBUG && ARESTIA_GATE
+                outcome = GateOutcome(error)
+                #endif
             }
         }
         return true
