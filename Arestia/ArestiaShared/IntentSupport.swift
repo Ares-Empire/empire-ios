@@ -40,6 +40,25 @@ nonisolated func performFlatIntent<T: Sendable>(_ work: @Sendable () async throw
         throw FlatIntentError(error)
     }
 }
+#if DEBUG && ARESTIA_GATE
+nonisolated func performFlatIntent<T: Sendable, Output: Sendable>(
+    timing: GateAction, _ work: @Sendable () async throws -> T, result: @Sendable (T) -> Output
+) async throws -> Output {
+    WidgetLanguage.arestia.follow()
+    do {
+        let answer = try await GateAction.$current.withValue(timing, operation: work)
+        ArestiaControlKind.reloadAll()
+        let output = result(answer)
+        timing.resultReturned(.ok)
+        return output
+    } catch {
+        ArestiaControlKind.reloadAll()
+        let output = FlatIntentError(error)
+        timing.resultReturned(GateOutcome(error))
+        throw output
+    }
+}
+#endif
 
 /// " Didn't answer: Fan 2." after a mode or scene whose devices did not all follow, by name (empty when all did).
 nonisolated enum FailureLine {

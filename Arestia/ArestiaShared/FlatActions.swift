@@ -112,6 +112,9 @@ nonisolated struct FlatActions: Sendable {
                     case let .failure(error): firstError = firstError ?? error
                     }
                 }
+                #if DEBUG && ARESTIA_GATE
+                GateAction.current?.fansSettled(firstError.map(GateOutcome.init) ?? .ok)
+                #endif
                 if let firstError { throw firstError }
                 return done
             }

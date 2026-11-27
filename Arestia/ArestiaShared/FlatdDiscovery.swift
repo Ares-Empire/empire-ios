@@ -58,6 +58,9 @@ nonisolated enum FlatdBonjour {
     /// The address of the service with this name, `https://<IPv4>:<port>`, or nil when it does not answer in time.
     /// IPv4 only: an IPv6 link-local address needs its interface in the URL, which URLSession and WebKit read poorly.
     static func resolve(name: String, timeout: Duration = .seconds(4)) async -> URL? {
+        #if DEBUG && ARESTIA_GATE
+        let timeout = FlatdRequestTimeout.duration
+        #endif
         let parameters = NWParameters.tcp
         if let ip = parameters.defaultProtocolStack.internetProtocol as? NWProtocolIP.Options { ip.version = .v4 }
         let connection = NWConnection(to: .service(name: name, type: type, domain: domain, interface: nil),

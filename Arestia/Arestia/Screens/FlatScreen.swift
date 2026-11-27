@@ -447,11 +447,32 @@ struct FlatWebView: UIViewRepresentable {
         private func answer(_ reqId: String, _ command: Task<FlatdError?, Never>) {
             let asking = document
             let token = UUID()
+            #if DEBUG && ARESTIA_GATE
+            let trace = GateAction.current
+            #endif
             requests[token] = Task { [weak self] in
                 let error = await command.value
+                #if DEBUG && ARESTIA_GATE
+                guard let self, !Task.isCancelled else {
+                    trace?.ended(.cancelled)
+                    return
+                }
+                requests[token] = nil
+                guard asking == document else {
+                    trace?.ended(.cancelled)
+                    return
+                }
+                let result = PageScript.result(reqId: reqId, error: error)
+                if let trace {
+                    send(result, forDocument: asking, tracing: trace, outcome: error.map(GateOutcome.init) ?? .ok)
+                } else {
+                    send(result)
+                }
+                #else
                 guard let self, !Task.isCancelled else { return }
                 requests[token] = nil
                 if asking == document { send(PageScript.result(reqId: reqId, error: error)) }
+                #endif
             }
         }
 
@@ -486,7 +507,14 @@ struct FlatWebView: UIViewRepresentable {
             case let .request(reqId, id, body):
                 answer(reqId, store.pageRequest(id, body: body))
             case let .mode(reqId, id, body):
+                #if DEBUG && ARESTIA_GATE
+                let trace = id == FlatMode.cookingID ? GateAction("ViewerCooking") : nil
+                GateAction.$current.withValue(trace) {
+                    answer(reqId, store.pageMode(id, body: body))
+                }
+                #else
                 answer(reqId, store.pageMode(id, body: body))
+                #endif
             case let .invalid(reqId):
                 send(PageScript.result(reqId: reqId, error: .failed(status: 400, message: nil)))
             case let .haptic(style):
@@ -567,6 +595,33 @@ struct FlatWebView: UIViewRepresentable {
                 if let error { Self.log.notice("receive failed: \(error.localizedDescription, privacy: .public)") }
             }
         }
+        #if DEBUG && ARESTIA_GATE
+        /// Wait for WebKit to confirm that the current document's receive function ran.
+        private func send(_ json: Data, forDocument asking: Int, tracing trace: GateAction, outcome: GateOutcome) {
+            guard let loading = activeLoad, isLoading(loading), handover.maySpeak, let webView else {
+                trace.ended(.cancelled)
+                return
+            }
+            let script = """
+                (() => {
+                    if (typeof window.flat3d?.receive !== 'function') return false;
+                    \(PageScript.receive(json))
+                    return true;
+                })()
+                """
+            webView.evaluateJavaScript(script) { [weak self] value, error in
+                guard let self, asking == document, isLoading(loading), handover.maySpeak else {
+                    trace.ended(.cancelled)
+                    return
+                }
+                if error == nil, value as? Bool == true {
+                    trace.resultReturned(outcome)
+                } else {
+                    trace.ended(.failed)
+                }
+            }
+        }
+        #endif
 
         /// The page is self-contained and the app is its only way out: nothing may be loaded or reached from it (no
         /// remote script, fetch or socket), whatever the page does. A content rule list; false when it could not be

@@ -14,6 +14,63 @@ The owner's flat through his flat service flatd on the home network. Decisions a
 - "Always daylight" setting (owner, 2026-11-19); the mark is real fire, busts were rejected (owner, 2026-11-20); no
   Automations card (owner, 2026-11-20).
 
+## Gate build (tests only)
+
+The P3 iPhone gate uses a disposable flatd probe. The commands below build Debug with `ARESTIA_GATE`. The gate
+gives requests 120 seconds and records action timing for Cooking and Fans controls, Shortcuts, and Cooking on Home
+and in the 3D viewer.
+Standard Debug and Release builds omit the flag.
+
+From the repository root, set `PHONE` to the connected iPhone's UDID shown by `xcrun xctrace list devices`.
+
+```bash
+bash scripts/arestia-gate.sh install "$PHONE"
+```
+
+Pair the gate build with the probe's identity A and use mobile data for the phone run. Create the ignored
+`arestia-gate.local.json` in the repository root. Use the URL of the probe route, the pins from the probe's A and B
+pairing codes, and only the probe's disposable token.
+
+```json
+{
+  "url": "https://probe.example.net:8443",
+  "pin_a": "<64 hex digits from identity A>",
+  "pin_b": "<64 hex digits from identity B>",
+  "token": "<disposable probe token>",
+  "echo_seconds": 120
+}
+```
+
+Omit `echo_seconds` for the two-minute default. The test command copies the file to the app's `Library/Caches`.
+The device tests skip with a message if the copy is missing. Both pin tests keep A pinned while the served identity
+changes. The command succeeds only when the selected test runs once and passes. Run each negative test separately
+with the probe serving `--key b`.
+
+```bash
+bash scripts/arestia-gate.sh test "$PHONE" wrong-websocket
+bash scripts/arestia-gate.sh test "$PHONE" wrong-post
+```
+
+Check the probe log after each command for a fresh TCP accept followed by a failed TLS handshake and zero requests.
+Restart the probe with `--key a` before running the right-pin and echo checks.
+
+```bash
+bash scripts/arestia-gate.sh test "$PHONE" right
+bash scripts/arestia-gate.sh test "$PHONE" echo
+```
+
+The echo test schedules 100-byte messages every 20 ms, skips missed slots, reports the achieved cadence, and
+prints p50/p95 round-trip times for a conclusive run. A run is inconclusive if more than 5% of slots were missed
+or its p95 send spacing exceeded 40 ms. For the timing runs, disconnect the debugger.
+In the app, open **Settings → Gate timing log** for newest-first entries. Pull down to refresh, tap the share
+button to export the text file, or tap the trash button to clear it. The app and the controls append to
+`Library/Application Support/Arestia/arestia-gate-timing.txt` in the Arestia App Group and log to the
+`gate-timing` unified logging category. Dispatch records when the first command POST starts, after service
+verification and device lookup. A Fans action records one completion with the outcome after all fan commands settle.
+The final stamp records the result handed back to iOS, Home, or the viewer document, including errors before
+dispatch. An abandoned Home or viewer action records `action ended` with its outcome.
+A completed timing run also requires seeing the result on the phone.
+
 ## As built
 
 ### Arestia app

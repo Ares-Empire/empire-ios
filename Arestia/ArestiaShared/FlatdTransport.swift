@@ -23,6 +23,9 @@ struct FlatdTransport: GatedTransport {
         guard request.url?.scheme?.lowercased() == "https" else { throw URLError(.unsupportedURL) }
         let session = FlatdSession.shared(pin: pin)
         let running = RunningTask()
+        #if DEBUG && ARESTIA_GATE
+        if request.httpMethod == "POST" { running.timing = GateAction.current }
+        #endif
         do {
             return try await withTaskCancellationHandler {
                 try await withCheckedThrowingContinuation { (done: CheckedContinuation<(Data, HTTPURLResponse), Error>) in
@@ -40,6 +43,10 @@ struct FlatdTransport: GatedTransport {
                             }
                             running.start(task)
                         }
+                        #if DEBUG && ARESTIA_GATE
+                        // Both the pairing lock and the task's start lock have been released.
+                        running.appendDispatch()
+                        #endif
                     } catch {
                         running.end(.failure(error))      // the gate refused: nothing was started
                     }
@@ -64,6 +71,27 @@ private nonisolated final class RunningTask: @unchecked Sendable {
     private var ended = false
     /// The caller's continuation; set before anything can end it.
     var finish: (@Sendable (Result<(Data, HTTPURLResponse), Error>) -> Void)?
+    #if DEBUG && ARESTIA_GATE
+    /// Set before starting the task, only for a command made by a traced action.
+    var timing: GateAction?
+    private typealias CompletionStamp = (time: Date, outcome: GateOutcome)
+    private var dispatchTime: Date?
+    private var dispatchFlushed = false
+    private var pendingCompletion: CompletionStamp?
+
+    /// If the reply beat dispatch to the log, write both from the continuation's setup closure.
+    /// The awaiting task cannot resume until that closure returns.
+    func appendDispatch() {
+        guard let timing, let time = lock.withLock({ dispatchTime }) else { return }
+        timing.dispatch(at: time)
+        let pending = lock.withLock {
+            dispatchFlushed = true
+            defer { pendingCompletion = nil }
+            return pendingCompletion
+        }
+        if let pending { timing.completion(pending.outcome, at: pending.time) }
+    }
+    #endif
 
     /// Resumes the task unless the request was cancelled first (then it ends as cancelled, never started). The check
     /// and the resume are one step under the lock, so a cancellation either comes before (nothing starts) or finds the
@@ -73,7 +101,15 @@ private nonisolated final class RunningTask: @unchecked Sendable {
         let started: Bool = lock.withLock {
             guard !cancelled else { return false }
             self.task = task
+            #if DEBUG && ARESTIA_GATE
+            if let timing {
+                dispatchTime = timing.resume(task)
+            } else {
+                task.resume()
+            }
+            #else
             task.resume()
+            #endif
             return true
         }
         if !started { end(.failure(CancellationError())) }
@@ -88,11 +124,27 @@ private nonisolated final class RunningTask: @unchecked Sendable {
     }
 
     func end(_ result: Result<(Data, HTTPURLResponse), Error>) {
+        #if DEBUG && ARESTIA_GATE
+        var completion: CompletionStamp?
+        #endif
         let first: Bool = lock.withLock {
             guard !ended else { return false }
             ended = true
+            #if DEBUG && ARESTIA_GATE
+            if let timing, !timing.isFanBatch, dispatchTime != nil {
+                let stamp = (Date.now, GateOutcome(result, cancelled: cancelled))
+                if dispatchFlushed {
+                    completion = stamp
+                } else {
+                    pendingCompletion = stamp
+                }
+            }
+            #endif
             return true
         }
+        #if DEBUG && ARESTIA_GATE
+        if let completion { timing?.completion(completion.outcome, at: completion.time) }
+        #endif
         if first { finish?(result) }
     }
 }
@@ -108,8 +160,16 @@ nonisolated enum FlatdSession {
     static func shared(pin: FlatdPin) -> URLSession {
         sessions.withLock { sessions in
             if let session = sessions[pin] { return session }
+            #if DEBUG && ARESTIA_GATE
+            let configuration = configuration()
+            configuration.timeoutIntervalForRequest = FlatdRequestTimeout.gate
+            configuration.timeoutIntervalForResource = FlatdRequestTimeout.gate
+            let session = URLSession(configuration: configuration, delegate: PinnedServer(pin: pin),
+                                     delegateQueue: nil)
+            #else
             let session = URLSession(configuration: configuration(), delegate: PinnedServer(pin: pin),
                                      delegateQueue: nil)
+            #endif
             sessions[pin] = session
             return session
         }
@@ -126,7 +186,11 @@ nonisolated enum FlatdSession {
     /// A session for the event stream: idle for long stretches (its liveness comes from pings); the same rules.
     static func events(pin: FlatdPin) -> URLSession {
         let configuration = configuration()
+        #if DEBUG && ARESTIA_GATE
+        configuration.timeoutIntervalForRequest = FlatdRequestTimeout.gate
+        #else
         configuration.timeoutIntervalForRequest = 3600
+        #endif
         configuration.waitsForConnectivity = false
         return URLSession(configuration: configuration, delegate: PinnedServer(pin: pin), delegateQueue: nil)
     }
