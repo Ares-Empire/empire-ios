@@ -5,7 +5,8 @@ import Testing
 /// How the app asks flatd, and how it reads a refusal.
 struct ClientTests {
     let transport = FakeTransport()
-    var client: FlatdClient { FlatdClient(Flat.pairing(), transport: transport) }
+    let connection = Flat.connection()
+    var client: FlatdClient { FlatdClient(Flat.pairing(), transport: transport).gated(by: connection) }
 
     @Test func everyRequestButHealthCarriesTheKey() async throws {
         transport.answer("GET /api/health", body: ["ok": true, "version": "1.1.0"])
@@ -91,6 +92,7 @@ struct ClientTests {
     @Test func theViewerETagIsKeptAndSentBackExactly() async throws {
         let etag = #""abc-123""#
         let pinnedClient = FlatdClient(Flat.pairing(), transport: ViewerTransport(base: transport, etag: etag))
+            .gated(by: connection)
         transport.answer("GET /viewer", body: ["page": true])
         let answer = try await pinnedClient.viewerPage(ifNoneMatch: nil)
         #expect(answer == .page(Data(#"{"page":true}"#.utf8), etag: etag))

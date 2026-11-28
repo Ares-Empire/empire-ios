@@ -4,8 +4,12 @@ import os
 /// flatd's HTTP transport: HTTPS only, to a server that proved it holds flatd's key (`FlatdPin`), in an ephemeral
 /// session that never follows a redirect. So the key and every request go only to flatd itself, encrypted: never in
 /// the clear, never to whatever answers at flatd's address, never on to another address.
-struct FlatdTransport: GatedTransport {
+nonisolated struct FlatdTransport: GatedTransport {
     let pin: FlatdPin
+
+    #if ARESTIA_UNIT_TESTS
+    @TaskLocal static var loopbackFixtureHost: String?
+    #endif
 
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         try await send(request, gate: nil, dispatch: nil)
@@ -18,6 +22,14 @@ struct FlatdTransport: GatedTransport {
         // Checked here too, not only by iOS: nothing for flatd ever leaves without TLS.
         guard request.url?.scheme?.lowercased() == "https" else { throw URLError(.unsupportedURL) }
         if let gate, gate.pin != pin { throw FlatdError.unreachable }
+        #if ARESTIA_UNIT_TESTS
+        var request = request
+        if let fixture = Self.loopbackFixtureHost, request.url?.host() == fixture {
+            var url = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)!
+            url.host = "127.0.0.1"
+            request.url = url.url
+        }
+        #endif
         let session = FlatdSession.shared(pin: pin)
         let running = RunningTask()
         #if DEBUG && ARESTIA_GATE
@@ -45,7 +57,7 @@ struct FlatdTransport: GatedTransport {
                                 return
                             }
                         }
-                        if let gate { try gate.start(start) } else { try start() }
+                        if let gate { try gate.start(until: dispatch?.cap, start) } else { try start() }
                         #if DEBUG && ARESTIA_GATE
                         // Both the pairing lock and the task's start lock have been released.
                         running.appendDispatch()

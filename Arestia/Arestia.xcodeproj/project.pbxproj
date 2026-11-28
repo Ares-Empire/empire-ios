@@ -299,14 +299,14 @@
 			buildActionMask = 2147483647;
 			files = ();
 			inputPaths = (
-				"$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)",
+				"$(SRCROOT)/$(ARESTIA_INFO_PLIST_SOURCE)",
 				"$(SRCROOT)/../scripts/arestia_remote_zone.py",
 			);
 			name = "Set remote ATS exception";
-			outputPaths = ();
+			outputPaths = ("$(INFOPLIST_FILE)");
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "exec /usr/bin/python3 \"$SCRIPT_INPUT_FILE_1\" \"$SCRIPT_INPUT_FILE_0\"\n";
+			shellScript = "exec /usr/bin/python3 \"$SCRIPT_INPUT_FILE_1\" \"$SCRIPT_INPUT_FILE_0\" \"$SCRIPT_OUTPUT_FILE_0\"\n";
 		};
 		B35700000000000000000002 /* Set remote ATS exception */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -314,14 +314,14 @@
 			buildActionMask = 2147483647;
 			files = ();
 			inputPaths = (
-				"$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)",
+				"$(SRCROOT)/$(ARESTIA_INFO_PLIST_SOURCE)",
 				"$(SRCROOT)/../scripts/arestia_remote_zone.py",
 			);
 			name = "Set remote ATS exception";
-			outputPaths = ();
+			outputPaths = ("$(INFOPLIST_FILE)");
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "exec /usr/bin/python3 \"$SCRIPT_INPUT_FILE_1\" \"$SCRIPT_INPUT_FILE_0\"\n";
+			shellScript = "exec /usr/bin/python3 \"$SCRIPT_INPUT_FILE_1\" \"$SCRIPT_INPUT_FILE_0\" \"$SCRIPT_OUTPUT_FILE_0\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -369,8 +369,8 @@
 				CODE_SIGN_ENTITLEMENTS = ArestiaControls.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				INFOPLIST_FILE = ArestiaControls/Info.plist;
+				ARESTIA_INFO_PLIST_SOURCE = ArestiaControls/Info.plist;
+				INFOPLIST_FILE = "$(DERIVED_FILE_DIR)/ArestiaInfo.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Arestia;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = "de.ares-empire.arestia.controls";
@@ -387,8 +387,8 @@
 				CODE_SIGN_ENTITLEMENTS = ArestiaControls.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				INFOPLIST_FILE = ArestiaControls/Info.plist;
+				ARESTIA_INFO_PLIST_SOURCE = ArestiaControls/Info.plist;
+				INFOPLIST_FILE = "$(DERIVED_FILE_DIR)/ArestiaInfo.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Arestia;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = "de.ares-empire.arestia.controls";
@@ -470,8 +470,8 @@
 				CODE_SIGN_STYLE = Automatic;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				INFOPLIST_FILE = Arestia/Info.plist;
+				ARESTIA_INFO_PLIST_SOURCE = Arestia/Info.plist;
+				INFOPLIST_FILE = "$(DERIVED_FILE_DIR)/ArestiaInfo.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Arestia";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = NO;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -493,8 +493,8 @@
 				CODE_SIGN_STYLE = Automatic;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				INFOPLIST_FILE = Arestia/Info.plist;
+				ARESTIA_INFO_PLIST_SOURCE = Arestia/Info.plist;
+				INFOPLIST_FILE = "$(DERIVED_FILE_DIR)/ArestiaInfo.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Arestia";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = NO;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

@@ -44,10 +44,23 @@ nonisolated struct Deadline: Sendable {
         guard remaining > .zero else { throw Expired() }
     }
 
+    /// A synchronous system lookup can outlive its caller. Its queue only returns a value and owns no further work.
+    func read<T: Sendable>(_ lookup: @escaping @Sendable () -> T) async throws -> T {
+        try await run {
+            let (values, result) = AsyncStream<T>.makeStream(bufferingPolicy: .bufferingNewest(1))
+            DispatchQueue.global(qos: .userInitiated).async {
+                result.yield(lookup())
+                result.finish()
+            }
+            for await value in values { return value }
+            throw CancellationError()
+        }
+    }
+
     /// Cancel the losing task. Operations must cooperate with cancellation.
     func run<T: Sendable>(_ operation: @escaping @Sendable () async throws -> T) async throws -> T {
         try check()
-        return try await withThrowingTaskGroup(of: T.self) { group in
+        let value = try await withThrowingTaskGroup(of: T.self) { group in
             group.addTask {
                 let value = try await operation()
                 try check()
@@ -66,5 +79,7 @@ nonisolated struct Deadline: Sendable {
                 throw error
             }
         }
+        try check()
+        return value
     }
 }

@@ -114,6 +114,74 @@ struct BlindOrderTests {
 
 @MainActor
 struct GatedStartTests {
+    private struct ForgetBeforeStart: GatedTransport {
+        let connection: FlatdConnection
+        let transport: FakeTransport
+
+        func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+            try await send(request, gate: nil, dispatch: nil)
+        }
+
+        func send(_ request: URLRequest, gate: FlatdGate?, dispatch: FlatdRequestDispatch?) async throws
+            -> (Data, HTTPURLResponse) {
+            if request.value(forHTTPHeaderField: "Authorization") != nil {
+                // The store has made its early check. Forget before the transport attempts the actual start.
+                try connection.forget()
+            }
+            if let gate { try gate.start(until: dispatch?.cap) { try dispatch?.start {} } }
+            return try await transport.send(request)
+        }
+    }
+
+    @Test func renewalCannotStartAfterForgetBetweenEarlyCheckAndDispatch() async throws {
+        let connection = Flat.connection()
+        let transport = FakeTransport()
+        transport.answer("GET /api/devices", body: ["devices": [Flat.fan(1)]])
+        let store = FlatStore(pairing: connection.pairing, connection: connection,
+                              transport: ForgetBeforeStart(connection: connection, transport: transport),
+                              reloadControls: {})
+        #expect(await store.connect(to: Flat.base, token: Flat.renewedKey, pin: Flat.pin) == .notPaired)
+        #expect(transport.sent.map { $0.url?.path() } == ["/api/health"])
+        #expect(connection.pairing == nil)
+    }
+
+    @Test(arguments: [true, false]) func productionDispatchStopsWaitingForHeldLock(fileLock: Bool) async throws {
+        let path = Flat.nameFile().url.deletingLastPathComponent().appending(path: "dispatch.lock").path()
+        let lock = fileLock ? FlatdDispatchLock(path: path) : .processOnly
+        let holder = fileLock ? FlatdDispatchLock(path: path) : lock
+        let connection = FlatdConnection(defaults: nil, names: nil, keychain: MemoryKeys(), lock: lock)
+        let pairing = Flat.pairing(at: URL(string: "https://127.0.0.1:0")!)
+        try connection.save(pairing)
+
+        let (held, notifyHeld) = AsyncStream<Bool>.makeStream()
+        let release = DispatchSemaphore(value: 0)
+        defer { release.signal() }
+        DispatchQueue.global().async {
+            defer { notifyHeld.finish() }
+            do {
+                try holder.withLock {
+                    notifyHeld.yield(true)
+                    _ = release.wait(timeout: .now() + 2)
+                }
+            } catch {
+                notifyHeld.yield(false)
+            }
+        }
+        var heldIterator = held.makeAsyncIterator()
+        try #require(await heldIterator.next() == true)
+
+        var client = FlatdClient(pairing).gated(by: connection)
+        client.commandTimeout = 0.25
+        let action = FlatdActionDispatch()
+        client.action = action
+        let start = ContinuousClock().now
+        await #expect(throws: FlatdError.unreachable) {
+            try await client.setMode(FlatMode.cookingID, active: true)
+        }
+        #expect(start.duration(to: ContinuousClock().now) < .seconds(1))
+        #expect(!action.writeStarted)
+    }
+
     /// A fresh code of the flat asks flatd with its key only while the flat is still the saved one.
     @Test func aRenewalOfAForgottenFlatAsksNothingWithTheKey() async throws {
         let connection = Flat.connection()

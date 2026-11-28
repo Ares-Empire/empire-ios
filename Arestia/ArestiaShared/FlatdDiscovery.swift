@@ -8,10 +8,33 @@ import os
 /// Bonjour is only a hint. Anyone on the Wi-Fi can advertise `_flatd._tcp` under any name, so what it finds are
 /// *candidates*: an address counts as flatd's only once the server there proved the pinned key (`FlatdPin`). That is
 /// also why no name is remembered: flatd is found again under whatever name it has, on whatever machine.
-nonisolated enum FlatdBonjour {
+nonisolated struct FlatdBonjour: Sendable {
     static let type = "_flatd._tcp"
     static let domain = "local."
     static let log = Logger(subsystem: "de.ares-empire.arestia", category: "bonjour")
+
+    var browse: @Sendable () async -> [String] = { await serviceNames(within: .seconds(2)) }
+    var resolve: @Sendable (String) async -> URL? = { await resolve(name: $0) }
+
+    /// Each service is probed as soon as its address resolves. A winning probe cancels the other resolutions.
+    func firstReachable<T: Sendable>(_ probe: @escaping @Sendable (URL) async -> T?) async -> T? {
+        let names = await browse().shuffled().prefix(Self.maxCandidates)
+        return await withTaskGroup(of: T?.self) { group in
+            for name in names {
+                group.addTask {
+                    guard !Task.isCancelled, let url = await resolve(name), !Task.isCancelled else { return nil }
+                    return await probe(url)
+                }
+            }
+            for await result in group {
+                if let result {
+                    group.cancelAll()
+                    return result
+                }
+            }
+            return nil
+        }
+    }
 
     /// Every address a `_flatd._tcp` service is advertised at right now, in no particular order: the services seen
     /// within `browse` (none seen: empty), each resolved. Candidates only, see above.
@@ -65,39 +88,31 @@ nonisolated enum FlatdBonjour {
         if let ip = parameters.defaultProtocolStack.internetProtocol as? NWProtocolIP.Options { ip.version = .v4 }
         let connection = NWConnection(to: .service(name: name, type: type, domain: domain, interface: nil),
                                       using: parameters)
-        let result = OSAllocatedUnfairLock<URL??>(initialState: nil)   // nil: not yet; .some(nil): failed
-        return await withTaskCancellationHandler {
-            await withCheckedContinuation { (done: CheckedContinuation<URL?, Never>) in
-                let finish: @Sendable (URL?) -> Void = { url in
-                    let first = result.withLock { state -> Bool in
-                        guard state == nil else { return false }
-                        state = .some(url)
-                        return true
-                    }
-                    guard first else { return }
-                    connection.cancel()
-                    done.resume(returning: url)
+        let (addresses, result) = AsyncStream<URL>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        connection.stateUpdateHandler = { state in
+            switch state {
+            case .ready:
+                if let url = connection.currentPath?.remoteEndpoint.flatMap(serviceURL) {
+                    result.yield(url)
                 }
-                connection.stateUpdateHandler = { state in
-                    switch state {
-                    case .ready:
-                        finish(connection.currentPath?.remoteEndpoint.flatMap(serviceURL))
-                    case .failed, .cancelled:
-                        finish(nil)
-                    case .waiting:
-                        log.notice("Bonjour resolution is waiting")
-                    default:
-                        break
-                    }
-                }
-                connection.start(queue: .global(qos: .userInitiated))
-                Task {
-                    try? await Task.sleep(for: timeout)
-                    finish(nil)
-                }
+                result.finish()
+            case .failed, .cancelled:
+                result.finish()
+            case .waiting:
+                log.notice("Bonjour resolution is waiting")
+            default:
+                break
             }
-        } onCancel: {
+        }
+        connection.start(queue: .global(qos: .userInitiated))
+        defer {
+            connection.stateUpdateHandler = nil
             connection.cancel()
+            result.finish()
+        }
+        return try? await Deadline(after: timeout).run { () -> URL? in
+            for await address in addresses { return address }
+            return nil
         }
     }
 
@@ -121,10 +136,11 @@ nonisolated enum FlatdBonjour {
 nonisolated struct FlatdReach: Sendable {
     let connection: FlatdConnection
     var transport: (any HTTPTransport & Sendable)?
-    var rediscover: @Sendable () async -> [URL] = { await FlatdBonjour.candidates() }
+    var rediscover: (@Sendable () async -> [URL])?
     var path: (@Sendable () async -> HomeRoute.Path)?
     var allowsRemote: @Sendable () -> Bool = RemoteUnlock.allowsRemote
     var needsPasscode: @Sendable () -> Bool = RemoteUnlock.needsPasscode
+    var bonjour = FlatdBonjour()
 
     @TaskLocal static var intentBudget: Deadline?
 
@@ -157,7 +173,10 @@ nonisolated struct FlatdReach: Sendable {
         }
 
         switch try await select(pairing, deadline: deadline, homeOnly: false) {
-        case .remoteDenied: throw FlatdError.awayNeedsUnlock(needsPasscode: needsPasscode())
+        case .remoteDenied:
+            let passcode = (try? await deadline.read(needsPasscode)) ?? false
+            try Task.checkCancellation()
+            throw FlatdError.awayNeedsUnlock(needsPasscode: passcode)
         case .unreachable: throw FlatdError.unreachable
         case let .reached(client):
             do {
@@ -182,8 +201,15 @@ nonisolated struct FlatdReach: Sendable {
             await Self.probe(FlatdClient(pairing, transport: transport), within: cap, deadline: deadline)
         }
         let discovery: @Sendable (Deadline) async -> FlatdClient? = { cap in
-            let candidates = await rediscover().filter { $0 != pairing.baseURL }
-            return await Self.find(pairing, among: candidates, transport: transport, within: cap, deadline: deadline)
+            if let rediscover {
+                let candidates = await rediscover().filter { $0 != pairing.baseURL }
+                return await Self.find(pairing, among: candidates, transport: transport, within: cap, deadline: deadline)
+            }
+            return await bonjour.firstReachable { url in
+                guard url != pairing.baseURL, url.scheme == "https" else { return nil }
+                let client = FlatdClient(pairing, at: url, transport: transport)
+                return await Self.probe(client, within: cap, deadline: deadline)
+            }
         }
         let readPath: @Sendable () async -> HomeRoute.Path = path ?? {
             #if DEBUG && ARESTIA_GATE

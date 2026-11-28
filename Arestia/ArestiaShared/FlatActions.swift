@@ -26,7 +26,8 @@ nonisolated struct FlatActions: Sendable {
 
     private func setCooking(resolving active: @Sendable (FlatdClient) async throws -> Bool) async throws -> CookingChange {
         let connection = reach.connection
-        let (change, pairing) = try await reach.run { client in
+        let deadline = FlatdReach.intentBudget ?? FlatdReach.intentDeadline()
+        let (change, pairing) = try await reach.run(deadline: deadline) { client in
             let active = try await active(client)
             let (mode, failed) = try await client.setMode(FlatMode.cookingID, active: active)
             let names = connection.names(failed, pairing: client.pairingID)
@@ -34,10 +35,11 @@ nonisolated struct FlatActions: Sendable {
         }
         if let pairing {
             if change.failed.isEmpty {
-                connection.clearTrouble(mode: FlatMode.cookingID, pairing: pairing, now: change.isActive)
+                connection.clearTrouble(mode: FlatMode.cookingID, pairing: pairing, now: change.isActive,
+                                        until: deadline)
             } else {
                 connection.note(ModeTrouble(pairing: pairing, mode: FlatMode.cookingID, active: change.isActive,
-                                            names: change.failed, at: .now))
+                                            names: change.failed, at: .now), until: deadline)
             }
         }
         return change
@@ -81,7 +83,7 @@ nonisolated struct FlatActions: Sendable {
     }
 
     /// Switches the fans (all, or those in `only`) on (for `minutes`, nil: until switched off) or off, side by side.
-    /// Returns the fans as flatd confirmed them; throws the first failure after every fan was tried. `only` holds
+    /// Returns the fans as flatd confirmed them; reports an unanswered write before other failures. `only` holds
     /// saved choices (`SavedDevice`): one the paired flat does not have (any more), or one chosen before the flat was
     /// forgotten, throws `ChosenDeviceGone.fan`, and nothing is switched.
     @discardableResult
@@ -111,7 +113,9 @@ nonisolated struct FlatActions: Sendable {
                     case let .success(device): done.append(device)
                     case let .failure(error):
                         // Preserve a lock refusal if the whole batch can still retry at home.
-                        if case .awayNeedsUnlock = error, client.action?.writeStarted == false {
+                        if error == .noAnswer {
+                            firstError = error
+                        } else if case .awayNeedsUnlock = error, client.action?.writeStarted == false {
                             firstError = error
                         } else {
                             firstError = firstError ?? error

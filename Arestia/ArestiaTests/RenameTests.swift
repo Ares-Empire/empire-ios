@@ -71,7 +71,8 @@ struct RenameContractTests {
 /// `PATCH /api/devices/{id}` and how a refusal reads.
 struct RenameClientTests {
     let transport = FakeTransport()
-    var client: FlatdClient { FlatdClient(Flat.pairing(), transport: transport) }
+    let connection = Flat.connection()
+    var client: FlatdClient { FlatdClient(Flat.pairing(), transport: transport).gated(by: connection) }
 
     @Test func aNameAndTheConfigNameAgain() async throws {
         transport.answer("PATCH /api/devices/fan:fan_1", body: named(Flat.fan(1), "Desk fan", default: "Fan 1"))

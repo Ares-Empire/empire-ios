@@ -29,8 +29,9 @@ nonisolated struct FlatdPairing: Codable, Equatable, Sendable {
         self.revision = revision
     }
 
-    func matches(route: HomeRoute?, pin: FlatdPin, url: URL) -> Bool {
-        switch route {
+    func matches(route: HomeRoute?, pin: FlatdPin, url: URL, token: String) -> Bool {
+        guard self.token == token else { return false }
+        return switch route {
         case .home: self.pin == pin
         case .remote: remote?.pin == pin && remote?.url == url
         case nil: false
@@ -200,9 +201,16 @@ nonisolated final class FlatdDispatchLock: @unchecked Sendable {
     }()
 
     /// Runs `body` holding the lock; throws `Unavailable` (and runs nothing) when the lock cannot be taken.
-    func withLock<T>(_ body: () throws -> T) throws -> T {
-        local.lock()
+    func withLock<T>(until deadline: Deadline? = nil, _ body: () throws -> T) throws -> T {
+        if let deadline {
+            repeat {
+                try deadline.check()
+            } while !local.lock(before: Date(timeIntervalSinceNow: min(0.01, deadline.remainingSeconds)))
+        } else {
+            local.lock()
+        }
         defer { local.unlock() }
+        try deadline?.check()
         switch kind {
         case .processOnly:
             return try body()
@@ -215,13 +223,18 @@ nonisolated final class FlatdDispatchLock: @unchecked Sendable {
                 throw Unavailable()
             }
             defer { close(descriptor) }
-            var locked = flock(descriptor, LOCK_EX)
-            while locked != 0, errno == EINTR { locked = flock(descriptor, LOCK_EX) }
-            guard locked == 0 else {
-                Self.log.error("the dispatch lock could not be taken (\(errno, privacy: .public))")
-                throw Unavailable()
+            let operation = deadline == nil ? LOCK_EX : LOCK_EX | LOCK_NB
+            while flock(descriptor, operation) != 0 {
+                if errno == EINTR { try deadline?.check(); continue }
+                guard errno == EWOULDBLOCK, let deadline else {
+                    Self.log.error("the dispatch lock could not be taken (\(errno, privacy: .public))")
+                    throw Unavailable()
+                }
+                try deadline.check()
+                Thread.sleep(forTimeInterval: min(0.01, max(0, deadline.remainingSeconds)))
             }
             defer { flock(descriptor, LOCK_UN) }
+            try deadline?.check()
             return try body()
         }
     }
@@ -332,10 +345,10 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
 
     /// Runs `start` (starting a request with this pairing's key) only while this pairing is the saved one, under the
     /// lock Forget takes too: throws `.notPaired` once it is not, `.pairingUnreadable` while it cannot be read.
-    func start(for pairing: UUID, checking: (FlatdPairing) throws -> Void = { _ in },
+    func start(for pairing: UUID, until deadline: Deadline? = nil, checking: (FlatdPairing) throws -> Void = { _ in },
                _ start: () throws -> Void) throws {
         do {
-            try lock.withLock {
+            try lock.withLock(until: deadline) {
                 let saved = try current()
                 guard saved.id == pairing else { throw FlatdError.notPaired }
                 try checking(saved)
@@ -360,12 +373,12 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
 
     /// The same flatd (the same identity) with a new key or address, written only over the version `saved` was read
     /// as: false when the pairing changed meanwhile. Keeps the pairing's identity, so its choices go on.
-    func renew(_ saved: FlatdPairing, with renewed: FlatdPairing) -> Bool {
+    func renew(_ saved: FlatdPairing, with renewed: FlatdPairing, until deadline: Deadline? = nil) -> Bool {
         guard renewed.id == saved.id, renewed.pin == saved.pin, renewed.revision != saved.revision else { return false }
         var renewed = renewed
         if renewed.token != saved.token { renewed.remote = nil }
         guard let text = try? Self.text(renewed) else { return false }
-        return (try? lock.withLock {
+        return (try? lock.withLock(until: deadline) {
             keychain.update(text, ifLabel: saved.revision.uuidString, newLabel: renewed.revision.uuidString)
         }) ?? false
     }
@@ -384,17 +397,17 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
         var moved = pairing
         moved.baseURL = baseURL
         moved.revision = UUID()
-        _ = renew(pairing, with: moved)
+        _ = renew(pairing, with: moved, until: client.deadline)
     }
 
     /// The client for the saved pairing, at its saved address.
-    var client: FlatdClient? { pairing.map { FlatdClient($0) } }
+    var client: FlatdClient? { pairing.map { FlatdClient($0).gated(by: self) } }
 
     /// The client for the pairing with this identity, while it is the saved one: built from that one reading of the
     /// Keychain, so the identity checked and the key and pin used are the same pairing's. Nil once it is not.
     func client(for id: UUID, transport: (any HTTPTransport & Sendable)? = nil) -> FlatdClient? {
         guard let pairing, pairing.id == id else { return nil }
-        return FlatdClient(pairing, transport: transport)
+        return FlatdClient(pairing, transport: transport).gated(by: self)
     }
 
     /// Forgets the flat (Settings → Forget this flat, `FlatSession.forget`): the pairing and everything kept for it here
@@ -462,7 +475,7 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     func checkCurrent(_ client: FlatdClient) throws {
         let saved = try current()
         guard saved.id == client.pairingID else { throw FlatdError.notPaired }
-        guard saved.matches(route: client.route, pin: client.pin, url: client.baseURL) else {
+        guard saved.matches(route: client.route, pin: client.pin, url: client.baseURL, token: client.token) else {
             throw FlatdError.unreachable
         }
     }
@@ -564,7 +577,7 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
         }
         let kept: [KnownDevice]?
         do {
-            kept = try lock.withLock { () throws -> [KnownDevice]? in
+            kept = try lock.withLock(until: client.deadline) { () throws -> [KnownDevice]? in
                 try checkCurrent(client)
                 let known = Self.known(devices)
                 let now = names.read()
@@ -573,6 +586,8 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
                 }
                 return names.read().flatMap { $0.pairing == id ? $0.devices : nil }
             }
+        } catch is Deadline.Expired {
+            throw FlatdError.unreachable
         } catch is FlatdDispatchLock.Unavailable {
             try checkCurrent(client)                       // no lock, so no names: nothing could have been kept either
             return devices
@@ -607,8 +622,8 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     /// Keeps what a change of a mode made outside the app left undone: the Cooking control shows it next to its state,
     /// and the app says it once (`FlatStore`). Written only while its pairing is the saved one, under the lock Forget
     /// takes, so a late writer never puts one back after Forget.
-    func note(_ trouble: ModeTrouble) {
-        let kept: Bool = (try? lock.withLock {
+    func note(_ trouble: ModeTrouble, until deadline: Deadline? = nil) {
+        let kept: Bool = (try? lock.withLock(until: deadline) {
             guard pairing?.id == trouble.pairing, let data = try? JSONEncoder().encode(trouble) else { return false }
             defaults?.set(data, forKey: Self.troubleKey)
             return true
@@ -620,8 +635,8 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     /// pairing's (a late answer of a forgotten flat never clears the next one's). A start sends every device its
     /// command again (flatd's contract), so one where all followed clears any trouble (round 8); ending a mode that is
     /// already off sends nothing to any device, so it never clears a fan left running by the first end (round 7).
-    func clearTrouble(mode: String, pairing: UUID, now active: Bool) {
-        try? lock.withLock {
+    func clearTrouble(mode: String, pairing: UUID, now active: Bool, until deadline: Deadline? = nil) {
+        try? lock.withLock(until: deadline) {
             guard let saved = savedTrouble, saved.mode == mode, saved.pairing == pairing, active || saved.active
             else { return }
             defaults?.removeObject(forKey: Self.troubleKey)

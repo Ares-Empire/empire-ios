@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Set the single Arestia ATS exception in a processed Info.plist."""
+"""Set the single Arestia ATS exception in an Info.plist for Xcode to process."""
 
 import os
 from pathlib import Path
 import plistlib
 import re
+import stat
 import sys
 
 
@@ -18,8 +19,13 @@ def read_zone(*, debug=False):
         raise ValueError("ARESTIA_REMOTE_ZONE_FILE is set but empty")
     path = Path(override) if override is not None else Path.home() / ".config/arestia/remote-zone"
     try:
-        with path.open("rb") as file:
-            raw = file.read(256)
+        descriptor = os.open(path, os.O_RDONLY | os.O_NONBLOCK | os.O_CLOEXEC)
+        try:
+            if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+                raise ValueError("remote zone file must be a regular file")
+            raw = os.read(descriptor, 256)
+        finally:
+            os.close(descriptor)
     except FileNotFoundError:
         if debug:
             return DEBUG_ZONE
@@ -46,15 +52,12 @@ def main():
         zone = read_zone(debug=os.environ.get("CONFIGURATION") == "Debug")
         data = plistlib.loads(plist.read_bytes())
         data["NSAppTransportSecurity"] = ats_settings(zone)
-        updated = plistlib.dumps(data, fmt=plistlib.FMT_BINARY)
-        temporary = plist.with_name(plist.name + ".arestia-ats")
-        temporary.write_bytes(updated)
-        temporary.replace(plist)
+        Path(sys.argv[2]).write_bytes(plistlib.dumps(data))
     except ValueError as error:
         print(f"error: Arestia ATS: {error}", file=sys.stderr)
         return 1
     except OSError:
-        print("error: Arestia ATS: could not update the processed Info.plist", file=sys.stderr)
+        print("error: Arestia ATS: could not generate the Info.plist", file=sys.stderr)
         return 1
     return 0
 

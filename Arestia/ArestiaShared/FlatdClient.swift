@@ -144,6 +144,15 @@ nonisolated struct FlatdClient: Sendable {
         self.transport = transport ?? FlatdTransport(pin: remote.pin)
     }
 
+    /// Tries the new home credential only while the pairing it would renew is still saved.
+    init(renewing saved: FlatdPairing, at baseURL: URL, token: String, connection: FlatdConnection,
+         transport: (any HTTPTransport & Sendable)? = nil) {
+        self.init(FlatdPairing(baseURL: baseURL, token: token, pin: saved.pin, id: saved.id), transport: transport)
+        gate = FlatdGate(connection: connection, pairing: saved.id, route: .home, pin: saved.pin, baseURL: baseURL,
+                         savedToken: saved.token, allowsRemote: RemoteUnlock.allowsRemote,
+                         needsPasscode: RemoteUnlock.needsPasscode)
+    }
+
     /// The same client, its every request with the key started only while its pairing is the saved one in this
     /// connection, under the lock Forget takes (`FlatdConnection.start(for:_:)`): after Forget it sends nothing.
     func gated(by connection: FlatdConnection, allowsRemote: @escaping @Sendable () -> Bool = RemoteUnlock.allowsRemote,
@@ -151,7 +160,8 @@ nonisolated struct FlatdClient: Sendable {
         guard let pairingID, let route else { return self }
         var client = self
         client.gate = FlatdGate(connection: connection, pairing: pairingID, route: route, pin: pin,
-                               baseURL: baseURL, allowsRemote: allowsRemote, needsPasscode: needsPasscode)
+                               baseURL: baseURL, savedToken: token,
+                               allowsRemote: allowsRemote, needsPasscode: needsPasscode)
         return client
     }
 
@@ -390,19 +400,25 @@ nonisolated struct FlatdClient: Sendable {
                                            deadline: deadline, action: action)
         let boundedRequest = request
         do {
-            if authorized && route == .remote && gate == nil { throw FlatdError.unreachable }
+            if authorized && pairingID != nil && gate == nil { throw FlatdError.unreachable }
             return try await cap.run {
                 if let pinned = transport as? any GatedTransport {
                     return try await pinned.send(boundedRequest, gate: authorized ? gate : nil, dispatch: dispatch)
                 }
-                if authorized, let gate { try gate.start { try dispatch.start {} } }
+                if authorized, let gate { try gate.start(until: cap) { try dispatch.start {} } }
                 else { try dispatch.start {} }
                 return try await transport.send(boundedRequest)
             }
+        } catch is FlatdGate.RemoteDenied {
+            let passcode = (try? await cap.read(gate?.needsPasscode ?? RemoteUnlock.needsPasscode)) ?? false
+            try Task.checkCancellation()
+            throw FlatdError.awayNeedsUnlock(needsPasscode: passcode)
         } catch let error as FlatdError {
             throw error
         } catch is Deadline.Expired {
-            throw dispatch.isWrite && !dispatch.started ? FlatdError.unreachable : FlatdError.noAnswer
+            let actionExpired = deadline.map { $0.remaining <= .zero } ?? false
+            let writeInFlight = actionExpired && action?.writeStarted == true
+            throw dispatch.started || writeInFlight ? FlatdError.noAnswer : FlatdError.unreachable
         } catch is CancellationError {
             throw CancellationError()
         } catch let error as URLError where error.code == .cancelled {
@@ -482,20 +498,26 @@ nonisolated struct FlatdRequestDispatch: Sendable {
 
 /// Checks the saved identity and the lock marker inside the same lock that protects dispatch.
 nonisolated struct FlatdGate: Sendable {
+    struct RemoteDenied: Error {}
+
     let connection: FlatdConnection
     let pairing: UUID
     let route: HomeRoute
     let pin: FlatdPin
     let baseURL: URL
+    let savedToken: String
     let allowsRemote: @Sendable () -> Bool
     let needsPasscode: @Sendable () -> Bool
 
-    func start(_ start: () throws -> Void) throws {
-        try connection.start(for: pairing, checking: { saved in
-            guard saved.matches(route: route, pin: pin, url: baseURL) else { throw FlatdError.unreachable }
-            if route == .remote, !allowsRemote() {
-                throw FlatdError.awayNeedsUnlock(needsPasscode: needsPasscode())
+    func start(until deadline: Deadline? = nil, _ start: () throws -> Void) throws {
+        try connection.start(for: pairing, until: deadline, checking: { saved in
+            guard saved.matches(route: route, pin: pin, url: baseURL, token: savedToken) else {
+                throw FlatdError.unreachable
             }
+            if route == .remote, !allowsRemote() {
+                throw RemoteDenied()
+            }
+            try deadline?.check()
         }, start)
     }
 }

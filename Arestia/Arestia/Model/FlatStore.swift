@@ -93,6 +93,14 @@ final class FlatStore {
     private var loop: Task<Void, Never>?
     /// Which loop may change the store (`run`); a stopped or replaced loop finds it changed and ends.
     private var loopGeneration = 0
+    private struct Enrollment {
+        let order = UUID()
+        let client: FlatdClient
+        let saved: FlatdPairing
+    }
+    private var pendingEnrollment: Enrollment?
+    private var enrollmentTask: Task<Void, Never>?
+    private var enrollmentOrder: UUID?
     /// Commands under way, cancelled when the store retires.
     private var tasks: [UUID: Task<Void, Never>] = [:]
     /// Hears when a control or Shortcut kept a trouble (`FlatdConnection.troubleNotification`) while the app follows.
@@ -174,6 +182,9 @@ final class FlatStore {
         loopGeneration += 1
         loop?.cancel()
         loop = nil
+        pendingEnrollment = nil
+        enrollmentOrder = nil
+        enrollmentTask?.cancel()
         liveBase = nil
         if link == .live { link = .connecting }
         if let troubleToken { notify_cancel(troubleToken) }
@@ -326,11 +337,15 @@ final class FlatStore {
         var opened: AsyncThrowingStream<FlatEvent, Error>?
         if let gate = client.gate {
             let request = client.eventsRequest
-            try gate.start {
-                opened = eventSource.events(from: request, pin: client.pin)
-                #if DEBUG
-                FlatdRequestDispatch.log(request, route: client.route, deadline: client.deadline)
-                #endif
+            do {
+                try gate.start(until: Deadline(after: .seconds(request.timeoutInterval))) {
+                    opened = eventSource.events(from: request, pin: client.pin)
+                    #if DEBUG
+                    FlatdRequestDispatch.log(request, route: client.route, deadline: client.deadline)
+                    #endif
+                }
+            } catch is Deadline.Expired {
+                throw FlatdError.unreachable
             }
         }
         guard let stream = opened else { throw FlatdError.notPaired }
@@ -354,7 +369,7 @@ final class FlatStore {
                     // Read the revision after a possible home address move, before asking for remote enrollment.
                     if let current = connection.pairing, current.id == saved.id,
                        current.token == saved.token, current.pin == saved.pin {
-                        Task { await Self.enrollRemote(from: client, read: current, connection: connection) }
+                        queueEnrollment(from: client, read: current)
                     }
                 }
                 sayTroubleFromOutside()
@@ -365,10 +380,32 @@ final class FlatStore {
         throw FlatdError.unreachable            // the stream ended: reconnect
     }
 
-    nonisolated static func enrollRemote(from client: FlatdClient, read saved: FlatdPairing,
-                                        connection: FlatdConnection) async {
+    private func queueEnrollment(from client: FlatdClient, read saved: FlatdPairing) {
+        let next = Enrollment(client: client, saved: saved)
+        enrollmentOrder = next.order
+        pendingEnrollment = next
+        enrollmentTask?.cancel()
+        startEnrollment()
+    }
+
+    private func startEnrollment() {
+        guard enrollmentTask == nil, let next = pendingEnrollment else { return }
+        pendingEnrollment = nil
+        let connection = connection
+        enrollmentTask = Task { [weak self] in
+            await Self.enrollRemote(from: next.client, read: next.saved, connection: connection) {
+                self?.enrollmentOrder == next.order
+            }
+            self?.enrollmentTask = nil
+            self?.startEnrollment()
+        }
+    }
+
+    static func enrollRemote(from client: FlatdClient, read saved: FlatdPairing, connection: FlatdConnection,
+                             isLatest: () -> Bool = { true }) async {
         guard client.route == .home, client.pairingID == saved.id, client.token == saved.token,
               case let .replace(remote)? = try? await client.remoteEnrollment(),
+              isLatest(), !Task.isCancelled,
               remote != saved.remote else { return }
         var renewed = saved
         renewed.remote = remote
@@ -557,9 +594,18 @@ final class FlatStore {
         do {
             try await candidate.verify()
             guard !Task.isCancelled, !isRetired else { return .notPossible }
-            if let pairingID, try connection.current().id != pairingID { return .notPaired }
+            let verifying: FlatdClient
+            if let pairingID {
+                let saved = try connection.current()
+                guard saved.id == pairingID else { return .notPaired }
+                guard saved.pin == pin else { return .anotherFlat }
+                verifying = FlatdClient(renewing: saved, at: baseURL, token: token,
+                                        connection: connection, transport: transport)
+            } else {
+                verifying = candidate
+            }
             let version = connection.devicesVersion
-            let found = Found(devices: try await candidate.devices(), version: version)
+            let found = Found(devices: try await verifying.devices(), version: version)
             // The screen went away, or the store's part ended meanwhile: this attempt keeps nothing.
             guard !Task.isCancelled, !isRetired else { return .notPossible }
             if let pairingID {

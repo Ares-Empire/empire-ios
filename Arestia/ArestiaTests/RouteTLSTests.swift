@@ -1,3 +1,4 @@
+#if ARESTIA_UNIT_TESTS
 import Foundation
 import Testing
 @testable import Arestia
@@ -8,26 +9,6 @@ struct RouteTLSTests {
         let method: String?
         let path: String?
         let authorized: Bool?
-    }
-
-    /// Replace only DNS resolution in the fixture. Both routes still use a real URLSession and its pin delegate.
-    private struct LoopbackRemote: GatedTransport {
-        let listener: URL
-        let pinned: FlatdTransport
-
-        func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
-            try await send(request, gate: nil, dispatch: nil)
-        }
-
-        func send(_ request: URLRequest, gate: FlatdGate?, dispatch: FlatdRequestDispatch?) async throws
-            -> (Data, HTTPURLResponse) {
-            var request = request
-            var url = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)!
-            url.host = listener.host()
-            url.port = listener.port
-            request.url = url.url
-            return try await pinned.send(request, gate: gate, dispatch: dispatch)
-        }
     }
 
     @MainActor @Test(.enabled(if: ProcessInfo.processInfo.environment["ARESTIA_ARRIVALS"] != nil))
@@ -47,10 +28,12 @@ struct RouteTLSTests {
         let paired = try connection.current()
         #expect(paired.remote?.pin == a.pin)
         #expect(paired.remote?.url.port == aLoopback.port)
-        let positiveRemote = try #require(FlatdClient(remoteOf: paired, transport: LoopbackRemote(
-            listener: aLoopback, pinned: FlatdTransport(pin: a.pin)
-        ))).gated(by: connection, allowsRemote: { true })
-        #expect(try await !positiveRemote.devices().isEmpty)
+        let fixtureHost = try #require(paired.remote?.url.host())
+        let positiveRemote = try #require(FlatdClient(remoteOf: paired)).gated(by: connection, allowsRemote: { true })
+        let devices = try await FlatdTransport.$loopbackFixtureHost.withValue(fixtureHost) {
+            try await positiveRemote.devices()
+        }
+        #expect(!devices.isEmpty)
 
         func arrivals(_ listener: String) throws -> [Arrival] {
             let data = try String(contentsOf: directory.appending(path: listener + ".arrivals"), encoding: .utf8)
@@ -77,10 +60,16 @@ struct RouteTLSTests {
             try await reach.run { try await $0.devices() }
         }
 
-        let wrongRemote = try #require(FlatdClient(remoteOf: paired, transport: LoopbackRemote(
-            listener: homeURL, pinned: FlatdTransport(pin: a.pin)
-        ))).gated(by: connection, allowsRemote: { true })
-        await #expect(throws: FlatdError.unreachable) { try await wrongRemote.devices() }
+        let remoteURL = try #require(paired.remote?.url)
+        var wrongPort = try #require(URLComponents(url: remoteURL, resolvingAgainstBaseURL: false))
+        wrongPort.port = homeURL.port
+        let wrongListener = try #require(RemoteListener.parse(url: wrongPort.string, pin: a.pin.hex, homePin: h.pin))
+        offline.remote = wrongListener
+        try connection.save(offline)
+        let wrongRemote = try #require(FlatdClient(remoteOf: offline)).gated(by: connection, allowsRemote: { true })
+        await FlatdTransport.$loopbackFixtureHost.withValue(fixtureHost) {
+            await #expect(throws: FlatdError.unreachable) { try await wrongRemote.devices() }
+        }
 
         try #require(await eventually {
             let rejectedA = (try? arrivals("remote").dropFirst(beforeA.count).filter { $0.event == "tls_failed" }.count) ?? 0
@@ -95,3 +84,4 @@ struct RouteTLSTests {
         #expect(newH.allSatisfy { $0.event != "request" })
     }
 }
+#endif

@@ -148,9 +148,11 @@ for app in "${apps[@]}"; do
     fi
     case "$app" in
         Aresium|Empire) filters+=("-skip-testing:${app}Tests/SharedLoginProbe") ;;
+        Arestia) filters+=('SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) ARESTIA_UNIT_TESTS') ;;
     esac
     # Use two independently pinned loopback listeners. Port 0 lets the OS assign the ports atomically.
     if [[ "$app" == Arestia ]] && (( ! timing )); then
+        python3 scripts/test-arestia-remote-zone.py
         fake_root="$PWD/build/test-unit/fake-flatd"
         mkdir -p "$fake_root"
         python3 scripts/fake-flatd.py --host 127.0.0.1 --port 0 --no-bonjour \

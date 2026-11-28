@@ -160,16 +160,18 @@ that did not follow.
 ### Remote enrollment and controls (B357, P7a)
 
 After a live home snapshot, the app asks flatd 1.7 for `GET /api/remote` in the background. It saves the
-validated listener URL and pin with the pairing revision it read before asking. Two nulls clear enrollment
-and a 404 preserves it. Renewing with a new token clears the remote part. The app's screens and event stream
-still use the home route.
+validated listener URL and pin with the pairing revision it read before asking. A newer snapshot supersedes
+the pending enrollment, and each store runs one request at a time. Two nulls clear enrollment and a 404
+preserves it. Renewing with a new token clears the remote part. The app's screens and event stream use the
+home route.
 
 Shortcuts, Siri and Control Center can select the saved home address, a Bonjour candidate, or the enrolled
 remote listener. Only token-free health probes race. Each route uses its own pinned identity. An intent
 has 15 s from entry, including up to 5 s for route choice. A write needs 3 s left to start. An expired
 in-flight write may have taken effect and is never replayed.
 
-On every authenticated remote dispatch, Arestia reads a fixed value from its shared Keychain group. The app
+Each authenticated dispatch checks the saved pairing and token under the lock shared with Forget.
+On remote dispatch, Arestia also reads a fixed value from its shared Keychain group. The app
 creates the marker on activation with `WhenPasscodeSetThisDeviceOnly`. The control extension reads it.
 Before any write has started, a remote lock refusal gets one home-only choice within the original deadline.
 If home answers, the action runs there. Arestia uses LocalAuthentication to distinguish a missing passcode.
@@ -178,11 +180,9 @@ Home dispatch works after first unlock, as before. Lock timing still needs the P
 The app and control extension read their ATS zone from `$ARESTIA_REMOTE_ZONE_FILE`, or
 `~/.config/arestia/remote-zone` when the variable is unset. Use one lowercase DNS name with at least two
 labels. Debug defaults to `home.example.net` when the file is missing. Release requires the file and the
-release audit requires a zone different from the Debug default. Malformed files fail the build. Xcode did
-not expand a build variable in a processed plist dictionary key. Each target's only script phase runs after
-plist processing and inserts the exact exception before signing. Script sandboxing is off for those two
-targets so the phase can read the private file and edit the processed plist. HTTPS and pin checks still
-apply to each connection.
+release audit requires a zone different from the Debug default. The build rejects malformed values and
+requires a regular file. Each target's sandboxed ATS phase reads its declared source plist and generates
+the declared plist input for Xcode's processing and signing. HTTPS and pin checks apply to each connection.
 
 Debug `-deadFlatdHome` replaces the saved home address with a test address. To exercise rediscovery in a
 control, launch before advertising the replacement home listener. The unified-log category `route` records
