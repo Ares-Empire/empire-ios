@@ -56,7 +56,8 @@ ci_skips() {
 
 flatd_pairing() {
     local log="$1" pairing
-    for _ in $(seq 1 50); do
+    # Up to 30 s: a fresh CI runner makes the identity and starts Python more slowly than a warm Mac.
+    for _ in $(seq 1 150); do
         pairing=$(sed -n 's/^pairing code: //p' "$log" 2>/dev/null || true)
         if [[ -n "$pairing" ]]; then
             printf '%s\n' "$pairing"
@@ -64,7 +65,8 @@ flatd_pairing() {
         fi
         sleep 0.2
     done
-    echo "The fake flatd did not start. See $log." >&2
+    echo "The fake flatd did not start ($log):" >&2
+    cat "$log" >&2 2>/dev/null || true
     return 1
 }
 
