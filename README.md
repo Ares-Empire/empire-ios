@@ -7,7 +7,7 @@
 Five native iPhone apps, written in SwiftUI. Four share one account; Aresium needs none. Each works in English and
 German, in light and dark, and, in a build from Xcode, on made-up sample data without an account. Aresium and Arestemis
 also come with a tour on made-up data.
-**[See them on patrikbreeck.com](https://patrikbreeck.com/en/apps/)**
+**[Try them in the demo](https://www.ares-empire.de/demo)**
 
 <table>
   <tr>
