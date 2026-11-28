@@ -128,8 +128,7 @@ struct GatedStartTests {
                 // The store has made its early check. Forget before the transport attempts the actual start.
                 try connection.forget()
             }
-            if let gate { try gate.start(until: dispatch?.cap) { try dispatch?.start {} } }
-            return try await transport.send(request)
+            return try await transport.send(request, gate: gate, dispatch: dispatch)
         }
     }
 
@@ -241,7 +240,7 @@ struct CookingTroubleTests {
     /// A second End cooking (flatd sends no device commands for it) leaves the first one's trouble standing.
     @Test func aNoOpEndKeepsTheTroubleOfTheRealEnd() async throws {
         let connection = Flat.connection()
-        connection.note(ModeTrouble(pairing: Flat.id, mode: "cooking", active: false, names: ["Fan 2"], at: .now))
+        try? connection.note(ModeTrouble(pairing: Flat.id, mode: "cooking", active: false, names: ["Fan 2"], at: .now))
         transport.answer("POST /api/modes/cooking", body: Flat.cooking.merging(["failed": [:]]) { $1 })
         let reach = FlatdReach(connection: connection, transport: transport, rediscover: { [] })
         _ = try await FlatActions(reach: reach).setCooking(false)
@@ -263,7 +262,7 @@ struct CookingTroubleTests {
         #expect(await eventually { events.isOpen })
         events.send(try Flat.snapshot(cookingActive: false))
         #expect(await eventually { store.link == .live })
-        connection.note(ModeTrouble(pairing: Flat.id, mode: "cooking", active: true, names: ["Fan 2"], at: .now))
+        try? connection.note(ModeTrouble(pairing: Flat.id, mode: "cooking", active: true, names: ["Fan 2"], at: .now))
         try await Task.sleep(for: .milliseconds(100))
         #expect(store.offer == nil)                                     // cooking is still off here: not yet
         events.send(.mode(FlatMode(id: "cooking", label: "Cooking", active: true, since: .now)))

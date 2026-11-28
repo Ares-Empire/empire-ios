@@ -4,8 +4,8 @@ import Foundation
 // Made-up flat for the tests: generic devices only ("Fan 1", "Blind 1"), never the real flat's.
 
 /// flatd's answers to requests, by method and path; records what was asked.
-final class FakeTransport: HTTPTransport, @unchecked Sendable {
-    struct Answer {
+nonisolated final class FakeTransport: GatedTransport, @unchecked Sendable {
+    struct Answer: @unchecked Sendable {
         var status = 200
         var body: Any = [String: Any]()
         var fails: URLError.Code?    // no answer: .cannotConnectToHost (flatd out of reach), .timedOut (too slow)
@@ -32,12 +32,18 @@ final class FakeTransport: HTTPTransport, @unchecked Sendable {
     func requests(to host: String) -> [URLRequest] { sent.filter { $0.url?.host() == host } }
 
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
-        let method = request.httpMethod ?? "GET", path = request.url?.path(percentEncoded: true) ?? ""
-        let host = request.url?.host() ?? ""
-        let answer = lock.withLock {
-            requests.append(request)
-            // `"GET 192.0.2.77/api/health"` for one host, else `"GET /api/health"` for every host.
-            return answers["\(method) \(host)\(path)"] ?? answers["\(method) \(path)"]
+        try await send(request, gate: nil, dispatch: nil)
+    }
+
+    func send(_ request: URLRequest, gate: FlatdGate?, dispatch: FlatdRequestDispatch?) async throws
+        -> (Data, HTTPURLResponse) {
+        let answer: Answer?
+        if let gate {
+            answer = try await gate.start(until: dispatch?.cap ?? Deadline(after: .seconds(request.timeoutInterval))) {
+                try $0.perform { try self.start(request, dispatch: dispatch) }
+            }
+        } else {
+            answer = try start(request, dispatch: dispatch)
         }
         guard let answer else { throw URLError(.cannotConnectToHost) }
         if let delay = answer.delay { try await Task.sleep(for: delay) }
@@ -46,6 +52,16 @@ final class FakeTransport: HTTPTransport, @unchecked Sendable {
         let data = try JSONSerialization.data(withJSONObject: answer.body)
         let response = HTTPURLResponse(url: request.url!, statusCode: answer.status, httpVersion: nil, headerFields: nil)!
         return (data, response)
+    }
+
+    private func start(_ request: URLRequest, dispatch: FlatdRequestDispatch?) throws -> Answer? {
+        let method = request.httpMethod ?? "GET", path = request.url?.path(percentEncoded: true) ?? ""
+        let host = request.url?.host() ?? ""
+        return try lock.withLock {
+            if let dispatch { try dispatch.start { requests.append(request) } }
+            else { requests.append(request) }
+            return answers["\(method) \(host)\(path)"] ?? answers["\(method) \(path)"]
+        }
     }
 
     var sent: [URLRequest] { lock.withLock { requests } }
@@ -57,21 +73,24 @@ final class FakeTransport: HTTPTransport, @unchecked Sendable {
 }
 
 /// The event stream, fed by the test.
-final class FakeEvents: FlatEventSource, @unchecked Sendable {
+nonisolated final class FakeEvents: FlatEventSource, @unchecked Sendable {
     private let lock = NSLock()
     private var continuation: AsyncThrowingStream<FlatEvent, Error>.Continuation?
     private(set) var requests: [URLRequest] = []
 
     private(set) var pins: [FlatdPin] = []
 
-    func events(from request: URLRequest, pin: FlatdPin) -> AsyncThrowingStream<FlatEvent, Error> {
-        AsyncThrowingStream { continuation in
+    func events(from request: URLRequest, pin: FlatdPin, starting: (() -> Void) throws -> Void)
+        throws -> AsyncThrowingStream<FlatEvent, Error> {
+        let (events, continuation) = AsyncThrowingStream<FlatEvent, Error>.makeStream()
+        try starting {
             lock.withLock {
                 requests.append(request)
                 pins.append(pin)
                 self.continuation = continuation
             }
         }
+        return events
     }
 
     var isOpen: Bool { lock.withLock { continuation != nil } }

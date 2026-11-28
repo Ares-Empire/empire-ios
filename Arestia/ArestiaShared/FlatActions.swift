@@ -30,18 +30,24 @@ nonisolated struct FlatActions: Sendable {
         let (change, pairing) = try await reach.run(deadline: deadline) { client in
             let active = try await active(client)
             let (mode, failed) = try await client.setMode(FlatMode.cookingID, active: active)
-            let names = connection.names(failed, pairing: client.pairingID)
+            let names = try await deadline.flatdWork { _ in connection.names(failed, pairing: client.pairingID) }
             return (CookingChange(isActive: mode.active, failed: names), client.pairingID)
         }
         if let pairing {
-            if change.failed.isEmpty {
-                connection.clearTrouble(mode: FlatMode.cookingID, pairing: pairing, now: change.isActive,
-                                        until: deadline)
-            } else {
-                connection.note(ModeTrouble(pairing: pairing, mode: FlatMode.cookingID, active: change.isActive,
-                                            names: change.failed, at: .now), until: deadline)
+            let at = Date.now
+            try await deadline.flatdWork { work in
+                do {
+                    if change.failed.isEmpty {
+                        try connection.clearTrouble(mode: FlatMode.cookingID, pairing: pairing, now: change.isActive,
+                                                    through: at, work: work)
+                    } else {
+                        try connection.note(ModeTrouble(pairing: pairing, mode: FlatMode.cookingID, active: change.isActive,
+                                                       names: change.failed, at: at), work: work)
+                    }
+                } catch is FlatdDispatchLock.Unavailable {}  // trouble bookkeeping is optional
             }
         }
+        try Task.checkCancellation()
         return change
     }
 
@@ -75,10 +81,14 @@ nonisolated struct FlatActions: Sendable {
     /// 2). Only where no names can be kept at all does a device keep the name flatd just sent.
     private func read() async throws -> (devices: [Device], client: FlatdClient) {
         let connection = reach.connection
-        let version = connection.devicesVersion
-        return try await reach.run { client in
+        let deadline = FlatdReach.intentBudget ?? FlatdReach.intentDeadline()
+        let version = try await deadline.flatdWork { _ in connection.devicesVersion }
+        return try await reach.run(deadline: deadline) { client in
             let devices = try await client.devices()
-            return (try connection.named(devices, from: client, readSince: version), client)
+            let named = try await deadline.flatdWork { work in
+                try connection.named(devices, from: client, readSince: version, work: work)
+            }
+            return (named, client)
         }
     }
 
@@ -90,32 +100,32 @@ nonisolated struct FlatActions: Sendable {
     func setFans(on: Bool, minutes: Int? = nil, only saved: [String]? = nil) async throws -> [Device] {
         let command = DeviceCommand.power(on: on, seconds: minutes.map { max(1, $0) * 60 })
         let connection = reach.connection
-        return try await reach.run { client in
+        let deadline = FlatdReach.intentBudget ?? FlatdReach.intentDeadline()
+        return try await reach.run(deadline: deadline) { client in
             let ids = try saved?.map { choice in
                 do { return try SavedDevice.device(choice, of: client) } catch { throw ChosenDeviceGone.fan }
             }
             let fans = try await client.devices().filter { $0.kind == .fan && (ids?.contains($0.id) ?? true) }
             if let ids, Set(fans.map(\.id)) != Set(ids) { throw ChosenDeviceGone.fan }
             guard !fans.isEmpty else { throw FlatdError.unknown }
-            try connection.checkCurrent(client)
-            return try await withThrowingTaskGroup(of: Result<Device, FlatdError>.self) { group in
+            try await deadline.flatdWork { _ in try connection.checkCurrent(client) }
+            return try await withThrowingTaskGroup(of: Result<Device, Error>.self) { group in
                 for fan in fans {
                     group.addTask {
                         do { return .success(try await client.send(command, to: fan.id)) }
-                        catch let error as FlatdError { return .failure(error) }
                         catch is CancellationError { throw CancellationError() }
-                        catch { return .failure(.unreachable) }
+                        catch { return .failure(error) }
                     }
                 }
-                var done: [Device] = [], firstError: FlatdError?
+                var done: [Device] = [], firstError: Error?
                 for try await result in group {
                     switch result {
                     case let .success(device): done.append(device)
                     case let .failure(error):
                         // Preserve a lock refusal if the whole batch can still retry at home.
-                        if error == .noAnswer {
+                        if (error as? FlatdError) == .noAnswer {
                             firstError = error
-                        } else if case .awayNeedsUnlock = error, client.action?.writeStarted == false {
+                        } else if error is FlatdGate.RemoteDenied, (firstError as? FlatdError) != .noAnswer {
                             firstError = error
                         } else {
                             firstError = firstError ?? error
@@ -123,7 +133,7 @@ nonisolated struct FlatActions: Sendable {
                     }
                 }
                 #if DEBUG && ARESTIA_GATE
-                GateAction.current?.fansSettled(firstError.map(GateOutcome.init) ?? .ok)
+                GateAction.current?.fansSettled(firstError.map { GateOutcome($0 as? FlatdError ?? .unreachable) } ?? .ok)
                 #endif
                 if let firstError { throw firstError }
                 return done
@@ -181,8 +191,10 @@ nonisolated struct FlatActions: Sendable {
     @discardableResult
     func runScene(_ id: String) async throws -> [String] {
         let connection = reach.connection
-        return try await reach.run { client in
-            connection.names(try await client.runScene(id), pairing: client.pairingID)
+        let deadline = FlatdReach.intentBudget ?? FlatdReach.intentDeadline()
+        return try await reach.run(deadline: deadline) { client in
+            let failed = try await client.runScene(id)
+            return try await deadline.flatdWork { _ in connection.names(failed, pairing: client.pairingID) }
         }
     }
 }

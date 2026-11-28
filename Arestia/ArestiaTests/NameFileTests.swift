@@ -155,8 +155,8 @@ struct NameFileTests {
         store.start()
         #expect(await eventually { events.isOpen })
         events.send(try Flat.snapshot())
-        #expect(await eventually { store.link == .live })
         let connection = store.connection
+        #expect(await eventually { store.link == .live && connection.devicesVersion != nil })
         let reach = FlatdReach(connection: connection, transport: transport, rediscover: { [] })
         transport.answer("GET /api/devices", body: ["devices": [
             Flat.fan(1), Flat.fan(2), named(Flat.rollo(1), "Kitchen blind"), Flat.rollo(2)]])
@@ -167,11 +167,11 @@ struct NameFileTests {
         transport.answer("PATCH /api/devices/fan:fan_1", body: named(Flat.fan(1), "Desk fan"))
         store.rename("fan:fan_1", to: "Desk fan")
         #expect(await eventually { store.device("fan:fan_1")?.label == "Desk fan" })
-        #expect(labels(connection) == ["Desk fan", "Fan 2", "Kitchen blind", "Blind 2"])
+        #expect(await eventually { labels(connection) == ["Desk fan", "Fan 2", "Kitchen blind", "Blind 2"] })
         // By the stream's event:
         events.send(.device(try Flat.decode(Device.self, named(Flat.fan(2), "Bath fan")), source: "mcp"))
         #expect(await eventually { store.device("fan:fan_2")?.label == "Bath fan" })
-        #expect(labels(connection) == ["Desk fan", "Bath fan", "Kitchen blind", "Blind 2"])
+        #expect(await eventually { labels(connection) == ["Desk fan", "Bath fan", "Kitchen blind", "Blind 2"] })
         // A snapshot is flatd's whole list, in the stream's order: it replaces the names.
         events.send(try Flat.snapshot())
         #expect(await eventually { labels(connection) == ["Fan 1", "Fan 2", "Blind 1", "Blind 2"] })

@@ -135,7 +135,7 @@ nonisolated struct FlatdBonjour: Sendable {
 /// Selects a route for an intent or control, then runs the action once through the selected client.
 nonisolated struct FlatdReach: Sendable {
     let connection: FlatdConnection
-    var transport: (any HTTPTransport & Sendable)?
+    var transport: FlatdTransportOverride?
     var rediscover: (@Sendable () async -> [URL])?
     var path: (@Sendable () async -> HomeRoute.Path)?
     var allowsRemote: @Sendable () -> Bool = RemoteUnlock.allowsRemote
@@ -155,38 +155,61 @@ nonisolated struct FlatdReach: Sendable {
 
     func run<T: Sendable>(deadline: Deadline = intentBudget ?? intentDeadline(),
                           _ work: @Sendable (FlatdClient) async throws -> T) async throws -> T {
-        let pairing = try connection.current()
+        func current() async throws -> FlatdPairing {
+            try await deadline.flatdWork { _ in try connection.current() }
+        }
+
+        let pairing = try await current()
         let dispatch = FlatdActionDispatch()
         func execute(_ selected: FlatdClient) async throws -> T {
-            var client = selected.gated(by: connection, allowsRemote: allowsRemote, needsPasscode: needsPasscode)
-            client.deadline = deadline
-            client.action = dispatch
-            guard try connection.current().id == pairing.id else { throw FlatdError.notPaired }
+            var selected = selected.gated(by: connection, allowsRemote: allowsRemote)
+            selected.deadline = deadline
+            selected.action = dispatch
+            let client = selected
+            guard try await current().id == pairing.id else { throw FlatdError.notPaired }
             let outcome: Result<T, Error>
-            do { outcome = .success(try await work(client)) } catch { outcome = .failure(error) }
+            do {
+                outcome = .success(try await work(client))
+            } catch let refusal as FlatdGate.RemoteDenied {
+                try Task.checkCancellation()
+                throw refusal
+            } catch {
+                outcome = .failure(error)
+            }
             try Task.checkCancellation()
+            // Preserve the result of a started request cut off at the deadline.
+            if deadline.remaining <= .zero, case .failure = outcome { return try outcome.get() }
             // A response received after Forget belongs to the forgotten flat.
-            guard try connection.current().id == pairing.id else { throw FlatdError.notPaired }
+            guard try await current().id == pairing.id else { throw FlatdError.notPaired }
             let result = try outcome.get()
-            connection.move(pairing, to: client)
+            if client.route == .home, client.baseURL != pairing.baseURL {
+                try await deadline.flatdWork { work in
+                    do { try connection.move(pairing, to: client, work: work) }
+                    catch is FlatdDispatchLock.Unavailable {}  // the address cache is optional
+                }
+            }
+            try Task.checkCancellation()
             return result
         }
 
-        switch try await select(pairing, deadline: deadline, homeOnly: false) {
-        case .remoteDenied:
+        func unlockError() async throws -> FlatdError {
             let passcode = (try? await deadline.read(needsPasscode)) ?? false
             try Task.checkCancellation()
-            throw FlatdError.awayNeedsUnlock(needsPasscode: passcode)
+            return .awayNeedsUnlock(needsPasscode: passcode)
+        }
+
+        switch try await select(pairing, deadline: deadline, homeOnly: false) {
+        case .remoteDenied: throw try await unlockError()
         case .unreachable: throw FlatdError.unreachable
         case let .reached(client):
             do {
                 return try await execute(client)
-            } catch let error as FlatdError {
-                guard case .awayNeedsUnlock = error, client.route == .remote, !dispatch.writeStarted else { throw error }
-                guard case let .reached(home) = try await select(pairing, deadline: deadline, homeOnly: true) else {
-                    throw error
+            } catch is FlatdGate.RemoteDenied {
+                if !dispatch.writeStarted,
+                   case let .reached(home) = try await select(pairing, deadline: deadline, homeOnly: true) {
+                    return try await execute(home)
                 }
-                return try await execute(home)
+                throw try await unlockError()
             }
         }
     }
@@ -216,7 +239,9 @@ nonisolated struct FlatdReach: Sendable {
             // The timing probe can be entered as a home pairing and reached over cellular.
             if remote == nil { return .unknown }
             #endif
+            #if DEBUG
             if transport != nil { return .unknown }
+            #endif
             return await HomeRoute.currentPath()
         }
         return try await HomeRoute.select(deadline: deadline, homeOnly: homeOnly, path: readPath,
@@ -234,7 +259,7 @@ nonisolated struct FlatdReach: Sendable {
     /// side and the first that answers wins, so addresses that answer slowly or not at all (forged Bonjour records)
     /// cannot use up the time before the real one is asked.
     static func find(_ pairing: FlatdPairing, among candidates: [URL],
-                     transport: (any HTTPTransport & Sendable)?, within cap: Deadline? = nil,
+                     transport: FlatdTransportOverride?, within cap: Deadline? = nil,
                      deadline: Deadline? = nil) async -> FlatdClient? {
         await find(among: candidates, within: cap, deadline: deadline) {
             FlatdClient(pairing, at: $0, transport: transport)
@@ -257,5 +282,12 @@ nonisolated struct FlatdReach: Sendable {
             }
             return nil
         }
+    }
+}
+
+nonisolated extension Deadline {
+    func flatdWork<T: Sendable>(_ operation: @escaping @Sendable (Work) throws -> T) async throws -> T {
+        do { return try await work(operation) }
+        catch is Expired { throw FlatdError.unreachable }
     }
 }

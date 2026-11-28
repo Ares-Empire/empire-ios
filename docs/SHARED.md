@@ -394,5 +394,7 @@ events. Callers supply their timeouts.
 `HomeRoute.select` races a saved home address, discovery, and a remote listener. Each caller supplies its
 health probes, discovery, and remote policy. The default policy allows remote, including on the lock screen.
 `Deadline` uses `ContinuousClock` so time spent suspended counts, and cancels work when its absolute
-limit is reached. Tests can supply a clock. Request authorization and the decision to retry an action
+limit is reached. A synchronous work item runs on a dispatch queue and can be abandoned while a system
+call is stalled. Its final request start checks cancellation and the deadline under the same lock that
+marks the work abandoned. Tests can supply a clock. Request authorization and the decision to retry an action
 before its first write belong to the calling app.

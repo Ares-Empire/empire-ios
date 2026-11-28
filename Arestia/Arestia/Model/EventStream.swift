@@ -3,10 +3,11 @@ import os
 
 /// flatd's event stream (`/api/events`): a snapshot on connect, then one message per change. Behind a protocol, so the
 /// store's tests feed it made-up events.
-protocol FlatEventSource: Sendable {
+nonisolated protocol FlatEventSource: Sendable {
     /// The events until the connection ends: the stream finishes with `FlatdError.refused` on a 401 and
     /// `FlatdError.unreachable` on anything else (the store then tries again), a server without flatd's key included.
-    func events(from request: URLRequest, pin: FlatdPin) -> AsyncThrowingStream<FlatEvent, Error>
+    func events(from request: URLRequest, pin: FlatdPin, starting: (() -> Void) throws -> Void)
+        throws -> AsyncThrowingStream<FlatEvent, Error>
 }
 
 /// The real stream over a WebSocket. A sleeping Mac leaves a socket open without answering, so a ping goes every
@@ -21,19 +22,27 @@ nonisolated struct WebSocketEvents: FlatEventSource {
     #endif
     private static let log = Logger(subsystem: "de.ares-empire.arestia", category: "events")
 
+    #if DEBUG
     func events(from request: URLRequest, pin: FlatdPin) -> AsyncThrowingStream<FlatEvent, Error> {
-        AsyncThrowingStream { continuation in
-            // Never an unencrypted stream, whatever the request says: the key is in its header.
-            guard request.url?.scheme?.lowercased() == "wss" else {
-                continuation.finish(throwing: FlatdError.unreachable)
-                return
-            }
-            // Idle for long: liveness comes from the pings. The session accepts only a server holding flatd's key.
-            let session = FlatdSession.events(pin: pin)
-            let task = session.webSocketTask(with: request.withLanguage())
-            task.resume()
-            Self.log.notice("events: connecting")
+        do { return try events(from: request.withLanguage(), pin: pin, starting: { $0() }) }
+        catch { return AsyncThrowingStream { $0.finish(throwing: error) } }
+    }
+    #endif
 
+    func events(from request: URLRequest, pin: FlatdPin, starting: (() -> Void) throws -> Void)
+        throws -> AsyncThrowingStream<FlatEvent, Error> {
+        // The key is in the header. The session accepts only a server holding flatd's key.
+        guard request.url?.scheme?.lowercased() == "wss" else { throw FlatdError.unreachable }
+        let session = FlatdSession.events(pin: pin)
+        let task = session.webSocketTask(with: request)
+        do { try starting { task.resume() } }
+        catch {
+            session.invalidateAndCancel()
+            throw error
+        }
+        Self.log.notice("events: connecting")
+
+        return AsyncThrowingStream { continuation in
             let snapshotSeen = OSAllocatedUnfairLock(initialState: false)
             let reader = Task {
                 do {

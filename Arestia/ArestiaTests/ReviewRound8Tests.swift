@@ -91,7 +91,7 @@ struct RoundEightTroubleTests {
     /// device its command again): the trouble is gone. A repeated End still keeps an end's trouble (round 7's test).
     @Test func aConfirmedStartClearsTheTrouble() async throws {
         let connection = Flat.connection()
-        connection.note(ModeTrouble(pairing: Flat.id, mode: "cooking", active: true, names: ["Fan 2"], at: .now))
+        try? connection.note(ModeTrouble(pairing: Flat.id, mode: "cooking", active: true, names: ["Fan 2"], at: .now))
         var active = Flat.cooking
         active["active"] = true
         transport.answer("POST /api/modes/cooking", body: active.merging(["failed": [:]]) { $1 })

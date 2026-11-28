@@ -22,7 +22,7 @@ private nonisolated final class Tally: @unchecked Sendable {
 }
 
 /// flatd's answers, with Forget run the moment one route's answer has arrived and before the caller sees it.
-private nonisolated final class ForgetAfterAnswer: HTTPTransport, @unchecked Sendable {
+private nonisolated final class ForgetAfterAnswer: GatedTransport, @unchecked Sendable {
     let inner: FakeTransport
     let route: String
     let forget: @Sendable () -> Void
@@ -34,7 +34,12 @@ private nonisolated final class ForgetAfterAnswer: HTTPTransport, @unchecked Sen
     }
 
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
-        let answer = try await inner.send(request)
+        try await send(request, gate: nil, dispatch: nil)
+    }
+
+    func send(_ request: URLRequest, gate: FlatdGate?, dispatch: FlatdRequestDispatch?) async throws
+        -> (Data, HTTPURLResponse) {
+        let answer = try await inner.send(request, gate: gate, dispatch: dispatch)
         if (request.httpMethod ?? "GET") + " " + (request.url?.path(percentEncoded: true) ?? "") == route { forget() }
         return answer
     }

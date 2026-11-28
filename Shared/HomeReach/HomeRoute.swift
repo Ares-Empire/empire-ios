@@ -42,7 +42,7 @@ nonisolated enum HomeRoute: Sendable {
                 remotePending = false
                 group.addTask {
                     let cap = choice.capped(by: .seconds(4))
-                    guard let allowed = try? await cap.read(allowsRemote) else { return .remote(nil) }
+                    guard let allowed = try? await cap.read(allowsRemote) else { return .remoteDenied }
                     guard allowed else { return .remoteDenied }
                     return .remote(try? await cap.run { await remote(cap) })
                 }

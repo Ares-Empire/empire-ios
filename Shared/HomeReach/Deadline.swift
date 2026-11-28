@@ -44,16 +44,55 @@ nonisolated struct Deadline: Sendable {
         guard remaining > .zero else { throw Expired() }
     }
 
-    /// A synchronous system lookup can outlive its caller. Its queue only returns a value and owns no further work.
-    func read<T: Sendable>(_ lookup: @escaping @Sendable () -> T) async throws -> T {
-        try await run {
-            let (values, result) = AsyncStream<T>.makeStream(bufferingPolicy: .bufferingNewest(1))
-            DispatchQueue.global(qos: .userInitiated).async {
-                result.yield(lookup())
-                result.finish()
+    /// Waits for synchronous work on a dispatch queue. The caller can leave while a system call is stalled.
+    func work<T: Sendable>(_ operation: @escaping @Sendable (Work) throws -> T) async throws -> T {
+        let work = Work(deadline: self)
+        return try await run {
+            try await withTaskCancellationHandler {
+                let (values, result) = AsyncStream<Result<T, Error>>.makeStream(bufferingPolicy: .bufferingNewest(1))
+                DispatchQueue.global(qos: .userInitiated).async {
+                    result.yield(Result {
+                        try work.check()
+                        return try operation(work)
+                    })
+                    result.finish()
+                }
+                for await value in values { return try value.get() }
+                throw CancellationError()
+            } onCancel: {
+                work.abandon()
             }
-            for await value in values { return value }
-            throw CancellationError()
+        }
+    }
+
+    func read<T: Sendable>(_ lookup: @escaping @Sendable () throws -> T) async throws -> T {
+        try await work { _ in try lookup() }
+    }
+
+    final class Work: @unchecked Sendable {
+        let deadline: Deadline
+        private let lock = NSLock()
+        private var abandoned = false
+        private var writing = false
+
+        fileprivate init(deadline: Deadline) { self.deadline = deadline }
+
+        fileprivate func abandon() { lock.withLock { abandoned = true } }
+
+        func check() throws { try perform {} }
+
+        /// A synchronous write can finish after abandonment. Its caller can tell whether it is safe to retry.
+        var writeAdmitted: Bool { lock.withLock { writing } }
+
+        func admitWrite() throws { try perform { writing = true } }
+
+        /// Linearizes request start with abandonment. Only use this for a short, nonblocking step.
+        func perform<T>(_ step: () throws -> T) throws -> T {
+            try lock.withLock {
+                guard !abandoned else { throw CancellationError() }
+                try deadline.check()
+                return try step()
+            }
         }
     }
 

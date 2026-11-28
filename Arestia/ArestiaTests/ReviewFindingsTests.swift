@@ -57,13 +57,13 @@ struct KeySafetyTests {
         let old = try #require(connection.pairing)
         let newer = Flat.pairing(token: "newer-key-0123456789")
         try connection.save(newer)
-        connection.move(old, to: FlatdClient(old, at: URL(string: "https://192.0.2.77:8788")!))          // the old pairing's late lookup
+        try? connection.move(old, to: FlatdClient(old, at: URL(string: "https://192.0.2.77:8788")!))          // the old pairing's late lookup
         #expect(connection.pairing == newer)
-        connection.move(newer, to: FlatdClient(newer, at: URL(string: "https://192.0.2.77:8788")!))
+        try? connection.move(newer, to: FlatdClient(newer, at: URL(string: "https://192.0.2.77:8788")!))
         #expect(connection.pairing?.baseURL.host() == "192.0.2.77")
         #expect(connection.token == "newer-key-0123456789")
         try connection.forget()
-        connection.move(newer, to: FlatdClient(newer, at: Flat.base))                                     // after Forget: nothing comes back
+        try? connection.move(newer, to: FlatdClient(newer, at: Flat.base))                                     // after Forget: nothing comes back
         #expect(connection.pairing == nil)
     }
 

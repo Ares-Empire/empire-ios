@@ -83,6 +83,13 @@ nonisolated enum FlatdError: Error, Equatable, Sendable {
     }
 }
 
+// The callers share one constructor signature across builds. Release can only pass nil.
+#if DEBUG
+typealias FlatdTransportOverride = any HTTPTransport & Sendable
+#else
+typealias FlatdTransportOverride = Never
+#endif
+
 /// Talks to flatd over HTTPS (contract v1.2: on the home network flatd speaks HTTPS only and proves its identity with
 /// the key the pairing pinned, `FlatdPin`; every endpoint but `/api/health` needs `Authorization: Bearer <token>`).
 /// The app, its intents and its Control Center controls all go through this one client, so nothing else builds a
@@ -97,7 +104,8 @@ nonisolated struct FlatdClient: Sendable {
     let route: HomeRoute?
     var deadline: Deadline?
     var action: FlatdActionDispatch?
-    let transport: any HTTPTransport & Sendable
+    private let transport: any HTTPTransport & Sendable
+    private(set) var remoteGeneration: UUID?
     /// Where a request with the key is started only while this client's pairing is still the saved one (`gated(by:)`);
     /// nil for a pairing code being tried, which belongs to no pairing yet.
     private(set) var gate: FlatdGate?
@@ -115,53 +123,62 @@ nonisolated struct FlatdClient: Sendable {
     #endif
 
     /// A pairing code being tried. Its identity is supplied by the code itself.
-    init(baseURL: URL, token: String, pin: FlatdPin, transport: (any HTTPTransport & Sendable)? = nil) {
+    init(baseURL: URL, token: String, pin: FlatdPin, transport: FlatdTransportOverride? = nil) {
         self.baseURL = baseURL
         self.token = token
         self.pin = pin
         pairingID = nil
         route = nil
-        self.transport = transport ?? FlatdTransport(pin: pin)
+        self.transport = Self.makeTransport(pin: pin, override: transport)
     }
 
     /// Home, at the saved address or a Bonjour candidate, always using the home pin.
-    init(_ pairing: FlatdPairing, at baseURL: URL? = nil, transport: (any HTTPTransport & Sendable)? = nil) {
+    init(_ pairing: FlatdPairing, at baseURL: URL? = nil, transport: FlatdTransportOverride? = nil) {
         self.baseURL = baseURL ?? pairing.baseURL
         token = pairing.token
         pin = pairing.pin
         pairingID = pairing.id
         route = .home
-        self.transport = transport ?? FlatdTransport(pin: pairing.pin)
+        self.transport = Self.makeTransport(pin: pairing.pin, override: transport)
     }
 
-    init?(remoteOf pairing: FlatdPairing, transport: (any HTTPTransport & Sendable)? = nil) {
+    init?(remoteOf pairing: FlatdPairing, transport: FlatdTransportOverride? = nil) {
         guard let remote = pairing.remote, remote.pin != pairing.pin else { return nil }
         baseURL = remote.url
         token = pairing.token
         pin = remote.pin
         pairingID = pairing.id
         route = .remote
-        self.transport = transport ?? FlatdTransport(pin: remote.pin)
+        remoteGeneration = remote.generation
+        self.transport = Self.makeTransport(pin: remote.pin, override: transport)
     }
 
-    /// Tries the new home credential only while the pairing it would renew is still saved.
-    init(renewing saved: FlatdPairing, at baseURL: URL, token: String, connection: FlatdConnection,
-         transport: (any HTTPTransport & Sendable)? = nil) {
-        self.init(FlatdPairing(baseURL: baseURL, token: token, pin: saved.pin, id: saved.id), transport: transport)
-        gate = FlatdGate(connection: connection, pairing: saved.id, route: .home, pin: saved.pin, baseURL: baseURL,
-                         savedToken: saved.token, allowsRemote: RemoteUnlock.allowsRemote,
-                         needsPasscode: RemoteUnlock.needsPasscode)
+    private static func makeTransport(pin: FlatdPin, override: FlatdTransportOverride?) -> any HTTPTransport & Sendable {
+        #if DEBUG
+        if let override { return override }
+        #endif
+        return FlatdTransport(pin: pin)
     }
 
-    /// The same client, its every request with the key started only while its pairing is the saved one in this
-    /// connection, under the lock Forget takes (`FlatdConnection.start(for:_:)`): after Forget it sends nothing.
-    func gated(by connection: FlatdConnection, allowsRemote: @escaping @Sendable () -> Bool = RemoteUnlock.allowsRemote,
-               needsPasscode: @escaping @Sendable () -> Bool = RemoteUnlock.needsPasscode) -> FlatdClient {
+    /// Verifies a fresh code with GET /api/devices, while the pairing it would renew is still saved.
+    static func verifyRenewal(of saved: FlatdPairing, at baseURL: URL, token: String, connection: FlatdConnection,
+                              transport: FlatdTransportOverride?) async throws -> [Device] {
+        var verifier = FlatdClient(FlatdPairing(baseURL: baseURL, token: token, pin: saved.pin, id: saved.id),
+                                   transport: transport)
+        verifier.gate = FlatdGate(connection: connection, pairing: saved.id, route: .home, pin: saved.pin,
+                                  baseURL: baseURL, savedToken: saved.token, remoteGeneration: nil,
+                                  allowsRemote: RemoteUnlock.allowsRemote)
+        return try await verifier.devices()
+    }
+
+    /// The same client, with each authenticated request started under the lock that Forget takes.
+    func gated(by connection: FlatdConnection,
+               allowsRemote: @escaping @Sendable () -> Bool = RemoteUnlock.allowsRemote) -> FlatdClient {
         guard let pairingID, let route else { return self }
         var client = self
         client.gate = FlatdGate(connection: connection, pairing: pairingID, route: route, pin: pin,
-                               baseURL: baseURL, savedToken: token,
-                               allowsRemote: allowsRemote, needsPasscode: needsPasscode)
+                               baseURL: baseURL, savedToken: token, remoteGeneration: remoteGeneration,
+                               allowsRemote: allowsRemote)
         return client
     }
 
@@ -400,19 +417,18 @@ nonisolated struct FlatdClient: Sendable {
                                            deadline: deadline, action: action)
         let boundedRequest = request
         do {
-            if authorized && pairingID != nil && gate == nil { throw FlatdError.unreachable }
+            if authorized && pairingID != nil {
+                guard gate != nil, transport is any GatedTransport else { throw FlatdError.unreachable }
+            }
             return try await cap.run {
                 if let pinned = transport as? any GatedTransport {
                     return try await pinned.send(boundedRequest, gate: authorized ? gate : nil, dispatch: dispatch)
                 }
-                if authorized, let gate { try gate.start(until: cap) { try dispatch.start {} } }
-                else { try dispatch.start {} }
+                try dispatch.start {}
                 return try await transport.send(boundedRequest)
             }
-        } catch is FlatdGate.RemoteDenied {
-            let passcode = (try? await cap.read(gate?.needsPasscode ?? RemoteUnlock.needsPasscode)) ?? false
-            try Task.checkCancellation()
-            throw FlatdError.awayNeedsUnlock(needsPasscode: passcode)
+        } catch let error as FlatdGate.RemoteDenied {
+            throw error
         } catch let error as FlatdError {
             throw error
         } catch is Deadline.Expired {
@@ -506,19 +522,20 @@ nonisolated struct FlatdGate: Sendable {
     let pin: FlatdPin
     let baseURL: URL
     let savedToken: String
+    let remoteGeneration: UUID?
     let allowsRemote: @Sendable () -> Bool
-    let needsPasscode: @Sendable () -> Bool
 
-    func start(until deadline: Deadline? = nil, _ start: () throws -> Void) throws {
-        try connection.start(for: pairing, until: deadline, checking: { saved in
-            guard saved.matches(route: route, pin: pin, url: baseURL, token: savedToken) else {
-                throw FlatdError.unreachable
+    func start<T: Sendable>(until deadline: Deadline,
+                            _ start: @escaping @Sendable (Deadline.Work) throws -> T) async throws -> T {
+        try await deadline.work { work in
+            try connection.start(for: pairing, work: work, checking: { saved in
+                guard saved.matches(route: route, pin: pin, url: baseURL, token: savedToken,
+                                    remoteGeneration: remoteGeneration) else { throw FlatdError.unreachable }
+                if route == .remote, !allowsRemote() { throw RemoteDenied() }
+            }) {
+                try start(work)
             }
-            if route == .remote, !allowsRemote() {
-                throw RemoteDenied()
-            }
-            try deadline?.check()
-        }, start)
+        }
     }
 }
 

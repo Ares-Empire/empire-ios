@@ -301,6 +301,7 @@
 			inputPaths = (
 				"$(SRCROOT)/$(ARESTIA_INFO_PLIST_SOURCE)",
 				"$(SRCROOT)/../scripts/arestia_remote_zone.py",
+				"$(ARESTIA_REMOTE_ZONE_FILE:default=$(HOME)/.config/arestia/remote-zone)",
 			);
 			name = "Set remote ATS exception";
 			outputPaths = ("$(INFOPLIST_FILE)");
@@ -316,6 +317,7 @@
 			inputPaths = (
 				"$(SRCROOT)/$(ARESTIA_INFO_PLIST_SOURCE)",
 				"$(SRCROOT)/../scripts/arestia_remote_zone.py",
+				"$(ARESTIA_REMOTE_ZONE_FILE:default=$(HOME)/.config/arestia/remote-zone)",
 			);
 			name = "Set remote ATS exception";
 			outputPaths = ("$(INFOPLIST_FILE)");

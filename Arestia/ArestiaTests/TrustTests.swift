@@ -263,7 +263,7 @@ struct RediscoveryTests {
                                rediscover: { [URL(string: "http://192.0.2.77:8787")!] })
         await #expect(throws: FlatdError.unreachable) { try await FlatActions(reach: reach).runScene("all_down") }
         #expect(transport.requests(to: "192.0.2.77").isEmpty)
-        connection.move(Flat.pairing(), to: FlatdClient(Flat.pairing(), at: URL(string: "http://192.0.2.77:8787")!))
+        try? connection.move(Flat.pairing(), to: FlatdClient(Flat.pairing(), at: URL(string: "http://192.0.2.77:8787")!))
         #expect(connection.pairing?.baseURL == Flat.base)
     }
 

@@ -105,12 +105,17 @@ struct ClientTests {
         #expect(request.timeoutInterval == 30)
     }
 
-    private struct ViewerTransport: HTTPTransport, Sendable {
+    private struct ViewerTransport: GatedTransport, Sendable {
         let base: FakeTransport
         let etag: String
 
         func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
-            let (data, response) = try await base.send(request)
+            try await send(request, gate: nil, dispatch: nil)
+        }
+
+        func send(_ request: URLRequest, gate: FlatdGate?, dispatch: FlatdRequestDispatch?) async throws
+            -> (Data, HTTPURLResponse) {
+            let (data, response) = try await base.send(request, gate: gate, dispatch: dispatch)
             let tagged = HTTPURLResponse(url: request.url!, statusCode: response.statusCode,
                                          httpVersion: nil, headerFields: ["ETag": etag])!
             return (response.statusCode == 304 ? Data() : data, tagged)

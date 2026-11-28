@@ -190,7 +190,7 @@ enum DebugConnection {
         }
         if arguments.contains("-deadFlatdHome"), let saved = connection.pairing {
             let dead = URL(string: "https://192.0.2.1:8788")!
-            connection.move(saved, to: FlatdClient(saved, at: dead))
+            try? connection.move(saved, to: FlatdClient(saved, at: dead))
         }
     }
 }

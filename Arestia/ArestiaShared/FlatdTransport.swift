@@ -10,6 +10,9 @@ nonisolated struct FlatdTransport: GatedTransport {
     #if ARESTIA_UNIT_TESTS
     @TaskLocal static var loopbackFixtureHost: String?
     #endif
+    #if DEBUG
+    @TaskLocal static var fixtureTransport: (@Sendable (FlatdPin) -> any GatedTransport)?
+    #endif
 
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         try await send(request, gate: nil, dispatch: nil)
@@ -22,6 +25,11 @@ nonisolated struct FlatdTransport: GatedTransport {
         // Checked here too, not only by iOS: nothing for flatd ever leaves without TLS.
         guard request.url?.scheme?.lowercased() == "https" else { throw URLError(.unsupportedURL) }
         if let gate, gate.pin != pin { throw FlatdError.unreachable }
+        #if DEBUG
+        if let fixture = Self.fixtureTransport {
+            return try await fixture(pin).send(request, gate: gate, dispatch: dispatch)
+        }
+        #endif
         #if ARESTIA_UNIT_TESTS
         var request = request
         if let fixture = Self.loopbackFixtureHost, request.url?.host() == fixture {
@@ -30,42 +38,54 @@ nonisolated struct FlatdTransport: GatedTransport {
             request.url = url.url
         }
         #endif
-        let session = FlatdSession.shared(pin: pin)
+        let requestToSend = request.withLanguage()
         let running = RunningTask()
+        let (replies, reply) = AsyncThrowingStream<(Data, HTTPURLResponse), Error>.makeStream()
+        running.finish = { result in
+            switch result {
+            case let .success(value):
+                reply.yield(value)
+                reply.finish()
+            case let .failure(error):
+                reply.finish(throwing: error)
+            }
+        }
         #if DEBUG && ARESTIA_GATE
         if request.httpMethod == "POST" { running.timing = GateAction.current }
         #endif
+        let start: @Sendable (Deadline.Work?) throws -> Void = { work in
+            let session = FlatdSession.shared(pin: pin)
+            let task = session.dataTask(with: requestToSend) { data, response, error in
+                if let error {
+                    running.end(.failure(error))
+                } else if let response = response as? HTTPURLResponse {
+                    running.end(.success((data ?? Data(), response)))
+                } else {
+                    running.end(.failure(HTTPError.invalidResponse))
+                }
+            }
+            do {
+                if let work { try work.perform { try running.start(task, dispatch: dispatch) } }
+                else { try running.start(task, dispatch: dispatch) }
+            } catch {
+                task.cancel()
+                throw error
+            }
+        }
         do {
             return try await withTaskCancellationHandler {
-                try await withCheckedThrowingContinuation { (done: CheckedContinuation<(Data, HTTPURLResponse), Error>) in
-                    running.finish = { result in done.resume(with: result) }
-                    do {
-                        let start = {
-                            let task = session.dataTask(with: request.withLanguage()) { data, response, error in
-                                if let error {
-                                    running.end(.failure(error))
-                                } else if let response = response as? HTTPURLResponse {
-                                    running.end(.success((data ?? Data(), response)))
-                                } else {
-                                    running.end(.failure(HTTPError.invalidResponse))
-                                }
-                            }
-                            do { try running.start(task, dispatch: dispatch) }
-                            catch {
-                                running.end(.failure(error))
-                                task.cancel()
-                                return
-                            }
-                        }
-                        if let gate { try gate.start(until: dispatch?.cap, start) } else { try start() }
-                        #if DEBUG && ARESTIA_GATE
-                        // Both the pairing lock and the task's start lock have been released.
-                        running.appendDispatch()
-                        #endif
-                    } catch {
-                        running.end(.failure(error))      // the gate refused: nothing was started
+                if let gate {
+                    try await gate.start(until: dispatch?.cap ?? Deadline(after: .seconds(request.timeoutInterval))) {
+                        try start($0)
                     }
+                } else {
+                    try start(nil)
                 }
+                #if DEBUG && ARESTIA_GATE
+                running.appendDispatch()
+                #endif
+                for try await reply in replies { return reply }
+                throw CancellationError()
             } onCancel: {
                 running.cancel()
             }
