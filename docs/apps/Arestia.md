@@ -170,17 +170,28 @@ same listener. The app's screens and event stream use the home route.
 Shortcuts, Siri and Control Center can select the saved home address, a Bonjour candidate, or the enrolled
 remote listener. Only token-free health probes race. Each route uses its own pinned identity. An intent
 has 15 s from entry, including up to 5 s for route choice. A write needs 3 s left to start. An expired
-in-flight write may have taken effect and is never replayed.
+in-flight write may have taken effect and is never replayed. For an action with a deadline, a started
+write without an HTTP reply reports that same uncertainty after a timeout or a dropped connection.
+A completed pairing read that finds the flat gone overrides the result. A stalled read or optional
+name, address or trouble cache leaves a started write's result intact. Caller cancellation takes precedence.
+Store commands retain their existing transport error mapping.
 
-Each authenticated dispatch checks the saved pairing and token under the lock shared with Forget.
-On remote dispatch, Arestia also reads a fixed value from its shared Keychain group. The app
-creates the marker on activation with `WhenPasscodeSetThisDeviceOnly`. The control extension reads it.
-Before any write has started, a remote lock refusal gets one home-only choice within the original deadline.
-If home answers, the action runs there. A marker lookup that times out during choice also withholds remote.
-Arestia consults LocalAuthentication only when it will show the unlock error. Home dispatch works after
-first unlock. The gate, intent Keychain reads and bookkeeping run off the caller's thread. The caller can
-stop waiting at the deadline or on cancellation, and an abandoned dispatch cannot resume its request.
-Lock timing still needs the P7a iPhone measurements.
+HTTPS and WebSocket tasks are prepared while suspended. The dispatch gate takes the lock shared with
+Forget, checks the saved pairing and token, and on the remote route also checks the URL, pin and
+enrollment generation. The marker read is the final blocking call. A remote task must resume within
+1 s of the start of that read. Admission commits the request's resume against the same attempt
+that handles expiry and cancellation. A stalled system call can hold the lock while its caller leaves
+at the cap. The prepared task is cancelled on failure, and a worker returning from a stall cannot
+resume an ended attempt.
+
+The app creates the shared Keychain marker in the background on activation with
+`WhenPasscodeSetThisDeviceOnly`. The control extension reads it. Before any write has started, a
+remote lock refusal gets one home-only choice within the original deadline. If home answers, the
+action runs there. A marker lookup that times out during choice also withholds remote. Arestia
+consults LocalAuthentication only when it will show the unlock error. Home dispatch works after
+first unlock. Forget waits off the main actor for up to 10 s to acquire the lock, then reports
+success after deletion. If the lock stays busy, Settings shows the existing failure message and
+the owner can retry. Physical lock timing still needs the P7a iPhone measurements.
 
 The app and control extension read their ATS zone from `$ARESTIA_REMOTE_ZONE_FILE`, or
 `~/.config/arestia/remote-zone` when the variable is unset. Use one lowercase DNS name with at least two

@@ -19,21 +19,12 @@ nonisolated struct FlatdBonjour: Sendable {
     /// Each service is probed as soon as its address resolves. A winning probe cancels the other resolutions.
     func firstReachable<T: Sendable>(_ probe: @escaping @Sendable (URL) async -> T?) async -> T? {
         let names = await browse().shuffled().prefix(Self.maxCandidates)
-        return await withTaskGroup(of: T?.self) { group in
-            for name in names {
-                group.addTask {
-                    guard !Task.isCancelled, let url = await resolve(name), !Task.isCancelled else { return nil }
-                    return await probe(url)
-                }
+        return await HomeRoute.first(names.map { name in
+            { @Sendable in
+                guard !Task.isCancelled, let url = await resolve(name), !Task.isCancelled else { return nil }
+                return await probe(url)
             }
-            for await result in group {
-                if let result {
-                    group.cancelAll()
-                    return result
-                }
-            }
-            return nil
-        }
+        })
     }
 
     /// Every address a `_flatd._tcp` service is advertised at right now, in no particular order: the services seen
@@ -138,7 +129,7 @@ nonisolated struct FlatdReach: Sendable {
     var transport: FlatdTransportOverride?
     var rediscover: (@Sendable () async -> [URL])?
     var path: (@Sendable () async -> HomeRoute.Path)?
-    var allowsRemote: @Sendable () -> Bool = RemoteUnlock.allowsRemote
+    var marker: RemoteMarker = .live
     var needsPasscode: @Sendable () -> Bool = RemoteUnlock.needsPasscode
     var bonjour = FlatdBonjour()
 
@@ -155,62 +146,64 @@ nonisolated struct FlatdReach: Sendable {
 
     func run<T: Sendable>(deadline: Deadline = intentBudget ?? intentDeadline(),
                           _ work: @Sendable (FlatdClient) async throws -> T) async throws -> T {
-        func current() async throws -> FlatdPairing {
-            try await deadline.flatdWork { _ in try connection.current() }
-        }
+        let pairing: FlatdPairing
+        do { pairing = try await deadline.blocking { _ in try connection.current() } }
+        catch is Deadline.Expired { throw FlatdError.unreachable }
+        try Task.checkCancellation()
 
-        let pairing = try await current()
         let dispatch = FlatdActionDispatch()
-        func execute(_ selected: FlatdClient) async throws -> T {
-            var selected = selected.gated(by: connection, allowsRemote: allowsRemote)
+        func execute(_ selected: FlatdClient) async -> FlatdOutcome<T> {
+            var selected = selected.gated(by: connection, marker: marker)
             selected.deadline = deadline
             selected.action = dispatch
             let client = selected
-            guard try await current().id == pairing.id else { throw FlatdError.notPaired }
-            let outcome: Result<T, Error>
-            do {
-                outcome = .success(try await work(client))
-            } catch let refusal as FlatdGate.RemoteDenied {
-                try Task.checkCancellation()
-                throw refusal
-            } catch {
-                outcome = .failure(error)
-            }
-            try Task.checkCancellation()
-            // Preserve the result of a started request cut off at the deadline.
-            if deadline.remaining <= .zero, case .failure = outcome { return try outcome.get() }
-            // A response received after Forget belongs to the forgotten flat.
-            guard try await current().id == pairing.id else { throw FlatdError.notPaired }
-            let result = try outcome.get()
-            if client.route == .home, client.baseURL != pairing.baseURL {
-                try await deadline.flatdWork { work in
-                    do { try connection.move(pairing, to: client, work: work) }
-                    catch is FlatdDispatchLock.Unavailable {}  // the address cache is optional
+            let result: Result<T, Error>
+            do { result = .success(try await work(client)) }
+            catch { result = .failure(error) }
+            if Task.isCancelled { return .finish(.failure(CancellationError())) }
+            let postflight = await deadline.bestEffort(default: FlatdOutcome<T>.PairingCheck.unknown) { _ in
+                switch connection.saved {
+                case let .paired(saved): return saved.id == pairing.id ? .same : .gone
+                case .none, .invalid: return .gone
+                case .unreadable: return .unknown
                 }
             }
-            try Task.checkCancellation()
-            return result
+            let outcome = FlatdOutcome.resolve(result, writeStarted: dispatch.writeStarted,
+                                               pairing: postflight, cancelled: Task.isCancelled)
+            if case .finish(.success) = outcome, client.route == .home, client.baseURL != pairing.baseURL {
+                await deadline.bestEffort(default: ()) { hold in
+                    try connection.move(pairing, to: client, hold: hold)
+                }
+            }
+            return outcome
         }
 
         func unlockError() async throws -> FlatdError {
-            let passcode = (try? await deadline.read(needsPasscode)) ?? false
+            let passcode = await deadline.bestEffort(default: false) { _ in needsPasscode() }
             try Task.checkCancellation()
             return .awayNeedsUnlock(needsPasscode: passcode)
         }
 
-        switch try await select(pairing, deadline: deadline, homeOnly: false) {
+        let selection = try await select(pairing, deadline: deadline, homeOnly: false)
+        try Task.checkCancellation()
+        let client: FlatdClient
+        switch selection {
         case .remoteDenied: throw try await unlockError()
         case .unreachable: throw FlatdError.unreachable
-        case let .reached(client):
-            do {
-                return try await execute(client)
-            } catch is FlatdGate.RemoteDenied {
-                if !dispatch.writeStarted,
-                   case let .reached(home) = try await select(pairing, deadline: deadline, homeOnly: true) {
-                    return try await execute(home)
-                }
-                throw try await unlockError()
-            }
+        case let .reached(selected): client = selected
+        }
+
+        var outcome = await execute(client)
+        try Task.checkCancellation()
+        if case .retryHome = outcome {
+            let home = try await select(pairing, deadline: deadline, homeOnly: true)
+            try Task.checkCancellation()
+            if case let .reached(client) = home { outcome = await execute(client) }
+        }
+        try Task.checkCancellation()
+        switch outcome {
+        case let .finish(result): return try result.get()
+        case .retryHome, .needsUnlock: throw try await unlockError()
         }
     }
 
@@ -246,7 +239,7 @@ nonisolated struct FlatdReach: Sendable {
         }
         return try await HomeRoute.select(deadline: deadline, homeOnly: homeOnly, path: readPath,
                                           home: home, discover: discovery, remote: remoteProbe,
-                                          allowsRemote: allowsRemote)
+                                          allowsRemote: marker.read)
     }
 
     private static func probe(_ client: FlatdClient, within cap: Deadline?, deadline: Deadline?) async -> FlatdClient? {
@@ -268,26 +261,29 @@ nonisolated struct FlatdReach: Sendable {
 
     static func find(among candidates: [URL], within cap: Deadline? = nil, deadline: Deadline? = nil,
                      client: @escaping @Sendable (URL) -> FlatdClient) async -> FlatdClient? {
-        await withTaskGroup(of: FlatdClient?.self) { group in
-            for url in candidates.prefix(FlatdBonjour.maxCandidates) where url.scheme == "https" {
-                group.addTask {
-                    await probe(client(url), within: cap, deadline: deadline)
-                }
-            }
-            for await found in group {
-                if let found {
-                    group.cancelAll()
-                    return found
-                }
-            }
-            return nil
-        }
+        let urls = candidates.prefix(FlatdBonjour.maxCandidates).filter { $0.scheme == "https" }
+        return await HomeRoute.first(urls.map { url in
+            { @Sendable in await probe(client(url), within: cap, deadline: deadline) }
+        })
     }
 }
 
-nonisolated extension Deadline {
-    func flatdWork<T: Sendable>(_ operation: @escaping @Sendable (Work) throws -> T) async throws -> T {
-        do { return try await work(operation) }
-        catch is Expired { throw FlatdError.unreachable }
+nonisolated enum FlatdOutcome<Value: Sendable>: Sendable {
+    enum PairingCheck: Sendable { case same, gone, unknown }
+
+    case finish(Result<Value, Error>)
+    case retryHome
+    case needsUnlock
+
+    static func resolve(_ result: Result<Value, Error>, writeStarted: Bool,
+                        pairing: PairingCheck, cancelled: Bool) -> Self {
+        if cancelled { return .finish(.failure(CancellationError())) }
+        if pairing == .gone { return .finish(.failure(FlatdError.notPaired)) }
+        if case let .failure(error) = result, error is FlatdGate.RemoteDenied {
+            return writeStarted ? .needsUnlock : .retryHome
+        }
+        if writeStarted || pairing == .same { return .finish(result) }
+        if case .failure = result { return .finish(result) }
+        return .finish(.failure(FlatdError.unreachable))
     }
 }

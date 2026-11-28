@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// An absolute limit on a monotonic clock that advances while the device sleeps or the process is suspended.
 nonisolated struct Deadline: Sendable {
@@ -44,81 +45,161 @@ nonisolated struct Deadline: Sendable {
         guard remaining > .zero else { throw Expired() }
     }
 
-    /// Waits for synchronous work on a dispatch queue. The caller can leave while a system call is stalled.
-    func work<T: Sendable>(_ operation: @escaping @Sendable (Work) throws -> T) async throws -> T {
-        let work = Work(deadline: self)
-        return try await run {
-            try await withTaskCancellationHandler {
-                let (values, result) = AsyncStream<Result<T, Error>>.makeStream(bufferingPolicy: .bufferingNewest(1))
-                DispatchQueue.global(qos: .userInitiated).async {
-                    result.yield(Result {
-                        try work.check()
-                        return try operation(work)
-                    })
-                    result.finish()
-                }
-                for await value in values { return try value.get() }
-                throw CancellationError()
-            } onCancel: {
-                work.abandon()
+    struct Abandoned: Error {}
+
+    func wait<V>(for attempt: Attempt<V>, starting start: () -> Void = {}) async -> Attempt<V>.Outcome {
+        await withTaskCancellationHandler {
+            if remaining <= .zero { attempt.end(.failure(Expired())) }
+            let timer = Task {
+                do {
+                    try await clock.sleepUntil(instant)
+                    attempt.end(.failure(Expired()))
+                } catch {}
             }
+            defer { timer.cancel() }
+            if attempt.isLive { start() }
+            return await attempt.outcome
+        } onCancel: {
+            attempt.end(.failure(CancellationError()))
         }
     }
 
-    func read<T: Sendable>(_ lookup: @escaping @Sendable () throws -> T) async throws -> T {
-        try await work { _ in try lookup() }
-    }
-
-    final class Work: @unchecked Sendable {
-        let deadline: Deadline
-        private let lock = NSLock()
-        private var abandoned = false
-        private var writing = false
-
-        fileprivate init(deadline: Deadline) { self.deadline = deadline }
-
-        fileprivate func abandon() { lock.withLock { abandoned = true } }
-
-        func check() throws { try perform {} }
-
-        /// A synchronous write can finish after abandonment. Its caller can tell whether it is safe to retry.
-        var writeAdmitted: Bool { lock.withLock { writing } }
-
-        func admitWrite() throws { try perform { writing = true } }
-
-        /// Linearizes request start with abandonment. Only use this for a short, nonblocking step.
-        func perform<T>(_ step: () throws -> T) throws -> T {
-            try lock.withLock {
-                guard !abandoned else { throw CancellationError() }
-                try deadline.check()
-                return try step()
-            }
-        }
-    }
-
-    /// Cancel the losing task. Operations must cooperate with cancellation.
     func run<T: Sendable>(_ operation: @escaping @Sendable () async throws -> T) async throws -> T {
-        try check()
-        let value = try await withThrowingTaskGroup(of: T.self) { group in
-            group.addTask {
-                let value = try await operation()
-                try check()
-                return value
+        let attempt = Attempt<T>(until: self)
+        let outcome = await wait(for: attempt) {
+            let task = Task {
+                guard attempt.isLive else { return }
+                do { attempt.end(.success(try await operation())) }
+                catch { attempt.end(.failure(error)) }
             }
-            group.addTask {
-                try await clock.sleepUntil(instant)
-                throw Expired()
-            }
-            defer { group.cancelAll() }
-            do {
-                return try await group.next()!
-            } catch {
-                try Task.checkCancellation()
-                if remaining <= .zero { throw Expired() }
-                throw error
+            attempt.onFailure { task.cancel() }
+        }
+        return try outcome.result.get()
+    }
+
+    /// The caller can leave while a system call on the worker is stalled.
+    func blockingOutcome<T: Sendable>(
+        _ body: @escaping @Sendable (Hold) throws -> T
+    ) async -> Attempt<T>.Outcome {
+        let attempt = Attempt<T>(until: self)
+        return await wait(for: attempt) {
+            DispatchQueue.global(qos: .userInitiated).async {
+                guard attempt.isLive else { return }
+                attempt.end(Result { try body(attempt) })
             }
         }
-        try check()
-        return value
+    }
+
+    func blocking<T: Sendable>(_ body: @escaping @Sendable (Hold) throws -> T) async throws -> T {
+        try await blockingOutcome(body).result.get()
+    }
+
+    func bestEffort<T: Sendable>(
+        within duration: Duration = .seconds(1), default fallback: T,
+        _ body: @escaping @Sendable (Hold) throws -> T
+    ) async -> T {
+        (try? await capped(by: duration).blocking(body)) ?? fallback
+    }
+}
+
+/// The non-generic view of an attempt used by synchronous workers.
+nonisolated class Hold: @unchecked Sendable {
+    let deadline: Deadline
+
+    fileprivate init(until deadline: Deadline) { self.deadline = deadline }
+
+    var isLive: Bool { fatalError("Implemented by Attempt") }
+    func commit<T>(_ step: () throws -> T) throws -> T { fatalError("Implemented by Attempt") }
+
+    func check() throws {
+        guard isLive else {
+            try deadline.check()
+            throw Deadline.Abandoned()
+        }
+    }
+}
+
+nonisolated final class Attempt<Value: Sendable>: Hold, @unchecked Sendable {
+    struct Outcome: Sendable {
+        let result: Result<Value, Error>
+        let committed: Bool
+    }
+
+    private struct State: Sendable {
+        var outcome: Outcome?
+        var committed = false
+        var waiter: CheckedContinuation<Outcome, Never>?
+        var cleanups: [@Sendable () -> Void] = []
+    }
+
+    private let state = OSAllocatedUnfairLock(initialState: State())
+
+    override init(until deadline: Deadline) { super.init(until: deadline) }
+
+    override var isLive: Bool {
+        state.withLock { $0.outcome == nil && deadline.remaining > .zero }
+    }
+
+    /// Only short, synchronous operations belong here. A rejected step has no effect.
+    override func commit<T>(_ step: () throws -> T) throws -> T {
+        try state.withLockUnchecked { state in
+            guard state.outcome == nil else { throw Deadline.Abandoned() }
+            try deadline.check()
+            let value = try step()
+            state.committed = true
+            return value
+        }
+    }
+
+    @discardableResult func end(_ result: Result<Value, Error>) -> Bool {
+        let ending = state.withLock { state -> (Outcome, CheckedContinuation<Outcome, Never>?, [@Sendable () -> Void])? in
+            guard state.outcome == nil else { return nil }
+            let result = if case .failure(let error) = result, error is CancellationError {
+                result
+            } else if deadline.remaining <= .zero {
+                Result<Value, Error>.failure(Deadline.Expired())
+            } else {
+                result
+            }
+            let outcome = Outcome(result: result, committed: state.committed)
+            state.outcome = outcome
+            let waiter = state.waiter
+            state.waiter = nil
+            let cleanups = state.cleanups
+            state.cleanups = []
+            return (outcome, waiter, cleanups)
+        }
+        guard let (outcome, waiter, cleanups) = ending else { return false }
+        waiter?.resume(returning: outcome)
+        if case .failure = outcome.result { cleanups.forEach { $0() } }
+        return true
+    }
+
+    func onFailure(_ cleanup: @escaping @Sendable () -> Void) {
+        let failed = state.withLock { state in
+            switch state.outcome?.result {
+            case nil:
+                state.cleanups.append(cleanup)
+                return false
+            case .success: return false
+            case .failure: return true
+            }
+        }
+        if failed { cleanup() }
+    }
+
+    fileprivate var outcome: Outcome {
+        get async {
+            await withCheckedContinuation { waiter in
+                let outcome = state.withLock { state in
+                    if state.outcome == nil {
+                        precondition(state.waiter == nil)
+                        state.waiter = waiter
+                    }
+                    return state.outcome
+                }
+                if let outcome { waiter.resume(returning: outcome) }
+            }
+        }
     }
 }

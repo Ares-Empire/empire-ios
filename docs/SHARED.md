@@ -389,12 +389,17 @@ prefix. For people besides the owner: external testing with a public TestFlight 
 
 `Shared/HomeReach/` provides `SPKIPin` for EC P-256 server keys and `PinnedServer` for TLS challenges and
 redirects. `PinnedSession` caches one ephemeral HTTP session per pin and creates a dedicated session for
-events. Callers supply their timeouts.
+events. Session construction happens outside the cache lock. The cache keeps the first session
+installed for a pin and invalidates duplicates.
 
-`HomeRoute.select` races a saved home address, discovery, and a remote listener. Each caller supplies its
-health probes, discovery, and remote policy. The default policy allows remote, including on the lock screen.
-`Deadline` uses `ContinuousClock` so time spent suspended counts, and cancels work when its absolute
-limit is reached. A synchronous work item runs on a dispatch queue and can be abandoned while a system
-call is stalled. Its final request start checks cancellation and the deadline under the same lock that
-marks the work abandoned. Tests can supply a clock. Request authorization and the decision to retry an action
-before its first write belong to the calling app.
+`HomeRoute.select` reads a mailbox of results from a saved home address, discovery, and a remote
+listener. A winner cancels losing probes and returns immediately. The cap bounds the wait even
+when a probe is stalled. Each caller supplies its health probes, discovery, and remote policy.
+The default policy allows remote, including on the lock screen.
+
+`Deadline` uses `ContinuousClock` so time spent suspended counts. An `Attempt` records the first
+ending and whether a commit ran under the same lock. Waiting ends on a result, the cap or caller
+cancellation. Failure triggers the attempt's registered cleanups. Synchronous work runs on a
+dispatch queue and can be abandoned when a system call stalls. An ended attempt refuses a late
+commit. Tests can supply a clock. Request admission and decisions about repeating an action belong
+to the calling app.

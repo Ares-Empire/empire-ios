@@ -13,11 +13,14 @@ import SwiftUI
 /// ones (`-appearance`, `-openLanguage`, …).
 struct ContentView: View {
     /// The flat paired now and its store; Forget or a first pairing make a new store, and with it new screens.
-    @State private var session: FlatSession
+    @State private var session: FlatSession?
     @State private var navigation: ArestiaNavigation
     /// Settings needs a session for its contact form; Arestia never signs in (`EmpireAppIdentity.arestia`).
     @State private var account = EmpireSession(app: .arestia, restoreOnLaunch: false)
     private let follows: Bool
+    #if DEBUG
+    private let connectionArguments: [String]
+    #endif
 
     init(arguments: [String] = LaunchArguments.current) {
         let connection = FlatdConnection.live
@@ -25,18 +28,19 @@ struct ContentView: View {
         // The tests use the app as their host: it must not reach for flatd then.
         let testing = NSClassFromString("XCTestCase") != nil
             || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
-        DebugConnection.apply(arguments: arguments, to: connection)
+        connectionArguments = arguments
         follows = !testing
+        _session = State(initialValue: DebugConnection.hasOverride(arguments) ? nil : FlatSession(connection: connection))
         #else
         follows = true
-        #endif
         _session = State(initialValue: FlatSession(connection: connection))
+        #endif
         _navigation = State(initialValue: ArestiaNavigation.launched(arguments: arguments))
     }
 
     var body: some View {
         Group {
-            if let store = session.store {
+            if let session, let store = session.store {
                 // A new store (Forget, a first pairing) gets new screens: nothing of the old one's stays on screen.
                 FlatRoot(store: store, session: session, navigation: navigation, account: account, follows: follows)
                     .id(session.generation)
@@ -49,10 +53,18 @@ struct ContentView: View {
             }
         }
         .onOpenURL { url in navigation.open(url) }
-        .onChange(of: session.generation) { navigation.reset() }
+        .onChange(of: session?.generation) { old, _ in if old != nil { navigation.reset() } }
+        #if DEBUG
+        .task {
+            guard session == nil else { return }
+            let connection = FlatdConnection.live
+            await DebugConnection.apply(arguments: connectionArguments, to: connection)
+            if !Task.isCancelled { session = FlatSession(connection: connection) }
+        }
+        #endif
         // A language switch builds the app anew with a session of its own: this one's store retires, so none of its
         // work goes on next to the new one's (Codex's review, round 6).
-        .onDisappear { session.end() }
+        .onDisappear { session?.end() }
     }
 }
 
@@ -180,8 +192,12 @@ final class ArestiaNavigation {
 #if DEBUG
 /// Screenshots and the simulator: point the app at a fake flatd from the launch arguments, never at the real one.
 enum DebugConnection {
-    static func apply(arguments: [String], to connection: FlatdConnection) {
-        if arguments.contains("-forgetFlatd") { try? connection.forget() }
+    static func hasOverride(_ arguments: [String]) -> Bool {
+        ["-forgetFlatd", "-flatdPairing", "-deadFlatdHome"].contains { arguments.contains($0) }
+    }
+
+    static func apply(arguments: [String], to connection: FlatdConnection) async {
+        if arguments.contains("-forgetFlatd") { try? await connection.forgetSavedPairing() }
         if let index = arguments.firstIndex(of: "-flatdPairing"), arguments.indices.contains(index + 1),
            let code = PairingCode.parse(arguments[index + 1]), let url = code.baseURL {
             // The same fake flatd keeps its pairing identity across launches, so its controls keep their choices.
@@ -190,7 +206,9 @@ enum DebugConnection {
         }
         if arguments.contains("-deadFlatdHome"), let saved = connection.pairing {
             let dead = URL(string: "https://192.0.2.1:8788")!
-            try? connection.move(saved, to: FlatdClient(saved, at: dead))
+            _ = try? await Deadline(after: .seconds(6)).blocking { hold in
+                try connection.move(saved, to: FlatdClient(saved, at: dead), hold: hold)
+            }
         }
     }
 }

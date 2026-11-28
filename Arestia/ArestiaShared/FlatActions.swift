@@ -30,21 +30,22 @@ nonisolated struct FlatActions: Sendable {
         let (change, pairing) = try await reach.run(deadline: deadline) { client in
             let active = try await active(client)
             let (mode, failed) = try await client.setMode(FlatMode.cookingID, active: active)
-            let names = try await deadline.flatdWork { _ in connection.names(failed, pairing: client.pairingID) }
+            let names = await deadline.bestEffort(default: failed) { _ in
+                connection.names(failed, pairing: client.pairingID)
+            }
+            try Task.checkCancellation()
             return (CookingChange(isActive: mode.active, failed: names), client.pairingID)
         }
         if let pairing {
             let at = Date.now
-            try await deadline.flatdWork { work in
-                do {
-                    if change.failed.isEmpty {
-                        try connection.clearTrouble(mode: FlatMode.cookingID, pairing: pairing, now: change.isActive,
-                                                    through: at, work: work)
-                    } else {
-                        try connection.note(ModeTrouble(pairing: pairing, mode: FlatMode.cookingID, active: change.isActive,
-                                                       names: change.failed, at: at), work: work)
-                    }
-                } catch is FlatdDispatchLock.Unavailable {}  // trouble bookkeeping is optional
+            await deadline.bestEffort(default: ()) { hold in
+                if change.failed.isEmpty {
+                    try connection.clearTrouble(mode: FlatMode.cookingID, pairing: pairing, now: change.isActive,
+                                                through: at, hold: hold)
+                } else {
+                    try connection.note(ModeTrouble(pairing: pairing, mode: FlatMode.cookingID, active: change.isActive,
+                                                   names: change.failed, at: at), hold: hold)
+                }
             }
         }
         try Task.checkCancellation()
@@ -82,12 +83,14 @@ nonisolated struct FlatActions: Sendable {
     private func read() async throws -> (devices: [Device], client: FlatdClient) {
         let connection = reach.connection
         let deadline = FlatdReach.intentBudget ?? FlatdReach.intentDeadline()
-        let version = try await deadline.flatdWork { _ in connection.devicesVersion }
+        let version = await deadline.bestEffort(default: nil) { _ in connection.devicesVersion }
+        try Task.checkCancellation()
         return try await reach.run(deadline: deadline) { client in
             let devices = try await client.devices()
-            let named = try await deadline.flatdWork { work in
-                try connection.named(devices, from: client, readSince: version, work: work)
+            let named = await deadline.bestEffort(default: devices) { hold in
+                try connection.named(devices, from: client, readSince: version, hold: hold)
             }
+            try Task.checkCancellation()
             return (named, client)
         }
     }
@@ -99,7 +102,6 @@ nonisolated struct FlatActions: Sendable {
     @discardableResult
     func setFans(on: Bool, minutes: Int? = nil, only saved: [String]? = nil) async throws -> [Device] {
         let command = DeviceCommand.power(on: on, seconds: minutes.map { max(1, $0) * 60 })
-        let connection = reach.connection
         let deadline = FlatdReach.intentBudget ?? FlatdReach.intentDeadline()
         return try await reach.run(deadline: deadline) { client in
             let ids = try saved?.map { choice in
@@ -108,7 +110,6 @@ nonisolated struct FlatActions: Sendable {
             let fans = try await client.devices().filter { $0.kind == .fan && (ids?.contains($0.id) ?? true) }
             if let ids, Set(fans.map(\.id)) != Set(ids) { throw ChosenDeviceGone.fan }
             guard !fans.isEmpty else { throw FlatdError.unknown }
-            try await deadline.flatdWork { _ in try connection.checkCurrent(client) }
             return try await withThrowingTaskGroup(of: Result<Device, Error>.self) { group in
                 for fan in fans {
                     group.addTask {
@@ -194,7 +195,11 @@ nonisolated struct FlatActions: Sendable {
         let deadline = FlatdReach.intentBudget ?? FlatdReach.intentDeadline()
         return try await reach.run(deadline: deadline) { client in
             let failed = try await client.runScene(id)
-            return try await deadline.flatdWork { _ in connection.names(failed, pairing: client.pairingID) }
+            let names = await deadline.bestEffort(default: failed) { _ in
+                connection.names(failed, pairing: client.pairingID)
+            }
+            try Task.checkCancellation()
+            return names
         }
     }
 }

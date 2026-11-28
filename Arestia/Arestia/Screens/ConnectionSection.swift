@@ -58,12 +58,16 @@ struct ConnectionSection: View {
                                 tint: FormButtonStyle.dangerInk)
                 }
                 .buttonStyle(SettingsRowStyle())
+                .disabled(session.isForgetting)
                 .confirmationDialog(Text("Forget this flat?"), isPresented: $confirmsForget,
                                     titleVisibility: .visible) {
                     Button(role: .destructive) {
-                        dismiss()
-                        if !session.forget() {
-                            store.offer = UndoOffer(message: String(localized: "Arestia couldn't forget the flat. Try again."))
+                        Task {
+                            let forgotten = await session.forget()
+                            dismiss()
+                            if !forgotten {
+                                store.offer = UndoOffer(message: String(localized: "Arestia couldn't forget the flat. Try again."))
+                            }
                         }
                     } label: { Text("Forget") }
                     Button(role: .cancel) {} label: { Text("Cancel") }

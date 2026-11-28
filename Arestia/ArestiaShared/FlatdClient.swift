@@ -85,7 +85,7 @@ nonisolated enum FlatdError: Error, Equatable, Sendable {
 
 // The callers share one constructor signature across builds. Release can only pass nil.
 #if DEBUG
-typealias FlatdTransportOverride = any HTTPTransport & Sendable
+typealias FlatdTransportOverride = any PreparingTransport
 #else
 typealias FlatdTransportOverride = Never
 #endif
@@ -104,7 +104,7 @@ nonisolated struct FlatdClient: Sendable {
     let route: HomeRoute?
     var deadline: Deadline?
     var action: FlatdActionDispatch?
-    private let transport: any HTTPTransport & Sendable
+    private let transport: any PreparingTransport
     private(set) var remoteGeneration: UUID?
     /// Where a request with the key is started only while this client's pairing is still the saved one (`gated(by:)`);
     /// nil for a pairing code being tried, which belongs to no pairing yet.
@@ -153,7 +153,7 @@ nonisolated struct FlatdClient: Sendable {
         self.transport = Self.makeTransport(pin: remote.pin, override: transport)
     }
 
-    private static func makeTransport(pin: FlatdPin, override: FlatdTransportOverride?) -> any HTTPTransport & Sendable {
+    private static func makeTransport(pin: FlatdPin, override: FlatdTransportOverride?) -> any PreparingTransport {
         #if DEBUG
         if let override { return override }
         #endif
@@ -167,18 +167,18 @@ nonisolated struct FlatdClient: Sendable {
                                    transport: transport)
         verifier.gate = FlatdGate(connection: connection, pairing: saved.id, route: .home, pin: saved.pin,
                                   baseURL: baseURL, savedToken: saved.token, remoteGeneration: nil,
-                                  allowsRemote: RemoteUnlock.allowsRemote)
+                                  marker: .live)
         return try await verifier.devices()
     }
 
     /// The same client, with each authenticated request started under the lock that Forget takes.
     func gated(by connection: FlatdConnection,
-               allowsRemote: @escaping @Sendable () -> Bool = RemoteUnlock.allowsRemote) -> FlatdClient {
+               marker: RemoteMarker = .live) -> FlatdClient {
         guard let pairingID, let route else { return self }
         var client = self
         client.gate = FlatdGate(connection: connection, pairing: pairingID, route: route, pin: pin,
                                baseURL: baseURL, savedToken: token, remoteGeneration: remoteGeneration,
-                               allowsRemote: allowsRemote)
+                               marker: marker)
         return client
     }
 
@@ -413,35 +413,45 @@ nonisolated struct FlatdClient: Sendable {
             request.timeoutInterval = max(0.001, min(request.timeoutInterval, budget.remainingSeconds))
         }
         let authorized = request.value(forHTTPHeaderField: "Authorization") != nil
-        let dispatch = FlatdRequestDispatch(request: request, route: route, cap: cap,
-                                           deadline: deadline, action: action)
-        let boundedRequest = request
-        do {
-            if authorized && pairingID != nil {
-                guard gate != nil, transport is any GatedTransport else { throw FlatdError.unreachable }
+        let admission: FlatdAdmission
+        if authorized, pairingID != nil {
+            guard let gate else { throw FlatdError.unreachable }
+            admission = .gated(gate)
+        } else {
+            admission = .open
+        }
+        let rule = WriteRule(cap: cap, deadline: deadline, isWrite: request.httpMethod != "GET", action: action)
+        let boundedRequest = request.withLanguage()
+        let preparing: any PreparingTransport
+        if let pinned = transport as? FlatdTransport {
+            guard pinned.pin == pin else { throw FlatdError.unreachable }
+            preparing = pinned.capturingFixturesAndTiming(for: request)
+        } else {
+            preparing = transport
+        }
+        let outcome = await FlatdLaunch.run(admission: admission, rule: rule, prepare: { reply in
+            .init(request: try preparing.prepare(boundedRequest, reply: reply))
+        }, didResume: {
+            #if DEBUG
+            Self.logDispatch(boundedRequest, route: route, deadline: deadline)
+            #endif
+        })
+        return try Self.classify(outcome, isWrite: rule.isWrite, inAction: action != nil)
+    }
+
+    static func classify(_ outcome: Attempt<HTTPReply>.Outcome, isWrite: Bool, inAction: Bool) throws -> HTTPReply {
+        switch outcome.result {
+        case let .success(reply): return reply
+        case let .failure(error):
+            if error is CancellationError { throw error }
+            if !outcome.committed {
+                if let admission = error as? FlatdError { throw admission }
+                if error is FlatdGate.RemoteDenied { throw error }
+                throw FlatdError.unreachable
             }
-            return try await cap.run {
-                if let pinned = transport as? any GatedTransport {
-                    return try await pinned.send(boundedRequest, gate: authorized ? gate : nil, dispatch: dispatch)
-                }
-                try dispatch.start {}
-                return try await transport.send(boundedRequest)
+            if error is Deadline.Expired || (error as? URLError)?.code == .timedOut || (isWrite && inAction) {
+                throw FlatdError.noAnswer
             }
-        } catch let error as FlatdGate.RemoteDenied {
-            throw error
-        } catch let error as FlatdError {
-            throw error
-        } catch is Deadline.Expired {
-            let actionExpired = deadline.map { $0.remaining <= .zero } ?? false
-            let writeInFlight = actionExpired && action?.writeStarted == true
-            throw dispatch.started || writeInFlight ? FlatdError.noAnswer : FlatdError.unreachable
-        } catch is CancellationError {
-            throw CancellationError()
-        } catch let error as URLError where error.code == .cancelled {
-            throw CancellationError()
-        } catch let error as URLError where error.code == .timedOut {
-            throw FlatdError.noAnswer
-        } catch {
             throw FlatdError.unreachable
         }
     }
@@ -477,32 +487,11 @@ nonisolated final class FlatdActionDispatch: Sendable {
     func startingWrite() { written.withLock { $0 = true } }
 }
 
-nonisolated struct FlatdRequestDispatch: Sendable {
-    let request: URLRequest
-    let route: HomeRoute?
-    let cap: Deadline
-    let deadline: Deadline?
-    let action: FlatdActionDispatch?
-    private let state = OSAllocatedUnfairLock(initialState: false)
-
-    var started: Bool { state.withLock { $0 } }
-    var isWrite: Bool { request.httpMethod != "GET" }
-
-    func start(_ resume: () -> Void) throws {
-        try cap.check()
-        if isWrite, let deadline, deadline.remaining < .seconds(3) { throw FlatdError.unreachable }
-        if isWrite { action?.startingWrite() }
-        state.withLock { $0 = true }
-        resume()
-        #if DEBUG
-        Self.log(request, route: route, deadline: deadline)
-        #endif
-    }
-
+nonisolated extension FlatdClient {
     #if DEBUG
     private static let logger = Logger(subsystem: "de.ares-empire.arestia", category: "route")
 
-    static func log(_ request: URLRequest, route: HomeRoute?, deadline: Deadline?) {
+    static func logDispatch(_ request: URLRequest, route: HomeRoute?, deadline: Deadline?) {
         let routeName = route.map { String(describing: $0) } ?? "pairing-code"
         let method = request.httpMethod ?? "GET"
         let path = request.url?.path() ?? ""
@@ -510,37 +499,4 @@ nonisolated struct FlatdRequestDispatch: Sendable {
         logger.notice("\(routeName, privacy: .public) \(method, privacy: .public) \(path, privacy: .public) \(time, privacy: .public)")
     }
     #endif
-}
-
-/// Checks the saved identity and the lock marker inside the same lock that protects dispatch.
-nonisolated struct FlatdGate: Sendable {
-    struct RemoteDenied: Error {}
-
-    let connection: FlatdConnection
-    let pairing: UUID
-    let route: HomeRoute
-    let pin: FlatdPin
-    let baseURL: URL
-    let savedToken: String
-    let remoteGeneration: UUID?
-    let allowsRemote: @Sendable () -> Bool
-
-    func start<T: Sendable>(until deadline: Deadline,
-                            _ start: @escaping @Sendable (Deadline.Work) throws -> T) async throws -> T {
-        try await deadline.work { work in
-            try connection.start(for: pairing, work: work, checking: { saved in
-                guard saved.matches(route: route, pin: pin, url: baseURL, token: savedToken,
-                                    remoteGeneration: remoteGeneration) else { throw FlatdError.unreachable }
-                if route == .remote, !allowsRemote() { throw RemoteDenied() }
-            }) {
-                try start(work)
-            }
-        }
-    }
-}
-
-/// A transport that starts a request inside a gate: the last check and the start are one step.
-nonisolated protocol GatedTransport: HTTPTransport, Sendable {
-    func send(_ request: URLRequest, gate: FlatdGate?, dispatch: FlatdRequestDispatch?) async throws
-        -> (Data, HTTPURLResponse)
 }

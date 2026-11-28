@@ -34,11 +34,12 @@ nonisolated enum RemoteUnlock {
     }
 
     /// Called from the app on activation.
-    static func createIfMissing() {
+    static func createIfMissing(_ hold: Hold) throws {
         guard read().0 == errSecItemNotFound else { return }
         var attributes = query
         attributes[kSecAttrAccessible as String] = kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly
         attributes[kSecValueData as String] = marker
+        try hold.commit {}
         SecItemAdd(attributes as CFDictionary, nil)
     }
 }

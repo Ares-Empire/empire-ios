@@ -39,20 +39,20 @@ struct NameFileTests {
 
     /// The extension reads flatd's list; the app keeps a rename before that list's answer comes. The extension's
     /// write sees the app's version the moment it holds the lock, and keeps nothing.
-    @Test func theOtherSidesNewerNameIsSeenAtOnce() throws {
+    @Test func theOtherSidesNewerNameIsSeenAtOnce() async throws {
         let sides = try TwoSides()
-        sides.app.remember(try Flat.devices([Flat.fan(1), Flat.rollo(1)]), for: Flat.id)
+        await sides.app.remember(try Flat.devices([Flat.fan(1), Flat.rollo(1)]), for: Flat.id)
         let begun = sides.controls.devicesVersion
         #expect(begun != nil)
-        sides.app.rememberName(of: try Flat.decode(Device.self, named(Flat.fan(1), "Desk fan")), for: Flat.id)
-        let taken = sides.controls.remember(try Flat.devices([Flat.fan(1), Flat.rollo(1)]), for: Flat.id,
+        await sides.app.rememberName(of: try Flat.decode(Device.self, named(Flat.fan(1), "Desk fan")), for: Flat.id)
+        let taken = await sides.controls.remember(try Flat.devices([Flat.fan(1), Flat.rollo(1)]), for: Flat.id,
                                             readSince: begun)
         #expect(!taken)
         #expect(labels(sides.controls) == ["Desk fan", "Blind 1"])
         #expect(labels(sides.app) == ["Desk fan", "Blind 1"])
         // A list read after it is kept, and the app sees that at once too.
         let next = sides.controls.devicesVersion
-        #expect(sides.controls.remember(try Flat.devices([named(Flat.fan(1), "Desk fan"), named(Flat.rollo(1), "Shade")]),
+        #expect(await sides.controls.remember(try Flat.devices([named(Flat.fan(1), "Desk fan"), named(Flat.rollo(1), "Shade")]),
                                         for: Flat.id, readSince: next))
         #expect(labels(sides.app) == ["Desk fan", "Shade"])
     }
@@ -62,13 +62,13 @@ struct NameFileTests {
     @Test func noNameIsLostBetweenTheTwoSides() async throws {
         let sides = try TwoSides()
         let count = 40
-        sides.app.remember(try Flat.devices((1...count).map { Flat.fan($0) }), for: Flat.id)
+        await sides.app.remember(try Flat.devices((1...count).map { Flat.fan($0) }), for: Flat.id)
         let pairing = Flat.id
         await withTaskGroup(of: Void.self) { group in
             for number in 1...count {
                 let side = number.isMultiple(of: 2) ? sides.app : sides.controls
                 let device = Device(id: "fan:fan_\(number)", kind: .fan, label: "Renamed \(number)")
-                group.addTask { @concurrent in side.rememberName(of: device, for: pairing) }
+                group.addTask { @concurrent in await side.rememberName(of: device, for: pairing) }
             }
         }
         #expect(labels(sides.app) == (1...count).map { "Renamed \($0)" })
@@ -82,7 +82,7 @@ struct NameFileTests {
     @Test func aSecondProcessesWriteIsReadUnderTheLock() async throws {
         #if targetEnvironment(simulator)
         let sides = try TwoSides()
-        sides.app.remember(try Flat.devices([Flat.fan(1), Flat.rollo(1)]), for: Flat.id)
+        await sides.app.remember(try Flat.devices([Flat.fan(1), Flat.rollo(1)]), for: Flat.id)
         let begun = sides.controls.devicesVersion
         let marker = sides.file.url.deletingLastPathComponent().appending(path: "locked")
         let said = sides.file.url.deletingLastPathComponent().appending(path: "said")
@@ -118,31 +118,31 @@ struct NameFileTests {
         #expect(labels(sides.controls) == ["Fan 1", "Blind 1"])            // the other process holds the lock, unwritten
         FileManager.default.createFile(atPath: go.path(percentEncoded: false), contents: nil)   // now it writes and lets go
         // Waits for the other process to let go, then lays the blind's name over what that one wrote.
-        sides.controls.rememberName(of: try Flat.decode(Device.self, named(Flat.rollo(1), "Shade")), for: Flat.id)
+        await sides.controls.rememberName(of: try Flat.decode(Device.self, named(Flat.rollo(1), "Shade")), for: Flat.id)
         #expect(labels(sides.controls) == ["Desk fan", "Shade"])
         #expect(process.wait() == 0)
-        #expect(!sides.controls.remember(try Flat.devices([Flat.fan(1), Flat.rollo(1)]), for: Flat.id, readSince: begun))
+        #expect(await !sides.controls.remember(try Flat.devices([Flat.fan(1), Flat.rollo(1)]), for: Flat.id, readSince: begun))
         #expect(labels(sides.app) == ["Desk fan", "Shade"])
         #endif
     }
 
     // MARK: finding 3: one device's name is laid over that device alone
 
-    @Test func aConfirmedNameChangesItsDeviceAlone() throws {
+    @Test func aConfirmedNameChangesItsDeviceAlone() async throws {
         let connection = Flat.connection()
         let desk = try Flat.decode(Device.self, named(Flat.fan(1), "Desk fan"))
-        connection.rememberName(of: desk, for: Flat.id)
+        await connection.rememberName(of: desk, for: Flat.id)
         #expect(connection.known == nil)                                    // one name is no list
-        connection.remember(try Flat.devices([Flat.fan(1), Flat.rollo(1)]), for: Flat.id)
+        await connection.remember(try Flat.devices([Flat.fan(1), Flat.rollo(1)]), for: Flat.id)
         let before = connection.devicesVersion
-        connection.rememberName(of: desk, for: Flat.id)
+        await connection.rememberName(of: desk, for: Flat.id)
         #expect(labels(connection) == ["Desk fan", "Blind 1"])
         #expect(connection.devicesVersion != before)                        // a list read before it is older
-        connection.rememberName(of: Device(id: "light:lamp", kind: .light, label: "Lamp"), for: Flat.id)
+        await connection.rememberName(of: Device(id: "light:lamp", kind: .light, label: "Lamp"), for: Flat.id)
         #expect(connection.knownDevices.map(\.id) == ["fan:fan_1", "rollo:blind_1", "light:lamp"])
-        connection.rememberName(of: desk, for: UUID())                      // another pairing's: nothing
-        try connection.forget()
-        connection.rememberName(of: desk, for: Flat.id)                     // late, after Forget: nothing
+        await connection.rememberName(of: desk, for: UUID())                      // another pairing's: nothing
+        try await connection.forgetSavedPairing()
+        await connection.rememberName(of: desk, for: Flat.id)                     // late, after Forget: nothing
         #expect(connection.known == nil && connection.devicesVersion == nil)
         #expect(!FileManager.default.fileExists(atPath: try #require(connection.names).url.path(percentEncoded: false)))
     }
@@ -185,7 +185,7 @@ struct NameFileTests {
     @Test func theBlindControlShowsTheNameKeptNotItsOwnOlderAnswer() async throws {
         let connection = Flat.connection()
         let transport = FakeTransport()
-        connection.remember(try Flat.devices([Flat.fan(1), Flat.rollo(1)]), for: Flat.id)
+        await connection.remember(try Flat.devices([Flat.fan(1), Flat.rollo(1)]), for: Flat.id)
         transport.answer("GET /api/devices", body: ["devices": [Flat.fan(1), Flat.rollo(1, position: 100)]],
                          delay: .milliseconds(300))
         let actions = FlatActions(reach: FlatdReach(connection: connection, transport: transport, rediscover: { [] }))
@@ -193,8 +193,8 @@ struct NameFileTests {
         let control = Task { try await actions.rolloControl(chosen) }
         let fans = Task { try await actions.fans() }
         try await Task.sleep(for: .milliseconds(100))
-        connection.rememberName(of: try Flat.decode(Device.self, named(Flat.rollo(1), "Kitchen blind")), for: Flat.id)
-        connection.rememberName(of: try Flat.decode(Device.self, named(Flat.fan(1), "Desk fan")), for: Flat.id)
+        await connection.rememberName(of: try Flat.decode(Device.self, named(Flat.rollo(1), "Kitchen blind")), for: Flat.id)
+        await connection.rememberName(of: try Flat.decode(Device.self, named(Flat.fan(1), "Desk fan")), for: Flat.id)
         #expect(try await control.value == .blind(name: "Kitchen blind", isOpen: false))
         #expect(try await fans.value.map(\.label) == ["Desk fan"])
         #expect(labels(connection) == ["Desk fan", "Kitchen blind"])
@@ -210,7 +210,7 @@ struct NameFileTests {
 
     // MARK: the pairing's scope, and build 2's names
 
-    @Test func forgetRemovesTheNamesAndNothingReadsBuild2s() throws {
+    @Test func forgetRemovesTheNamesAndNothingReadsBuild2s() async throws {
         let defaults = try #require(UserDefaults(suiteName: "arestia-tests-" + UUID().uuidString))
         let connection = FlatdConnection(defaults: defaults, names: Flat.nameFile(), keychain: MemoryKeys(),
                                          lock: .processOnly)
@@ -219,16 +219,16 @@ struct NameFileTests {
         let old = #"{"pairing":"\#(Flat.id.uuidString)","devices":[{"id":"fan:fan_1","kind":"fan","label":"Old"}]}"#
         defaults.set(Data(old.utf8), forKey: FlatdConnection.namesKeyOfBuild2)
         #expect(connection.known == nil)
-        connection.remember(try Flat.devices([Flat.fan(1)]), for: Flat.id)
+        await connection.remember(try Flat.devices([Flat.fan(1)]), for: Flat.id)
         #expect(labels(connection) == ["Fan 1"])
         #expect(defaults.object(forKey: FlatdConnection.namesKeyOfBuild2) == nil)
         defaults.set(Data(old.utf8), forKey: FlatdConnection.namesKeyOfBuild2)
-        try connection.forget()
+        try await connection.forgetSavedPairing()
         #expect(connection.devicesVersion == nil)
         #expect(defaults.object(forKey: FlatdConnection.namesKeyOfBuild2) == nil)
         // Names kept for one pairing are never another's, even when the file stayed.
         try connection.save(Flat.pairing())
-        connection.remember(try Flat.devices([Flat.fan(1)]), for: Flat.id)
+        await connection.remember(try Flat.devices([Flat.fan(1)]), for: Flat.id)
         try connection.save(Flat.pairing(id: UUID()))
         #expect(connection.known == nil)
     }

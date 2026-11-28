@@ -211,21 +211,20 @@ nonisolated final class FlatdDispatchLock: @unchecked Sendable {
     }()
 
     /// Runs `body` holding the lock; throws `Unavailable` (and runs nothing) when the lock cannot be taken.
-    func withLock<T>(until deadline: Deadline? = nil, work: Deadline.Work? = nil, _ body: () throws -> T) throws -> T {
-        let deadline = work?.deadline ?? deadline
+    func withLock<T>(until deadline: Deadline, hold: Hold, _ body: () throws -> T) throws -> T {
+        #if DEBUG
+        dispatchPrecondition(condition: .notOnQueue(.main))
+        #endif
         func check() throws {
-            if let work { try work.check() }
-            else { try deadline?.check() }
+            try deadline.check()
+            try hold.check()
         }
-        if let deadline {
-            while !local.lock(before: Date(timeIntervalSinceNow: min(0.01, max(0, deadline.remainingSeconds)))) {
-                #if DEBUG
-                onContention?()
-                #endif
-                try check()
-            }
-        } else {
-            local.lock()
+        try check()
+        while !local.lock(before: Date(timeIntervalSinceNow: min(0.01, max(0, deadline.remainingSeconds)))) {
+            #if DEBUG
+            onContention?()
+            #endif
+            try check()
         }
         defer { local.unlock() }
         try check()
@@ -241,10 +240,9 @@ nonisolated final class FlatdDispatchLock: @unchecked Sendable {
                 throw Unavailable()
             }
             defer { close(descriptor) }
-            let operation = deadline == nil ? LOCK_EX : LOCK_EX | LOCK_NB
-            while flock(descriptor, operation) != 0 {
+            while flock(descriptor, LOCK_EX | LOCK_NB) != 0 {
                 if errno == EINTR { try check(); continue }
-                guard errno == EWOULDBLOCK, let deadline else {
+                guard errno == EWOULDBLOCK else {
                     Self.log.error("the dispatch lock could not be taken (\(errno, privacy: .public))")
                     throw Unavailable()
                 }
@@ -361,21 +359,6 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
 
     var token: String? { pairing?.token }
 
-    /// Runs `start` (starting a request with this pairing's key) only while this pairing is the saved one, under the
-    /// lock Forget takes too: throws `.notPaired` once it is not, `.pairingUnreadable` while it cannot be read.
-    func start<T>(for pairing: UUID, work: Deadline.Work? = nil, checking: (FlatdPairing) throws -> Void = { _ in },
-               _ start: () throws -> T) throws -> T {
-        do {
-            return try lock.withLock(work: work) {
-                let saved = try current()
-                guard saved.id == pairing else { throw FlatdError.notPaired }
-                try checking(saved)
-                return try start()
-            }
-        } catch is FlatdDispatchLock.Unavailable {
-            throw FlatdError.pairingUnreadable          // nothing was started: the lock could not be taken
-        }
-    }
 
     /// Saves this pairing over whatever is saved (Debug launch arguments and the tests; the app pairs with `pairNew`
     /// and `renew`, which change only what they were read as).
@@ -391,17 +374,16 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
 
     /// The same flatd (the same identity) with a new key or address, written only over the version `saved` was read
     /// as: false when the pairing changed meanwhile. Keeps the pairing's identity, so its choices go on.
-    func renew(_ saved: FlatdPairing, with renewed: FlatdPairing, work: Deadline.Work? = nil,
+    func renew(_ saved: FlatdPairing, with renewed: FlatdPairing, hold: Hold,
                isLatest: () -> Bool = { true }) throws -> Bool {
         guard renewed.id == saved.id, renewed.pin == saved.pin, renewed.revision != saved.revision else { return false }
         var renewed = renewed
         if renewed.token != saved.token { renewed.remote = nil }
         let text = try Self.text(renewed)
-        return try lock.withLock(work: work) {
-            let mayCommit = try work?.perform(isLatest) ?? isLatest()
-            guard mayCommit else { return false }
-            // An admitted CAS holds the dispatch lock until Keychain returns. A newer write cannot
-            // overtake it, and the saved revision must still match when the CAS runs.
+        return try lock.withLock(until: hold.deadline, hold: hold) {
+            guard isLatest() else { return false }
+            // An admitted CAS holds the dispatch lock until Keychain returns.
+            try hold.commit {}
             return keychain.update(text, ifLabel: saved.revision.uuidString, newLabel: renewed.revision.uuidString)
         }
     }
@@ -413,14 +395,14 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     /// A new address for this pairing (flatd found again over Bonjour and proved by its key), written only over the
     /// version it was read as: it changes nothing once the pairing was renewed, replaced or forgotten, so a late lookup
     /// (in the app or a control) never brings an old pairing or an old key back.
-    func move(_ pairing: FlatdPairing, to client: FlatdClient, work: Deadline.Work? = nil) throws {
+    func move(_ pairing: FlatdPairing, to client: FlatdClient, hold: Hold) throws {
         guard client.route == .home, client.pairingID == pairing.id, client.pin == pairing.pin else { return }
         let baseURL = client.baseURL
         guard pairing.baseURL != baseURL, baseURL.scheme == "https" else { return }
         var moved = pairing
         moved.baseURL = baseURL
         moved.revision = UUID()
-        _ = try renew(pairing, with: moved, work: work)
+        _ = try renew(pairing, with: moved, hold: hold)
     }
 
     /// The client for the saved pairing, at its saved address.
@@ -441,13 +423,23 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     /// when the process ends between the two steps (Codex's review of the renaming, round 3, finding 5: the Keychain
     /// item went first and the removal's failure was swallowed). Throws when the Keychain kept the item too; the names
     /// are gone then, which is harmless: the pairing's next snapshot keeps them again.
-    func forget() throws {
-        try lock.withLock {
+    func forget(_ hold: Hold, lockBy: Deadline, onlyIfInvalid: Bool = false) throws {
+        try lock.withLock(until: lockBy, hold: hold) {
+            if onlyIfInvalid {
+                guard case .invalid = saved else { return }
+            }
+            try hold.commit {}
             try names?.remove()
             try keychain.delete()
             defaults?.removeObject(forKey: Self.namesKeyOfBuild2)
             defaults?.removeObject(forKey: Self.troubleKey)
             defaults?.removeObject(forKey: Self.troubleSeenKey)
+        }
+    }
+
+    func forgetSavedPairing(onlyIfInvalid: Bool = false) async throws {
+        try await Deadline(after: .seconds(3600)).blocking { hold in
+            try forget(hold, lockBy: Deadline(after: .seconds(10)), onlyIfInvalid: onlyIfInvalid)
         }
     }
 
@@ -515,19 +507,16 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
 
     /// A snapshot of the app's event stream: flatd's whole list. The stream brings flatd's changes in their order, so
     /// its list is the newest: always kept, under a new version, so a list read before it is not kept after it.
-    func remember(_ devices: [Device], for pairing: UUID, work: Deadline.Work? = nil) {
-        keep(for: pairing, work: work) { _ in
-            defaults?.removeObject(forKey: Self.namesKeyOfBuild2)
-            return Self.known(devices)
-        }
+    func remember(_ devices: [Device], for pairing: UUID, hold: Hold) {
+        keep(for: pairing, hold: hold, removesLegacyNames: true) { _ in Self.known(devices) }
     }
 
     /// One device's name as flatd confirmed it (a `device` event, a rename's answer): laid over that device alone in
     /// the names kept, under a new version. The other devices' names stay as kept: a picker may have read a newer
     /// name for one of them while the app's stream was down (finding 3). Nothing while no names are kept for this
     /// pairing: one name is no list, and the next snapshot brings them all.
-    func rememberName(of device: Device, for pairing: UUID, work: Deadline.Work? = nil) {
-        keep(for: pairing, work: work) { kept in Self.laying(device, over: kept, for: pairing) }
+    func rememberName(of device: Device, for pairing: UUID, hold: Hold) {
+        keep(for: pairing, hold: hold) { kept in Self.laying(device, over: kept, for: pairing) }
     }
 
     /// The same for a command's answer (a rename's, or flatd's device read again), which may have been on its way
@@ -537,9 +526,9 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     /// than this answer, or older; the caller asks flatd again (Codex's review of the renaming, round 3, finding 3: a
     /// late answer put "Desk" back over the "Kitchen" a picker had read since).
     func rememberName(of device: Device, for pairing: UUID, unchangedSince version: UUID?,
-                      work: Deadline.Work? = nil) -> Bool {
+                      hold: Hold) -> Bool {
         var unchanged = true
-        keep(for: pairing, work: work) { kept in
+        keep(for: pairing, hold: hold) { kept in
             guard kept?.version == version else {
                 unchanged = false
                 return nil
@@ -567,10 +556,10 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     /// the names to show are then the ones kept (`known`), never this list's.
     @discardableResult
     func remember(_ devices: [Device], for pairing: UUID, readSince version: UUID?,
-                  work: Deadline.Work? = nil) -> Bool {
+                  hold: Hold) -> Bool {
         let known = Self.known(devices)
         var taken = false
-        keep(for: pairing, work: work) { kept in
+        keep(for: pairing, hold: hold) { kept in
             guard kept?.version == version else { return nil }
             taken = true
             // The same names for the same pairing: taken, and nothing to write.
@@ -581,9 +570,9 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
 
     /// The same, for what a client of a pairing read (nothing for a client made for no pairing).
     @discardableResult
-    func remember(_ devices: [Device], from client: FlatdClient, readSince version: UUID?) -> Bool {
+    func remember(_ devices: [Device], from client: FlatdClient, readSince version: UUID?, hold: Hold) -> Bool {
         guard let id = client.pairingID, isCurrent(client) else { return false }
-        return remember(devices, for: id, readSince: version)
+        return remember(devices, for: id, readSince: version, hold: hold)
     }
 
     /// flatd's list as a request of `client` read it, each device under the name to show: offered to the names kept
@@ -595,7 +584,7 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     /// list is a retired pairing's and shows nothing. `.pairingUnreadable` while the Keychain cannot say. Only when no
     /// names can be kept at all (no App Group folder, no lock file, a file that cannot be written) are the names flatd
     /// just sent shown: the cache is unavailable, which is not the same as a retired pairing.
-    func named(_ devices: [Device], from client: FlatdClient, readSince version: UUID?, work: Deadline.Work) throws -> [Device] {
+    func named(_ devices: [Device], from client: FlatdClient, readSince version: UUID?, hold: Hold) throws -> [Device] {
         guard let id = client.pairingID else { throw FlatdError.notPaired }
         guard let names else {
             try checkCurrent(client)
@@ -603,12 +592,12 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
         }
         let kept: [KnownDevice]?
         do {
-            kept = try lock.withLock(work: work) { () throws -> [KnownDevice]? in
+            kept = try lock.withLock(until: hold.deadline, hold: hold) { () throws -> [KnownDevice]? in
                 try checkCurrent(client)
                 let known = Self.known(devices)
                 let now = names.read()
                 if now?.version == version, !(now?.pairing == id && now?.devices == known) {
-                    try work.check()
+                    try hold.commit {}
                     names.write(KnownDevices(pairing: id, devices: known, version: UUID()))
                 }
                 return names.read().flatMap { $0.pairing == id ? $0.devices : nil }
@@ -626,14 +615,16 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     /// One change of the names kept: `change` gets what the file holds now and gives the list to keep (nil: nothing is
     /// written). Read, decided and written under the lock, only while `pairing` is the saved one, and always under a
     /// new version.
-    private func keep(for pairing: UUID, work: Deadline.Work?, _ change: (KnownDevices?) -> [KnownDevice]?) {
+    private func keep(for pairing: UUID, hold: Hold, removesLegacyNames: Bool = false,
+                      _ change: (KnownDevices?) -> [KnownDevice]?) {
         guard let names else { return }
-        try? lock.withLock(work: work) {
+        try? lock.withLock(until: hold.deadline, hold: hold) {
             guard self.pairing?.id == pairing else { return }
             let saved = names.read()
-            try work?.check()
+            try hold.check()
             guard let devices = change(saved) else { return }
-            try work?.admitWrite()
+            try hold.commit {}
+            if removesLegacyNames { defaults?.removeObject(forKey: Self.namesKeyOfBuild2) }
             names.write(KnownDevices(pairing: pairing, devices: devices, version: UUID()))
         }
     }
@@ -653,11 +644,11 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     /// Keeps what a change of a mode made outside the app left undone: the Cooking control shows it next to its state,
     /// and the app says it once (`FlatStore`). Written only while its pairing is the saved one, under the lock Forget
     /// takes, so a late writer never puts one back after Forget.
-    func note(_ trouble: ModeTrouble, work: Deadline.Work? = nil) throws {
-        let kept = try lock.withLock(work: work) {
+    func note(_ trouble: ModeTrouble, hold: Hold) throws {
+        let kept = try lock.withLock(until: hold.deadline, hold: hold) {
             guard pairing?.id == trouble.pairing, let data = try? JSONEncoder().encode(trouble) else { return false }
             if let saved = savedTrouble, saved.pairing == trouble.pairing, saved.at > trouble.at { return false }
-            try work?.check()
+            try hold.commit {}
             defaults?.set(data, forKey: Self.troubleKey)
             return true
         }
@@ -669,11 +660,11 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     /// command again (flatd's contract), so one where all followed clears any trouble (round 8); ending a mode that is
     /// already off sends nothing to any device, so it never clears a fan left running by the first end (round 7).
     func clearTrouble(mode: String, pairing: UUID, now active: Bool, through date: Date = .now,
-                      work: Deadline.Work? = nil) throws {
-        try lock.withLock(work: work) {
+                      hold: Hold) throws {
+        try lock.withLock(until: hold.deadline, hold: hold) {
             guard let saved = savedTrouble, saved.mode == mode, saved.pairing == pairing,
                   active || saved.active, saved.at <= date else { return }
-            try work?.check()
+            try hold.commit {}
             defaults?.removeObject(forKey: Self.troubleKey)
         }
     }

@@ -11,13 +11,13 @@ struct ForgetGateTests {
     let transport = FakeTransport()
 
     /// A command whose checks all ran before Forget, but whose request starts after it, is never sent: the last check
-    /// and the start are one step under the lock Forget takes (`FlatdConnection.start(for:_:)`).
+    /// and the start are one step under the lock Forget takes (`FlatdGate.admit`).
     @Test func aRequestStartingAfterForgetIsNeverSent() async throws {
         let connection = Flat.connection()
         transport.answer("POST /api/devices/fan:fan_1", body: Flat.fan(1, on: true))
         let client = FlatdClient(Flat.pairing(), transport: transport).gated(by: connection)
         try await client.verify()                                      // all checks passed: paired, flatd answers
-        try connection.forget()
+        try await connection.forgetSavedPairing()
         await #expect(throws: FlatdError.notPaired) { _ = try await client.send(.power(on: true), to: "fan:fan_1") }
         await #expect(throws: FlatdError.notPaired) { _ = try await client.devices() }
         #expect(transport.sent.allSatisfy { $0.value(forHTTPHeaderField: "Authorization") == nil })
@@ -40,22 +40,18 @@ struct ForgetGateTests {
 
     /// The fans: Forget after the list was read and checked, before a fan's command starts: no fan is switched.
     @Test func noFanSwitchesAfterForgetEvenWhenTheListWasCheckedBefore() async throws {
-        let keys = MemoryKeys()
-        let connection = FlatdConnection(defaults: nil, names: nil, keychain: keys, lock: .processOnly)
-        try connection.save(Flat.pairing())
-        transport.answer("GET /api/devices", body: ["devices": [Flat.fan(1), Flat.fan(2)]])
-        transport.answer("POST /api/devices/fan:fan_1", body: Flat.fan(1, on: true))
-        transport.answer("POST /api/devices/fan:fan_2", body: Flat.fan(2, on: true))
-        // Readings: the run's pairing (1), its check after the address (2), the list's gate (3), the `isCurrent`
-        // check before the fans' commands (4). Right after that last check passed, Forget runs.
-        let reads = Counter2()
-        keys.afterRead = {
-            if reads.next() == 4 { try? keys.delete() }
+        let connection = Flat.connection()
+        transport.answer("GET /api/devices", body: ["devices": [Flat.fan(1), Flat.fan(2)]]) {
+            try? await connection.forgetSavedPairing()
+        }
+        let prepared = Counter2()
+        transport.onPrepare = { request in
+            if request.httpMethod == "POST" { _ = prepared.next() }
         }
         let reach = FlatdReach(connection: connection, transport: transport, rediscover: { [] })
         await #expect(throws: FlatdError.notPaired) { try await FlatActions(reach: reach).setFans(on: true) }
         #expect(transport.sent.allSatisfy { $0.httpMethod != "POST" })
-        #expect(reads.value >= 6)                                       // each fan's command was stopped at its gate
+        #expect(prepared.value == 2)   // both suspended requests were refused at admission
     }
 
     /// A Shortcut whose request went out before Forget gets no answer of the forgotten flat as its own.
@@ -65,7 +61,7 @@ struct ForgetGateTests {
         let reach = FlatdReach(connection: connection, transport: transport, rediscover: { [] })
         let reading = Task { try await reach.run { try await $0.devices() } }
         try await Task.sleep(for: .milliseconds(80))
-        try connection.forget()
+        try await connection.forgetSavedPairing()
         await #expect(throws: FlatdError.notPaired) { _ = try await reading.value }
     }
 }

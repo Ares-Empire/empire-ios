@@ -1,10 +1,11 @@
 import Foundation
+import os
 @testable import Arestia
 
 // Made-up flat for the tests: generic devices only ("Fan 1", "Blind 1"), never the real flat's.
 
 /// flatd's answers to requests, by method and path; records what was asked.
-nonisolated final class FakeTransport: GatedTransport, @unchecked Sendable {
+nonisolated final class FakeTransport: PreparingTransport, @unchecked Sendable {
     struct Answer: @unchecked Sendable {
         var status = 200
         var body: Any = [String: Any]()
@@ -31,35 +32,47 @@ nonisolated final class FakeTransport: GatedTransport, @unchecked Sendable {
     /// Every answer for this host: as if another device held the address (`host` "192.0.2.10").
     func requests(to host: String) -> [URLRequest] { sent.filter { $0.url?.host() == host } }
 
-    func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
-        try await send(request, gate: nil, dispatch: nil)
+    var onPrepare: (@Sendable (URLRequest) -> Void)?
+    var afterResume: (@Sendable (URLRequest) -> Void)?
+    var cancelled: (@Sendable (URLRequest) -> Void)?
+
+    func prepare(_ request: URLRequest, reply: Attempt<HTTPReply>) throws -> any SuspendedRequest {
+        prepare(request, reply: reply, transform: { $0 })
     }
 
-    func send(_ request: URLRequest, gate: FlatdGate?, dispatch: FlatdRequestDispatch?) async throws
-        -> (Data, HTTPURLResponse) {
-        let answer: Answer?
-        if let gate {
-            answer = try await gate.start(until: dispatch?.cap ?? Deadline(after: .seconds(request.timeoutInterval))) {
-                try $0.perform { try self.start(request, dispatch: dispatch) }
+    func prepare(_ request: URLRequest, reply: Attempt<HTTPReply>,
+                 transform: @escaping @Sendable (HTTPReply) async throws -> HTTPReply) -> any SuspendedRequest {
+        onPrepare?(request)
+        let work = OSAllocatedUnfairLock<Task<Void, Never>?>(initialState: nil)
+        return FakeRequest(onResume: {
+            let answer = self.start(request)
+            let task = Task {
+                do {
+                    guard let answer else { throw URLError(.cannotConnectToHost) }
+                    if let delay = answer.delay { try await Task.sleep(for: delay) }
+                    guard !Task.isCancelled else { return }
+                    await answer.beforeReply?()
+                    if let failure = answer.fails { throw URLError(failure) }
+                    let data = try JSONSerialization.data(withJSONObject: answer.body)
+                    let response = HTTPURLResponse(url: request.url!, statusCode: answer.status,
+                                                   httpVersion: nil, headerFields: nil)!
+                    reply.end(.success(try await transform((data, response))))
+                } catch {
+                    reply.end(.failure(error))
+                }
             }
-        } else {
-            answer = try start(request, dispatch: dispatch)
-        }
-        guard let answer else { throw URLError(.cannotConnectToHost) }
-        if let delay = answer.delay { try await Task.sleep(for: delay) }
-        await answer.beforeReply?()
-        if let failure = answer.fails { throw URLError(failure) }
-        let data = try JSONSerialization.data(withJSONObject: answer.body)
-        let response = HTTPURLResponse(url: request.url!, statusCode: answer.status, httpVersion: nil, headerFields: nil)!
-        return (data, response)
+            work.withLock { $0 = task }
+        }, onCancel: {
+            work.withLock { $0 }?.cancel()
+            self.cancelled?(request)
+        }, after: { self.afterResume?(request) })
     }
 
-    private func start(_ request: URLRequest, dispatch: FlatdRequestDispatch?) throws -> Answer? {
+    private func start(_ request: URLRequest) -> Answer? {
         let method = request.httpMethod ?? "GET", path = request.url?.path(percentEncoded: true) ?? ""
         let host = request.url?.host() ?? ""
-        return try lock.withLock {
-            if let dispatch { try dispatch.start { requests.append(request) } }
-            else { requests.append(request) }
+        return lock.withLock {
+            requests.append(request)
             return answers["\(method) \(host)\(path)"] ?? answers["\(method) \(path)"]
         }
     }
@@ -72,6 +85,16 @@ nonisolated final class FakeTransport: GatedTransport, @unchecked Sendable {
     }
 }
 
+nonisolated struct FakeRequest: SuspendedRequest {
+    let onResume: @Sendable () -> Void
+    let onCancel: @Sendable () -> Void
+    var after: @Sendable () -> Void = {}
+
+    func resume() { onResume() }
+    func cancel() { onCancel() }
+    func afterResume() { after() }
+}
+
 /// The event stream, fed by the test.
 nonisolated final class FakeEvents: FlatEventSource, @unchecked Sendable {
     private let lock = NSLock()
@@ -80,17 +103,33 @@ nonisolated final class FakeEvents: FlatEventSource, @unchecked Sendable {
 
     private(set) var pins: [FlatdPin] = []
 
-    func events(from request: URLRequest, pin: FlatdPin, starting: (() -> Void) throws -> Void)
-        throws -> AsyncThrowingStream<FlatEvent, Error> {
+    var onPrepare: (@Sendable () -> Void)?
+    var afterResume: (@Sendable () -> Void)?
+    var cancelled: (@Sendable () -> Void)?
+
+    func prepare(_ request: URLRequest, pin: FlatdPin) throws -> any PreparedEvents {
+        onPrepare?()
         let (events, continuation) = AsyncThrowingStream<FlatEvent, Error>.makeStream()
-        try starting {
-            lock.withLock {
-                requests.append(request)
-                pins.append(pin)
+        return Events(events: events, request: FakeRequest(onResume: {
+            self.lock.withLock {
+                self.requests.append(request)
+                self.pins.append(pin)
                 self.continuation = continuation
             }
-        }
-        return events
+        }, onCancel: {
+            continuation.finish()
+            self.cancelled?()
+        }, after: { self.afterResume?() }))
+    }
+
+    private struct Events: PreparedEvents {
+        let events: AsyncThrowingStream<FlatEvent, Error>
+        let request: FakeRequest
+
+        func resume() { request.resume() }
+        func cancel() { request.cancel() }
+        func afterResume() { request.afterResume() }
+        func stream() -> AsyncThrowingStream<FlatEvent, Error> { events }
     }
 
     var isOpen: Bool { lock.withLock { continuation != nil } }
@@ -242,4 +281,62 @@ func eventually(_ condition: () -> Bool, timeout: Duration = .seconds(2)) async 
         try? await Task.sleep(for: .milliseconds(10))
     }
     return condition()
+}
+
+
+// Raw requests used by the TLS fixture tests. These still use the production launch and pin validation.
+nonisolated extension FlatdTransport {
+    func send(_ request: URLRequest) async throws -> HTTPReply {
+        let transport = capturingFixturesAndTiming(for: request)
+        let outcome = await FlatdLaunch.run(admission: .open,
+                                            rule: WriteRule(cap: Deadline(after: .seconds(request.timeoutInterval))),
+                                            prepare: { .init(request: try transport.prepare(request, reply: $0)) })
+        return try outcome.result.get()
+    }
+}
+
+nonisolated extension FlatdConnection {
+    func renew(_ saved: FlatdPairing, with renewed: FlatdPairing) async throws -> Bool {
+        try await Deadline(after: .seconds(6)).blocking { try renew(saved, with: renewed, hold: $0) }
+    }
+
+    func move(_ pairing: FlatdPairing, to client: FlatdClient) async throws {
+        try await Deadline(after: .seconds(6)).blocking { try move(pairing, to: client, hold: $0) }
+    }
+
+    func remember(_ devices: [Device], for pairing: UUID) async {
+        await Deadline(after: .seconds(6)).bestEffort(within: .seconds(6), default: ()) {
+            remember(devices, for: pairing, hold: $0)
+        }
+    }
+
+    @discardableResult
+    func remember(_ devices: [Device], for pairing: UUID, readSince version: UUID?) async -> Bool {
+        await Deadline(after: .seconds(6)).bestEffort(within: .seconds(6), default: false) {
+            remember(devices, for: pairing, readSince: version, hold: $0)
+        }
+    }
+
+    @discardableResult
+    func remember(_ devices: [Device], from client: FlatdClient, readSince version: UUID?) async -> Bool {
+        await Deadline(after: .seconds(6)).bestEffort(within: .seconds(6), default: false) {
+            remember(devices, from: client, readSince: version, hold: $0)
+        }
+    }
+
+    func rememberName(of device: Device, for pairing: UUID) async {
+        await Deadline(after: .seconds(6)).bestEffort(within: .seconds(6), default: ()) {
+            rememberName(of: device, for: pairing, hold: $0)
+        }
+    }
+
+    func note(_ trouble: ModeTrouble) async throws {
+        try await Deadline(after: .seconds(6)).blocking { try note(trouble, hold: $0) }
+    }
+
+    func clearTrouble(mode: String, pairing: UUID, now active: Bool) async throws {
+        try await Deadline(after: .seconds(6)).blocking {
+            try clearTrouble(mode: mode, pairing: pairing, now: active, hold: $0)
+        }
+    }
 }

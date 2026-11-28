@@ -17,14 +17,11 @@ nonisolated final class GateAction: Sendable {
         record("intent entry")
     }
 
-    /// Claims the first POST at resume time, with no log I/O inside the request-start locks.
-    func resume(_ task: URLSessionTask) -> Date? {
+    func claimDispatch() -> Bool {
         dispatched.withLock { didDispatch in
-            task.resume()
-            let time = Date.now
-            guard !didDispatch else { return nil }
+            guard !didDispatch else { return false }
             didDispatch = true
-            return time
+            return true
         }
     }
 
@@ -113,43 +110,60 @@ nonisolated enum GateTimingLog {
         FlatdDispatchLock(path: $0.appending(path: "arestia-gate-timing.lock").path(percentEncoded: false))
     }
 
+    private static let queue = DispatchQueue(label: "de.ares-empire.arestia.gate-timing")
+
     static func append(_ line: String) {
         logger.notice("\(line, privacy: .public)")
-        do {
-            try access { file in
-                if !FileManager.default.fileExists(atPath: file.path(percentEncoded: false)) {
-                    try Data().write(to: file, options: .completeFileProtectionUntilFirstUserAuthentication)
-                }
-                let handle = try FileHandle(forWritingTo: file)
-                defer { try? handle.close() }
-                try handle.seekToEnd()
-                try handle.write(contentsOf: Data((line + "\n").utf8))
-            }
-        } catch {
-            logger.error("Could not append to the gate timing file")
-        }
-    }
-
-    static func newestFirst() throws -> [String] {
-        try access { file in
+        let cap = Deadline(after: .seconds(6))
+        queue.async {
+            let hold = Attempt<Void>(until: cap)
             do {
-                return try String(contentsOf: file, encoding: .utf8)
-                    .split(separator: "\n").reversed().map(String.init)
-            } catch CocoaError.fileReadNoSuchFile {
-                return []
+                try access(hold) { file in
+                    try hold.commit {}
+                    if !FileManager.default.fileExists(atPath: file.path(percentEncoded: false)) {
+                        try Data().write(to: file, options: .completeFileProtectionUntilFirstUserAuthentication)
+                    }
+                    let handle = try FileHandle(forWritingTo: file)
+                    defer { try? handle.close() }
+                    try handle.seekToEnd()
+                    try handle.write(contentsOf: Data((line + "\n").utf8))
+                }
+            } catch {
+                logger.error("Could not append to the gate timing file")
             }
         }
     }
 
-    static func clear() throws {
-        try access { file in
-            do { try FileManager.default.removeItem(at: file) } catch CocoaError.fileNoSuchFile {}
+    static func newestFirst() async throws -> [String] {
+        try await Deadline(after: .seconds(6)).blocking { hold in
+            try queue.sync {
+                try access(hold) { file in
+                    do {
+                        return try String(contentsOf: file, encoding: .utf8)
+                            .split(separator: "\n").reversed().map(String.init)
+                            .sorted { $0.prefix(24) > $1.prefix(24) }
+                    } catch CocoaError.fileReadNoSuchFile {
+                        return []
+                    }
+                }
+            }
         }
     }
 
-    private static func access<T>(_ work: (URL) throws -> T) throws -> T {
+    static func clear() async throws {
+        try await Deadline(after: .seconds(6)).blocking { hold in
+            try queue.sync {
+                try access(hold) { file in
+                    try hold.commit {}
+                    do { try FileManager.default.removeItem(at: file) } catch CocoaError.fileNoSuchFile {}
+                }
+            }
+        }
+    }
+
+    private static func access<T>(_ hold: Hold, _ work: (URL) throws -> T) throws -> T {
         guard let file, let lock else { throw CocoaError(.fileNoSuchFile) }
-        return try lock.withLock { try work(file) }
+        return try lock.withLock(until: hold.deadline, hold: hold) { try work(file) }
     }
 }
 #endif

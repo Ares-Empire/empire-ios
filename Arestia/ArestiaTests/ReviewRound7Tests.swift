@@ -19,11 +19,10 @@ struct DispatchLockTests {
         let connection = FlatdConnection(defaults: nil, names: nil, keychain: MemoryKeys(),
                                          lock: FlatdDispatchLock(path: "/nonexistent-arestia-folder/dispatch.lock"))
         try connection.save(Flat.pairing())
-        #expect(throws: FlatdError.pairingUnreadable) { try connection.start(for: Flat.id) {} }
         let client = FlatdClient(Flat.pairing(), transport: transport).gated(by: connection)
         await #expect(throws: FlatdError.pairingUnreadable) { _ = try await client.devices() }
         #expect(transport.sent.isEmpty)
-        #expect(throws: (any Error).self) { try connection.forget() }
+        await #expect(throws: (any Error).self) { try await connection.forgetSavedPairing() }
         #expect(connection.pairing?.id == Flat.id)                      // not forgotten: Forget says it failed
     }
 
@@ -34,18 +33,24 @@ struct DispatchLockTests {
         let path = lockFile()
         let app = FlatdDispatchLock(path: path), controls = FlatdDispatchLock(path: path)
         let holding = Latch(), done = Latch()
-        let holder = Thread {
-            try? app.withLock {
-                holding.open()
-                Thread.sleep(forTimeInterval: 0.2)          // room for a lock that is not shared to let the other in
-                done.open()
+        let cap = Deadline(after: .seconds(2))
+        let holder = Task {
+            try await cap.blocking { hold in
+                try app.withLock(until: cap, hold: hold) {
+                    holding.open()
+                    Thread.sleep(forTimeInterval: 0.2)
+                    done.open()
+                }
             }
         }
-        holder.start()
-        holding.wait()
-        try controls.withLock {
-            #expect(done.isOpen)
+        defer { holder.cancel() }
+        try #require(await eventually { holding.isOpen })
+        try await cap.blocking { hold in
+            try controls.withLock(until: cap, hold: hold) {
+                #expect(done.isOpen)
+            }
         }
+        try await holder.value
     }
 }
 
@@ -54,7 +59,6 @@ private nonisolated final class Latch: @unchecked Sendable {
     private let condition = NSCondition()
     private var opened = false
     func open() { condition.lock(); opened = true; condition.broadcast(); condition.unlock() }
-    func wait() { condition.lock(); while !opened { condition.wait() }; condition.unlock() }
     var isOpen: Bool { condition.lock(); defer { condition.unlock() }; return opened }
 }
 
@@ -114,21 +118,17 @@ struct BlindOrderTests {
 
 @MainActor
 struct GatedStartTests {
-    private struct ForgetBeforeStart: GatedTransport {
+    private struct ForgetBeforeStart: PreparingTransport {
         let connection: FlatdConnection
         let transport: FakeTransport
 
-        func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
-            try await send(request, gate: nil, dispatch: nil)
-        }
-
-        func send(_ request: URLRequest, gate: FlatdGate?, dispatch: FlatdRequestDispatch?) async throws
-            -> (Data, HTTPURLResponse) {
+        func prepare(_ request: URLRequest, reply: Attempt<HTTPReply>) throws -> any SuspendedRequest {
             if request.value(forHTTPHeaderField: "Authorization") != nil {
-                // The store has made its early check. Forget before the transport attempts the actual start.
-                try connection.forget()
+                // Preparation already runs on a worker. Forget before launch enters admission.
+                let cap = Deadline(after: .seconds(5))
+                try connection.forget(Attempt<Void>(until: cap), lockBy: cap)
             }
-            return try await transport.send(request, gate: gate, dispatch: dispatch)
+            return try transport.prepare(request, reply: reply)
         }
     }
 
@@ -155,17 +155,21 @@ struct GatedStartTests {
         let (held, notifyHeld) = AsyncStream<Bool>.makeStream()
         let release = DispatchSemaphore(value: 0)
         defer { release.signal() }
-        DispatchQueue.global().async {
+        let holding = Task {
             defer { notifyHeld.finish() }
             do {
-                try holder.withLock {
-                    notifyHeld.yield(true)
-                    _ = release.wait(timeout: .now() + 2)
+                let cap = Deadline(after: .seconds(3))
+                try await cap.blocking { hold in
+                    try holder.withLock(until: cap, hold: hold) {
+                        notifyHeld.yield(true)
+                        _ = release.wait(timeout: .now() + 2)
+                    }
                 }
             } catch {
                 notifyHeld.yield(false)
             }
         }
+        defer { holding.cancel() }
         var heldIterator = held.makeAsyncIterator()
         try #require(await heldIterator.next() == true)
 
@@ -189,7 +193,7 @@ struct GatedStartTests {
         transport.answer("GET /api/devices", body: ["devices": [Flat.fan(1)]])
         let renewal = Task { await store.connect(to: Flat.base, token: Flat.renewedKey, pin: Flat.pin) }
         try await Task.sleep(for: .milliseconds(50))
-        try connection.forget()
+        try await connection.forgetSavedPairing()
         #expect(await renewal.value == .notPaired)
         #expect(transport.sent.allSatisfy { $0.value(forHTTPHeaderField: "Authorization") == nil })
     }
@@ -201,7 +205,7 @@ struct GatedStartTests {
         transport.answer("GET /api/scenes", body: ["scenes": []], delay: .milliseconds(200))
         store.start()
         try await Task.sleep(for: .milliseconds(80))                   // the scenes are on their way
-        try connection.forget()
+        try await connection.forgetSavedPairing()
         try await Task.sleep(for: .milliseconds(400))
         #expect(events.requests.isEmpty)
         store.stop()
@@ -211,8 +215,7 @@ struct GatedStartTests {
 struct ShortcutAnswerTests {
     let transport = FakeTransport()
 
-    /// flatd's refusal that arrives after Forget is not the paired flat's either; an answer the Keychain cannot vouch
-    /// for says so.
+    /// A confirmed Forget overrides a write's reply. An unreadable pairing leaves a confirmed write intact.
     @Test func anAnswerCountsOnlyWhileItsPairingIsSaved() async throws {
         let keys = MemoryKeys()
         let connection = FlatdConnection(defaults: nil, names: nil, keychain: keys, lock: .processOnly)
@@ -222,7 +225,7 @@ struct ShortcutAnswerTests {
         let reach = FlatdReach(connection: connection, transport: transport, rediscover: { [] })
         let refused = Task { try await FlatActions(reach: reach).runScene("all_down") }
         try await Task.sleep(for: .milliseconds(80))
-        try connection.forget()
+        try await connection.forgetSavedPairing()
         await #expect(throws: FlatdError.notPaired) { _ = try await refused.value }
 
         try connection.save(Flat.pairing())
@@ -230,7 +233,7 @@ struct ShortcutAnswerTests {
         let unvouched = Task { try await FlatActions(reach: reach).runScene("all_down") }
         try await Task.sleep(for: .milliseconds(80))
         keys.failsToRead = true
-        await #expect(throws: FlatdError.pairingUnreadable) { _ = try await unvouched.value }
+        #expect(try await unvouched.value.isEmpty)
     }
 }
 
@@ -240,7 +243,7 @@ struct CookingTroubleTests {
     /// A second End cooking (flatd sends no device commands for it) leaves the first one's trouble standing.
     @Test func aNoOpEndKeepsTheTroubleOfTheRealEnd() async throws {
         let connection = Flat.connection()
-        try? connection.note(ModeTrouble(pairing: Flat.id, mode: "cooking", active: false, names: ["Fan 2"], at: .now))
+        try? await connection.note(ModeTrouble(pairing: Flat.id, mode: "cooking", active: false, names: ["Fan 2"], at: .now))
         transport.answer("POST /api/modes/cooking", body: Flat.cooking.merging(["failed": [:]]) { $1 })
         let reach = FlatdReach(connection: connection, transport: transport, rediscover: { [] })
         _ = try await FlatActions(reach: reach).setCooking(false)
@@ -262,7 +265,7 @@ struct CookingTroubleTests {
         #expect(await eventually { events.isOpen })
         events.send(try Flat.snapshot(cookingActive: false))
         #expect(await eventually { store.link == .live })
-        try? connection.note(ModeTrouble(pairing: Flat.id, mode: "cooking", active: true, names: ["Fan 2"], at: .now))
+        try? await connection.note(ModeTrouble(pairing: Flat.id, mode: "cooking", active: true, names: ["Fan 2"], at: .now))
         try await Task.sleep(for: .milliseconds(100))
         #expect(store.offer == nil)                                     // cooking is still off here: not yet
         events.send(.mode(FlatMode(id: "cooking", label: "Cooking", active: true, since: .now)))

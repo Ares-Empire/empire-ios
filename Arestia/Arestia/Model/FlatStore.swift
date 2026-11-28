@@ -246,7 +246,7 @@ final class FlatStore {
 
     private func readSavedPairing() async throws -> FlatdConnection.Saved {
         let connection = connection
-        return try await Deadline(after: .seconds(6)).flatdWork { _ in connection.saved }
+        return try await Deadline(after: .seconds(6)).blocking { _ in connection.saved }
     }
 
     /// Whether the loop of `generation` may still change the store.
@@ -287,7 +287,7 @@ final class FlatStore {
                 // A refusal counts only for the key it was sent with: a fresh code of the same flatd brought another
                 // one meanwhile, which the next round uses.
                 let connection = connection
-                let current = try? await Deadline(after: .seconds(client.readTimeout)).read { connection.pairing }
+                let current = try? await Deadline(after: .seconds(client.readTimeout)).blocking { _ in connection.pairing }
                 guard owns(generation) else { return }
                 if current?.token == pairing.token {
                     Self.log.notice("flatd refused the key")
@@ -340,21 +340,16 @@ final class FlatStore {
         scenes = answered
         // The stream (with the key in its header) starts inside the gate too: only while this pairing is saved.
         guard let gate = client.gate else { throw FlatdError.notPaired }
-        let request = client.eventsRequest.withLanguage()
-        let source = eventSource
-        let stream: AsyncThrowingStream<FlatEvent, Error>
+        let request = client.eventsRequest
+        let prepared: any PreparedEvents
         do {
-            stream = try await gate.start(until: Deadline(after: .seconds(request.timeoutInterval))) { work in
-                try source.events(from: request, pin: client.pin) { start in
-                    try work.perform(start)
-                    #if DEBUG
-                    FlatdRequestDispatch.log(request, route: client.route, deadline: client.deadline)
-                    #endif
-                }
-            }
+            prepared = try await eventSource.open(request, pin: client.pin, admission: .gated(gate),
+                                                  cap: Deadline(after: .seconds(request.timeoutInterval)),
+                                                  route: client.route)
         } catch is Deadline.Expired {
             throw FlatdError.unreachable
         }
+        let stream = prepared.stream()
         for try await event in stream {
             guard owns(generation) else { return }
             if case .snapshot = event {
@@ -392,9 +387,9 @@ final class FlatStore {
         enrollmentTask = Task {
             let deadline = Deadline(after: .seconds(client.readTimeout))
             // Move only over the snapshot's revision. For enrollment, read again after any earlier commit.
-            guard let saved = try? await deadline.work({ work in
-                try connection.move(snapshotPairing, to: client, work: work)
-                let current = try connection.lock.withLock(work: work) { try connection.current() }
+            guard let saved = try? await deadline.blocking({ hold in
+                try connection.move(snapshotPairing, to: client, hold: hold)
+                let current = try connection.lock.withLock(until: hold.deadline, hold: hold) { try connection.current() }
                 guard current.id == client.pairingID, current.token == client.token, current.pin == client.pin else {
                     throw FlatdError.unreachable
                 }
@@ -411,11 +406,11 @@ final class FlatStore {
         guard client.route == .home, client.pairingID == saved.id, client.token == saved.token, client.pin == saved.pin,
               case let .replace(remote)? = try? await client.remoteEnrollment(),
               remote?.url != saved.remote?.url || remote?.pin != saved.remote?.pin else { return }
-        _ = try? await Deadline(after: .seconds(client.readTimeout)).work { work in
+        _ = try? await Deadline(after: .seconds(client.readTimeout)).blocking { hold in
             var renewed = saved
             renewed.remote = remote
             renewed.revision = UUID()
-            return try connection.renew(saved, with: renewed, work: work, isLatest: isLatest)
+            return try connection.renew(saved, with: renewed, hold: hold, isLatest: isLatest)
         }
     }
 
@@ -423,8 +418,8 @@ final class FlatStore {
         let connection = connection
         let at = Date.now
         perform {
-            _ = try? await Deadline(after: .seconds(6)).work { work in
-                try connection.clearTrouble(mode: mode, pairing: pairing, now: active, through: at, work: work)
+            _ = try? await Deadline(after: .seconds(6)).blocking { hold in
+                try connection.clearTrouble(mode: mode, pairing: pairing, now: active, through: at, hold: hold)
             }
         }
     }
@@ -471,7 +466,7 @@ final class FlatStore {
             self.devices = devices
             if let modes { self.modes = modes }
             if let pairingID {
-                enqueueNameWrite { connection, work in connection.remember(devices, for: pairingID, work: work) }
+                enqueueNameWrite { connection, hold in connection.remember(devices, for: pairingID, hold: hold) }
             }
             lastSeen = now
             tell(.snapshot(devices: self.devices, modes: self.modes))
@@ -502,7 +497,7 @@ final class FlatStore {
             // Only this device's name is kept: the app's list of the others may be older than the names kept.
             if let pairingID {
                 let device = devices[index]
-                enqueueNameWrite { connection, work in connection.rememberName(of: device, for: pairingID, work: work) }
+                enqueueNameWrite { connection, hold in connection.rememberName(of: device, for: pairingID, hold: hold) }
             }
             lastSeen = now
             tell(.device(devices[index], source: source))
@@ -567,8 +562,8 @@ final class FlatStore {
         devices[index] = devices[index].named(like: device)
         if let pairingID {
             let named = devices[index]
-            enqueueNameWrite { connection, work in
-                connection.rememberName(of: named, for: pairingID, unchangedSince: version, work: work)
+            enqueueNameWrite { connection, hold in
+                connection.rememberName(of: named, for: pairingID, unchangedSince: version, hold: hold)
             } after: { [weak self] unchanged in
                 guard let self, readsAgain, !unchanged, stamp == self.stamp("label:" + device.id) else { return }
                 readNameAgain(device.id)
@@ -624,7 +619,7 @@ final class FlatStore {
             let devices: [Device]
             if let pairingID {
                 let connection = connection
-                let saved = try await Deadline(after: .seconds(candidate.readTimeout)).flatdWork { _ in
+                let saved = try await Deadline(after: .seconds(candidate.readTimeout)).blocking { _ in
                     try connection.current()
                 }
                 guard saved.id == pairingID else { return .notPaired }
@@ -641,9 +636,11 @@ final class FlatStore {
                 return try await renew(pairingID, baseURL: baseURL, token: token, pin: pin, found: found,
                                        deadline: Deadline(after: .seconds(candidate.readTimeout)))
             }
-            return try pairFirst(baseURL: baseURL, token: token, pin: pin, found: found)
+            return try await pairFirst(baseURL: baseURL, token: token, pin: pin, found: found)
         } catch let error as FlatdError {
             return error
+        } catch is Deadline.Expired {
+            return .unreachable
         } catch is CancellationError {
             return .notPossible
         } catch {
@@ -664,19 +661,19 @@ final class FlatStore {
                        deadline: Deadline) async throws -> FlatdError? {
         let connection = connection
         for _ in 0..<3 {
-            let updated = try await deadline.flatdWork { work in
+            let updated = try await deadline.blocking { hold in
                 let current = try connection.current()
                 guard current.id == id else { throw FlatdError.notPaired }
                 guard current.pin == pin else { throw FlatdError.anotherFlat }
                 var renewed = FlatdPairing(baseURL: baseURL, token: token, pin: pin, id: id)
                 renewed.remote = current.remote
-                do { return try connection.renew(current, with: renewed, work: work) }
+                do { return try connection.renew(current, with: renewed, hold: hold) }
                 catch is FlatdDispatchLock.Unavailable { return false }
             }
             guard !isRetired else { return .notPossible }
             if updated {
-                enqueueNameWrite { connection, work in
-                    _ = connection.remember(found.devices, for: id, readSince: found.version, work: work)
+                enqueueNameWrite { connection, hold in
+                    _ = connection.remember(found.devices, for: id, readSince: found.version, hold: hold)
                 }
                 credentials += 1
                 stop()                                  // the stream again, with the new key and address
@@ -691,10 +688,13 @@ final class FlatStore {
 
     /// The first pairing, from a store with none: saved only while nothing usable is saved (an item that is no pairing,
     /// from an old build, is replaced); then the session takes over with a store for it.
-    private func pairFirst(baseURL: URL, token: String, pin: FlatdPin, found: Found) throws -> FlatdError? {
+    private func pairFirst(baseURL: URL, token: String, pin: FlatdPin, found: Found) async throws -> FlatdError? {
+        let connection = connection
         switch connection.saved {
         case .none: break
-        case .invalid: try connection.forget()
+        case .invalid:
+            try await connection.forgetSavedPairing(onlyIfInvalid: true)
+            guard !Task.isCancelled, !isRetired else { return .notPossible }
         case .unreadable: return .pairingUnreadable
         case .paired:
             handOver()                                  // paired meanwhile: the session follows that one
@@ -705,7 +705,9 @@ final class FlatStore {
             handOver()
             return .notPossible
         }
-        connection.remember(found.devices, for: fresh.id, readSince: found.version)
+        _ = await Deadline(after: .seconds(6)).bestEffort(within: .seconds(6), default: false) { hold in
+            connection.remember(found.devices, for: fresh.id, readSince: found.version, hold: hold)
+        }
         Self.log.notice("paired with a flat")
         handOver()
         reloadControls()
@@ -922,7 +924,7 @@ final class FlatStore {
     }
 
     private func enqueueNameWrite<T: Sendable>(
-        _ write: @escaping @Sendable (FlatdConnection, Deadline.Work) -> T,
+        _ write: @escaping @Sendable (FlatdConnection, Hold) -> T,
         after: @escaping @MainActor (T) -> Void = { _ in }
     ) {
         let connection = connection
@@ -930,19 +932,16 @@ final class FlatStore {
         nameWrite = perform {
             await previous?.value
             while !Task.isCancelled {
-                let running = OSAllocatedUnfairLock<Deadline.Work?>(initialState: nil)
-                do {
-                    let result = try await Deadline(after: .seconds(6)).work { work in
-                        running.withLock { $0 = work }
-                        return write(connection, work)
-                    }
+                let outcome = await Deadline(after: .seconds(6)).blockingOutcome { hold in
+                    write(connection, hold)
+                }
+                switch outcome.result {
+                case let .success(result):
                     if !Task.isCancelled { after(result) }
                     return
-                } catch is Deadline.Expired {
+                case let .failure(error):
                     // Keep the event queued through lock contention. An admitted write may still finish.
-                    if running.withLock({ $0 })?.writeAdmitted == true { return }
-                } catch {
-                    return
+                    if !(error is Deadline.Expired) || outcome.committed { return }
                 }
             }
         }
@@ -1257,15 +1256,20 @@ final class FlatSession {
     /// retires (its work cancelled, its stream and 3D page gone) and a new one without a pairing takes its place; the
     /// controls read again. A choice made in a Shortcut or a control before acts on nothing afterwards (`SavedDevice`).
     /// False, and nothing changed, when the Keychain kept the item. A request with the old key starts only while the
-    /// pairing is saved, under the lock the delete takes (`FlatdConnection.start(for:_:)`): none starts after it.
-    func forget() -> Bool {
+    /// pairing is saved, under the same lock used for deletion.
+    private(set) var isForgetting = false
+
+    func forget() async -> Bool {
+        guard !isForgetting else { return false }
+        isForgetting = true
+        defer { isForgetting = false }
         do {
-            try connection.forget()
+            try await connection.forgetSavedPairing()
         } catch {
             Self.log.error("the pairing could not be forgotten")
             return false
         }
-        // Nothing runs between the delete and this on the main actor: no work of the old store starts after it.
+        // Admission already sees the deleted pairing. Retire the old store and clear its page.
         store?.retire()
         viewerCache.removeAll()
         load()

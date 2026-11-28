@@ -196,7 +196,9 @@ struct RenameStoreTests {
         #expect(store.device("rollo:blind_1")?.hasOwnName == true)
         #expect(label(transport, "rollo:blind_1") as? String == "Kitchen blind")
         // Shortcuts' choices read the new name, and Control Center reads its Blind control again.
-        #expect(store.connection.knownDevices.first { $0.id == "rollo:blind_1" }?.label == "Kitchen blind")
+        #expect(await eventually {
+            store.connection.knownDevices.first { $0.id == "rollo:blind_1" }?.label == "Kitchen blind"
+        })
         #expect(reloads.count > before)
         store.stop()
     }
@@ -224,7 +226,9 @@ struct RenameStoreTests {
         #expect(await eventually { store.device("rollo:blind_1")?.label == "Kitchen blind" })
         #expect(store.device("rollo:blind_1")?.state.position == 60)
         #expect(heard == ["Kitchen blind · mcp"])                           // the 3D page hears it, and who did it
-        #expect(store.connection.knownDevices.first { $0.id == "rollo:blind_1" }?.label == "Kitchen blind")
+        #expect(await eventually {
+            store.connection.knownDevices.first { $0.id == "rollo:blind_1" }?.label == "Kitchen blind"
+        })
         #expect(reloads.count == before + 1)                                // the Blind control shows the name
         // A device flatd does not list here is no news.
         events.send(.device(Device(id: "fan:elsewhere", kind: .fan, label: "Somewhere"), source: "api"))
@@ -349,30 +353,30 @@ struct RenameStoreTests {
         store.stop()
     }
 
-    @Test func aReadingKeepsItsListOnlyWhileNothingNewerWasKept() throws {
+    @Test func aReadingKeepsItsListOnlyWhileNothingNewerWasKept() async throws {
         let connection = Flat.connection()
         let first = connection.devicesVersion
         #expect(first == nil)                                               // nothing kept yet
-        connection.remember(try Flat.devices([Flat.fan(1)]), for: Flat.id, readSince: first)
+        await connection.remember(try Flat.devices([Flat.fan(1)]), for: Flat.id, readSince: first)
         #expect(connection.knownDevices.map(\.label) == ["Fan 1"])
         let begun = connection.devicesVersion
         #expect(begun != nil)
-        connection.remember(try Flat.devices([named(Flat.fan(1), "Desk fan", default: "Fan 1")]), for: Flat.id)
-        connection.remember(try Flat.devices([Flat.fan(1)]), for: Flat.id, readSince: begun)
+        await connection.remember(try Flat.devices([named(Flat.fan(1), "Desk fan", default: "Fan 1")]), for: Flat.id)
+        await connection.remember(try Flat.devices([Flat.fan(1)]), for: Flat.id, readSince: begun)
         #expect(connection.knownDevices.map(\.label) == ["Desk fan"])
         // The stream's names are always the newest, even the same names again (a list read before them is older).
         let again = connection.devicesVersion
-        connection.remember(try Flat.devices([named(Flat.fan(1), "Desk fan", default: "Fan 1")]), for: Flat.id)
+        await connection.remember(try Flat.devices([named(Flat.fan(1), "Desk fan", default: "Fan 1")]), for: Flat.id)
         #expect(connection.devicesVersion != again)
-        connection.remember(try Flat.devices([Flat.fan(1)]), for: Flat.id, readSince: again)
+        await connection.remember(try Flat.devices([Flat.fan(1)]), for: Flat.id, readSince: again)
         #expect(connection.knownDevices.map(\.label) == ["Desk fan"])
     }
 
     /// The Blind control's gallery preview names the chosen blind only as the paired flat calls it now (Codex's
     /// review, finding 5): never a forgotten flat's name kept in the control's configuration.
-    @Test func theBlindPreviewNamesOnlyThePairedFlatsBlind() throws {
+    @Test func theBlindPreviewNamesOnlyThePairedFlatsBlind() async throws {
         let connection = Flat.connection()
-        connection.remember(try Flat.devices([Flat.fan(1), named(Flat.rollo(1), "Kitchen blind", default: "Blind 1")]),
+        await connection.remember(try Flat.devices([Flat.fan(1), named(Flat.rollo(1), "Kitchen blind", default: "Blind 1")]),
                             for: Flat.id)
         let chosen = SavedDevice.id(for: "rollo:blind_1", of: Flat.id)
         #expect(DeviceChoices.name(of: chosen, kind: .rollo, from: connection.known) == "Kitchen blind")
@@ -381,7 +385,7 @@ struct RenameStoreTests {
                                    from: connection.known) == nil)          // chosen for another pairing
         #expect(DeviceChoices.name(of: SavedDevice.id(for: "fan:fan_1", of: Flat.id), kind: .rollo,
                                    from: connection.known) == nil)
-        try connection.forget()
+        try await connection.forgetSavedPairing()
         #expect(DeviceChoices.name(of: chosen, kind: .rollo, from: connection.known) == nil)
     }
 

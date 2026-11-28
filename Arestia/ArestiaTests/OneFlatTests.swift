@@ -50,7 +50,7 @@ struct OneFlatTests {
         transport.answer("POST /api/modes/cooking", body: Flat.cooking)
         transport.answer("GET /api/modes", body: ["modes": [Flat.cooking]])
         Flats.answerB(transport)
-        connection.remember(try Flat.devices([Flat.fan(1), Flat.rollo(1)]), for: Flat.id)
+        await connection.remember(try Flat.devices([Flat.fan(1), Flat.rollo(1)]), for: Flat.id)
         let blindOfA = try #require(DeviceChoices.choices(kind: .rollo, from: connection.known).first)
         let fanOfA = try #require(DeviceChoices.choices(kind: .fan, from: connection.known).first)
 
@@ -74,7 +74,7 @@ struct OneFlatTests {
         try await Task.sleep(for: .milliseconds(50))
 
         // Forget: the old store is retired at once and a new one without a pairing takes its place.
-        #expect(session.forget())
+        #expect(await session.forget())
         #expect(old.isRetired && old.working.isEmpty && old.devices.isEmpty && old.offer == nil)
         #expect(connection.saved == .none && connection.knownDevices.isEmpty)
         let unpaired = try #require(session.store)
@@ -221,7 +221,7 @@ struct OneFlatTests {
     }
 
     /// Forget that the Keychain refuses changes nothing: the store goes on, the pairing stays.
-    @Test func aForgetTheKeychainRefusesChangesNothing() throws {
+    @Test func aForgetTheKeychainRefusesChangesNothing() async throws {
         let keys = MemoryKeys()
         let connection = FlatdConnection(defaults: UserDefaults(suiteName: "arestia-tests-" + UUID().uuidString)!,
                                          names: Flat.nameFile(), keychain: keys, lock: .processOnly)
@@ -229,7 +229,7 @@ struct OneFlatTests {
         let (session, _, _, _) = Flat.session(connection: connection)
         let store = try #require(session.store)
         keys.failsToDelete = true
-        #expect(!session.forget())
+        #expect(await !session.forget())
         #expect(session.store === store && !store.isRetired && connection.pairing?.id == Flat.id)
     }
 
@@ -305,17 +305,17 @@ struct OneFlatTests {
 
     /// A late address update (its lookup started before a renewal) never puts the old key back: the Keychain item is
     /// written only over the version it was read as.
-    @Test func aLateMoveNeverBringsBackAnOldKey() throws {
+    @Test func aLateMoveNeverBringsBackAnOldKey() async throws {
         let connection = Flat.connection()
         let read = try #require(connection.pairing)
         let renewed = FlatdPairing(baseURL: Flat.base, token: Flat.renewedKey, pin: Flat.pin, id: read.id)
-        #expect(try connection.renew(read, with: renewed))
-        try? connection.move(read, to: FlatdClient(read, at: URL(string: "https://192.0.2.77:8788")!))       // from before the renewal
+        #expect(try await connection.renew(read, with: renewed))
+        try? await connection.move(read, to: FlatdClient(read, at: URL(string: "https://192.0.2.77:8788")!))       // from before the renewal
         #expect(connection.token == Flat.renewedKey && connection.pairing?.baseURL == Flat.base)
         // A renewal never changes the identity or the flatd.
         let other = FlatdPairing(baseURL: Flat.base, token: Flat.key, pin: MadeUpCertificates.pinB, id: read.id)
-        #expect(try !connection.renew(renewed, with: other))
-        #expect(try !connection.renew(renewed, with: Flat.pairing(id: UUID())))
+        #expect(try await !connection.renew(renewed, with: other))
+        #expect(try await !connection.renew(renewed, with: Flat.pairing(id: UUID())))
         // A first pairing never overwrites one that is there.
         #expect(try connection.pairNew(Flat.pairing(id: UUID())) == false)
         #expect(connection.pairing?.id == read.id)

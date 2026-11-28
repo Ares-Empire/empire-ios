@@ -1,4 +1,5 @@
 import Network
+import os
 
 nonisolated enum HomeRoute: Sendable {
     case home, remote
@@ -14,6 +15,7 @@ nonisolated enum HomeRoute: Sendable {
     private enum Candidate<Client: Sendable>: Sendable {
         case home(Client?)
         case discovery(Client?)
+        case timeUp
         case remoteTime
         case remote(Client?)
         case remoteDenied
@@ -28,64 +30,110 @@ nonisolated enum HomeRoute: Sendable {
         remote: (@Sendable (Deadline) async -> Client?)?,
         allowsRemote: @escaping @Sendable () -> Bool = { true }
     ) async throws -> Selection<Client> {
-        let start = deadline.clock.now()
-        let choice = deadline.capped(at: start + choiceLimit)
+        let startTime = deadline.clock.now()
+        let choice = deadline.capped(at: startTime + choiceLimit)
         let routePath = homeOnly ? .localPossible :
-            (try? await choice.capped(at: start + .milliseconds(100)).run(path)) ?? .unknown
+            (try? await choice.capped(at: startTime + .milliseconds(100)).run(path)) ?? .unknown
         try Task.checkCancellation()
         guard choice.remaining > .zero else { return .unreachable }
-        let selection: Selection<Client> = await withTaskGroup(of: Candidate<Client>.self) { group in
-            var remotePending = !homeOnly && remote != nil
-            var remoteDenied = false
-            func startRemote() {
-                guard remotePending, let remote else { return }
-                remotePending = false
-                group.addTask {
-                    let cap = choice.capped(by: .seconds(4))
-                    guard let allowed = try? await cap.read(allowsRemote) else { return .remoteDenied }
-                    guard allowed else { return .remoteDenied }
-                    return .remote(try? await cap.run { await remote(cap) })
-                }
-            }
+        let (mailbox, messages) = AsyncStream<Candidate<Client>>.makeStream()
+        var probes: [Task<Void, Never>] = []
+        var pending = 0
+        var remotePending = !homeOnly && remote != nil
+        // If choice and the policy lookup expire together, a remote probe whose policy
+        // never allowed it counts as denied whichever mailbox message arrives first.
+        let remoteAllowed = OSAllocatedUnfairLock<Bool?>(initialState: nil)
 
-            if routePath == .remoteOnly {
-                startRemote()
-            } else {
-                group.addTask {
-                    let cap = choice.capped(by: .milliseconds(2500))
-                    return .home(try? await cap.run { await home(cap) })
-                }
-                group.addTask {
-                    try? await choice.clock.sleepUntil(min(choice.instant, start + .milliseconds(300)))
-                    return .discovery(try? await choice.run { await discover(choice) })
-                }
-                if remotePending {
-                    group.addTask {
-                        try? await choice.clock.sleepUntil(min(choice.instant, start + .milliseconds(500)))
-                        return .remoteTime
-                    }
-                }
-            }
+        func start(_ probe: @escaping @Sendable () async -> Candidate<Client>) {
+            pending += 1
+            probes.append(Task { _ = messages.yield(await probe()) })
+        }
 
-            for await candidate in group {
-                guard !Task.isCancelled else { break }
+        func startRemote() {
+            guard remotePending, let remote else { return }
+            remotePending = false
+            remoteAllowed.withLock { $0 = false }
+            start {
+                let cap = choice.capped(by: .seconds(4))
+                guard (try? await cap.blocking({ _ in allowsRemote() })) == true else { return .remoteDenied }
+                guard cap.remaining > .zero else { return .remoteDenied }
+                remoteAllowed.withLock { $0 = true }
+                return .remote(try? await cap.run { await remote(cap) })
+            }
+        }
+
+        let timer = Task {
+            do {
+                try await choice.clock.sleepUntil(choice.instant)
+                messages.yield(.timeUp)
+            } catch {}
+        }
+        defer {
+            timer.cancel()
+            probes.forEach { $0.cancel() }
+            messages.finish()
+        }
+
+        if routePath == .remoteOnly {
+            startRemote()
+        } else {
+            start {
+                let cap = choice.capped(by: .milliseconds(2500))
+                return .home(try? await cap.run { await home(cap) })
+            }
+            start {
+                try? await choice.clock.sleepUntil(min(choice.instant, startTime + .milliseconds(300)))
+                guard !Task.isCancelled, choice.remaining > .zero else { return .discovery(nil) }
+                return .discovery(await discover(choice))
+            }
+            if remotePending {
+                probes.append(Task {
+                    do {
+                        try await choice.clock.sleepUntil(min(choice.instant, startTime + .milliseconds(500)))
+                        messages.yield(.remoteTime)
+                    } catch {}
+                })
+            }
+        }
+
+        if pending > 0 {
+            for await candidate in mailbox {
+                try Task.checkCancellation()
+                if case .timeUp = candidate { break }
+                guard choice.remaining > .zero else { break }
+                if case .remoteTime = candidate { startRemote(); continue }
+                pending -= 1
                 switch candidate {
                 case let .home(value?), let .discovery(value?), let .remote(value?):
-                    group.cancelAll()
                     return .reached(value)
-                case .home(nil), .remoteTime:
-                    if choice.remaining > .zero { startRemote() }
-                case .remoteDenied:
-                    remoteDenied = true
+                case .home(nil):
+                    startRemote()
                 default:
                     break
                 }
+                if pending == 0 { break }
             }
-            return remoteDenied ? .remoteDenied : .unreachable
         }
         try Task.checkCancellation()
-        if case .reached = selection, choice.remaining <= .zero { return .unreachable }
-        return selection
+        return remoteAllowed.withLock { $0 } == false ? .remoteDenied : .unreachable
+    }
+
+    /// First non-nil result wins. A cancelled or stalled operation is never awaited.
+    static func first<Value: Sendable>(_ operations: [@Sendable () async -> Value?]) async -> Value? {
+        let (mailbox, messages) = AsyncStream<Value?>.makeStream()
+        let tasks = operations.map { operation in
+            Task { _ = messages.yield(await operation()) }
+        }
+        defer {
+            tasks.forEach { $0.cancel() }
+            messages.finish()
+        }
+        var replies = mailbox.makeAsyncIterator()
+        for _ in operations {
+            guard !Task.isCancelled, let result = await replies.next(), !Task.isCancelled else { break }
+            if let result { return result }
+        }
+        return nil
     }
 
     static func currentPath() async -> Path {

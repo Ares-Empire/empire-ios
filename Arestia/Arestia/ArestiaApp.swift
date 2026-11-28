@@ -10,7 +10,13 @@ struct ArestiaApp: App {
     var body: some Scene {
         WindowGroup { AppRoot(widget: .arestia) { ContentView() } }
             .onChange(of: scenePhase, initial: true) { _, phase in
-                if phase == .active { RemoteUnlock.createIfMissing() }
+                if phase == .active {
+                    Task.detached {
+                        await Deadline(after: .seconds(1)).bestEffort(default: ()) { hold in
+                            try RemoteUnlock.createIfMissing(hold)
+                        }
+                    }
+                }
             }
     }
 }

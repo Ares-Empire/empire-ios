@@ -29,7 +29,7 @@ struct RouteTLSTests {
         #expect(paired.remote?.pin == a.pin)
         #expect(paired.remote?.url.port == aLoopback.port)
         let fixtureHost = try #require(paired.remote?.url.host())
-        let positiveRemote = try #require(FlatdClient(remoteOf: paired)).gated(by: connection, allowsRemote: { true })
+        let positiveRemote = try #require(FlatdClient(remoteOf: paired)).gated(by: connection, marker: RemoteMarker(read: { true }))
         let devices = try await FlatdTransport.$loopbackFixtureHost.withValue(fixtureHost) {
             try await positiveRemote.devices()
         }
@@ -55,7 +55,7 @@ struct RouteTLSTests {
         offline.baseURL = URL(string: "https://127.0.0.1:0")!
         try connection.save(offline)
         let reach = FlatdReach(connection: connection, rediscover: { [aLoopback] }, path: { .localPossible },
-                               allowsRemote: { false }, needsPasscode: { false })
+                               marker: RemoteMarker(read: { false }), needsPasscode: { false })
         await #expect(throws: FlatdError.awayNeedsUnlock(needsPasscode: false)) {
             try await reach.run { try await $0.devices() }
         }
@@ -66,7 +66,7 @@ struct RouteTLSTests {
         let wrongListener = try #require(RemoteListener.parse(url: wrongPort.string, pin: a.pin.hex, homePin: h.pin))
         offline.remote = wrongListener
         try connection.save(offline)
-        let wrongRemote = try #require(FlatdClient(remoteOf: offline)).gated(by: connection, allowsRemote: { true })
+        let wrongRemote = try #require(FlatdClient(remoteOf: offline)).gated(by: connection, marker: RemoteMarker(read: { true }))
         await FlatdTransport.$loopbackFixtureHost.withValue(fixtureHost) {
             await #expect(throws: FlatdError.unreachable) { try await wrongRemote.devices() }
         }

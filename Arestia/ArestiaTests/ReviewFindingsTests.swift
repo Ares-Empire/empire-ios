@@ -52,25 +52,25 @@ struct KeySafetyTests {
         #expect(transport.requests(to: "192.0.2.77").isEmpty)
     }
 
-    @Test func aLateLookupNeverMovesANewerOrForgottenPairing() throws {
+    @Test func aLateLookupNeverMovesANewerOrForgottenPairing() async throws {
         let connection = Flat.connection()
         let old = try #require(connection.pairing)
         let newer = Flat.pairing(token: "newer-key-0123456789")
         try connection.save(newer)
-        try? connection.move(old, to: FlatdClient(old, at: URL(string: "https://192.0.2.77:8788")!))          // the old pairing's late lookup
+        try? await connection.move(old, to: FlatdClient(old, at: URL(string: "https://192.0.2.77:8788")!))          // the old pairing's late lookup
         #expect(connection.pairing == newer)
-        try? connection.move(newer, to: FlatdClient(newer, at: URL(string: "https://192.0.2.77:8788")!))
+        try? await connection.move(newer, to: FlatdClient(newer, at: URL(string: "https://192.0.2.77:8788")!))
         #expect(connection.pairing?.baseURL.host() == "192.0.2.77")
         #expect(connection.token == "newer-key-0123456789")
-        try connection.forget()
-        try? connection.move(newer, to: FlatdClient(newer, at: Flat.base))                                     // after Forget: nothing comes back
+        try await connection.forgetSavedPairing()
+        try? await connection.move(newer, to: FlatdClient(newer, at: Flat.base))                                     // after Forget: nothing comes back
         #expect(connection.pairing == nil)
     }
 
     @Test func aCommandRunsOnceEvenWhenItsConnectionIsLost() async {
         let moved = URL(string: "https://192.0.2.77:8788")!
         transport.answer("POST /api/scenes/air_out", fails: true)                 // lost after flatd may have taken it
-        await #expect(throws: FlatdError.unreachable) {
+        await #expect(throws: FlatdError.noAnswer) {
             try await FlatActions(reach: reach(Flat.connection(), resolve: moved)).runScene("air_out")
         }
         #expect(transport.bodies(for: "POST /api/scenes/air_out").count == 1)
@@ -82,7 +82,7 @@ struct KeySafetyTests {
         transport.answer("GET 192.0.2.10/api/health", fails: true)
         transport.answer("POST /api/scenes/all_down", body: ["id": "all_down", "failed": [:]])
         let reach = FlatdReach(connection: connection, transport: transport, rediscover: {
-            try? connection.forget()                                  // Forget while flatd is looked up again
+            try? await connection.forgetSavedPairing()                                  // Forget while flatd is looked up again
             return [URL(string: "https://192.0.2.77:8788")!]
         })
         await #expect(throws: FlatdError.notPaired) { try await FlatActions(reach: reach).runScene("all_down") }
@@ -93,12 +93,12 @@ struct KeySafetyTests {
         #expect(try Flat.decode(CommandFailures.self, ["failed": ["fan:fan_1", "fan:fan_1"]]).ids == ["fan:fan_1"])
     }
 
-    @Test func addressAndKeyAreOneItem() throws {
+    @Test func addressAndKeyAreOneItem() async throws {
         let connection = Flat.connection(linked: false)
         let pairing = Flat.pairing()
         try connection.save(pairing)
         #expect(connection.pairing == pairing)
-        try connection.forget()
+        try await connection.forgetSavedPairing()
         #expect(connection.pairing == nil && connection.client == nil)
     }
 }
@@ -189,7 +189,7 @@ struct StoreReviewTests {
                          delay: .milliseconds(100))
         store.setFan("fan:fan_2", on: true)
         try await Task.sleep(for: .milliseconds(20))
-        #expect(session.forget())
+        #expect(await session.forget())
         try await Task.sleep(for: .milliseconds(200))
         #expect(store.link == .notSetUp && store.isRetired)   // not .refused from the old pairing's answer
         #expect(store.working.isEmpty && session.store?.link == .notSetUp)

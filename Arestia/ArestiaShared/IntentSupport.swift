@@ -108,13 +108,17 @@ nonisolated enum DeviceChoices {
 
     static func load(kind: Device.Kind, connection: FlatdConnection = .live,
                      reach: FlatdReach? = nil) async -> [Choice] {
-        let version = connection.devicesVersion
-        if let answer = try? await (reach ?? FlatdReach(connection: connection)).run({ client in
+        let deadline = FlatdReach.intentBudget ?? FlatdReach.intentDeadline()
+        let version = await deadline.bestEffort(default: nil) { _ in connection.devicesVersion }
+        if let answer = try? await (reach ?? FlatdReach(connection: connection)).run(deadline: deadline, { client in
             (try await client.devices(), client)
         }) {
-            connection.remember(answer.0, from: answer.1, readSince: version)
+            _ = await deadline.bestEffort(default: false) { hold in
+                connection.remember(answer.0, from: answer.1, readSince: version, hold: hold)
+            }
         }
-        return choices(kind: kind, from: connection.known)
+        let known = await deadline.bestEffort(default: nil) { _ in connection.known }
+        return choices(kind: kind, from: known)
     }
 
     /// The saved choices iOS asks for (a Shortcut's or a control's parameter), each one kept: one the paired flat does

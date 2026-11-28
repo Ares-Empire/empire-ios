@@ -22,26 +22,24 @@ private nonisolated final class Tally: @unchecked Sendable {
 }
 
 /// flatd's answers, with Forget run the moment one route's answer has arrived and before the caller sees it.
-private nonisolated final class ForgetAfterAnswer: GatedTransport, @unchecked Sendable {
+private nonisolated final class ForgetAfterAnswer: PreparingTransport, @unchecked Sendable {
     let inner: FakeTransport
     let route: String
-    let forget: @Sendable () -> Void
+    let forget: @Sendable () async -> Void
 
-    init(_ inner: FakeTransport, after route: String, forget: @escaping @Sendable () -> Void) {
+    init(_ inner: FakeTransport, after route: String, forget: @escaping @Sendable () async -> Void) {
         self.inner = inner
         self.route = route
         self.forget = forget
     }
 
-    func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
-        try await send(request, gate: nil, dispatch: nil)
-    }
-
-    func send(_ request: URLRequest, gate: FlatdGate?, dispatch: FlatdRequestDispatch?) async throws
-        -> (Data, HTTPURLResponse) {
-        let answer = try await inner.send(request, gate: gate, dispatch: dispatch)
-        if (request.httpMethod ?? "GET") + " " + (request.url?.path(percentEncoded: true) ?? "") == route { forget() }
-        return answer
+    func prepare(_ request: URLRequest, reply: Attempt<HTTPReply>) throws -> any SuspendedRequest {
+        inner.prepare(request, reply: reply) { answer in
+            if (request.httpMethod ?? "GET") + " " + (request.url?.path(percentEncoded: true) ?? "") == self.route {
+                await self.forget()
+            }
+            return answer
+        }
     }
 }
 
@@ -60,8 +58,8 @@ struct ForgottenFlatReadingTests {
     @Test func forgetBetweenTheListAndTheNamesShowsNothing() async throws {
         for reading in ["blind", "fans"] {
             let connection = Flat.connection()
-            connection.remember(try Flat.devices([Flat.fan(1), Flat.rollo(1)]), for: Flat.id)
-            let transport = ForgetAfterAnswer(flatd(), after: "GET /api/devices") { try? connection.forget() }
+            await connection.remember(try Flat.devices([Flat.fan(1), Flat.rollo(1)]), for: Flat.id)
+            let transport = ForgetAfterAnswer(flatd(), after: "GET /api/devices") { try? await connection.forgetSavedPairing() }
             let actions = FlatActions(reach: FlatdReach(connection: connection, transport: transport, rediscover: { [] }))
             await #expect(throws: FlatdError.notPaired) {
                 if reading == "blind" { _ = try await actions.rolloControl(chosen) } else { _ = try await actions.fans() }
@@ -74,10 +72,10 @@ struct ForgottenFlatReadingTests {
     /// under the new one, and the new pairing's names are not the old flat's.
     @Test func anotherFlatPairedMeanwhileGetsNothingOfTheOld() async throws {
         let connection = Flat.connection()
-        connection.remember(try Flat.devices([Flat.fan(1), Flat.rollo(1)]), for: Flat.id)
+        await connection.remember(try Flat.devices([Flat.fan(1), Flat.rollo(1)]), for: Flat.id)
         let other = Flat.pairing(id: UUID())
         let transport = ForgetAfterAnswer(flatd(), after: "GET /api/devices") {
-            try? connection.forget()
+            try? await connection.forgetSavedPairing()
             try? connection.save(other)
         }
         let actions = FlatActions(reach: FlatdReach(connection: connection, transport: transport, rediscover: { [] }))
@@ -94,7 +92,7 @@ struct ForgottenFlatReadingTests {
             let file = Flat.nameFile()
             let connection = FlatdConnection(defaults: nil, names: file, keychain: keys, lock: .processOnly)
             try connection.save(Flat.pairing())
-            connection.remember(try Flat.devices([Flat.fan(1), Flat.rollo(1)]), for: Flat.id)
+            await connection.remember(try Flat.devices([Flat.fan(1), Flat.rollo(1)]), for: Flat.id)
             let reads = Tally()
             keys.afterRead = {
                 // Forget's effect, names first (as `forget` does), at this point of the reading.

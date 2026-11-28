@@ -6,8 +6,29 @@ import os
 nonisolated protocol FlatEventSource: Sendable {
     /// The events until the connection ends: the stream finishes with `FlatdError.refused` on a 401 and
     /// `FlatdError.unreachable` on anything else (the store then tries again), a server without flatd's key included.
-    func events(from request: URLRequest, pin: FlatdPin, starting: (() -> Void) throws -> Void)
-        throws -> AsyncThrowingStream<FlatEvent, Error>
+    func prepare(_ request: URLRequest, pin: FlatdPin) throws -> any PreparedEvents
+}
+
+nonisolated protocol PreparedEvents: SuspendedRequest {
+    func stream() -> AsyncThrowingStream<FlatEvent, Error>
+}
+
+nonisolated extension FlatEventSource {
+    func open(_ request: URLRequest, pin: FlatdPin, admission: FlatdAdmission,
+              cap: Deadline, route: HomeRoute?) async throws -> any PreparedEvents {
+        let request = request.withLanguage()
+        let outcome: Attempt<any PreparedEvents>.Outcome = await FlatdLaunch.run(
+            admission: admission, rule: WriteRule(cap: cap),
+            prepare: { _ in
+                let prepared = try self.prepare(request, pin: pin)
+                return .init(request: prepared, afterStart: { $0.end(.success(prepared)) })
+            }, didResume: {
+                #if DEBUG
+                FlatdClient.logDispatch(request, route: route, deadline: nil)
+                #endif
+            })
+        return try outcome.result.get()
+    }
 }
 
 /// The real stream over a WebSocket. A sleeping Mac leaves a socket open without answering, so a ping goes every
@@ -20,28 +41,38 @@ nonisolated struct WebSocketEvents: FlatEventSource {
     #else
     static let snapshotWithin: Duration = .seconds(10)
     #endif
-    private static let log = Logger(subsystem: "de.ares-empire.arestia", category: "events")
+    fileprivate static let log = Logger(subsystem: "de.ares-empire.arestia", category: "events")
 
     #if DEBUG
-    func events(from request: URLRequest, pin: FlatdPin) -> AsyncThrowingStream<FlatEvent, Error> {
-        do { return try events(from: request.withLanguage(), pin: pin, starting: { $0() }) }
-        catch { return AsyncThrowingStream { $0.finish(throwing: error) } }
+    func events(from request: URLRequest, pin: FlatdPin) async -> AsyncThrowingStream<FlatEvent, Error> {
+        do {
+            return try await open(request, pin: pin, admission: .open,
+                                  cap: Deadline(after: .seconds(request.timeoutInterval)), route: nil).stream()
+        } catch {
+            return AsyncThrowingStream { $0.finish(throwing: error) }
+        }
     }
     #endif
 
-    func events(from request: URLRequest, pin: FlatdPin, starting: (() -> Void) throws -> Void)
-        throws -> AsyncThrowingStream<FlatEvent, Error> {
-        // The key is in the header. The session accepts only a server holding flatd's key.
+    func prepare(_ request: URLRequest, pin: FlatdPin) throws -> any PreparedEvents {
         guard request.url?.scheme?.lowercased() == "wss" else { throw FlatdError.unreachable }
         let session = FlatdSession.events(pin: pin)
-        let task = session.webSocketTask(with: request)
-        do { try starting { task.resume() } }
-        catch {
-            session.invalidateAndCancel()
-            throw error
-        }
-        Self.log.notice("events: connecting")
+        return SocketEvents(session: session, task: session.webSocketTask(with: request))
+    }
+}
 
+private nonisolated struct SocketEvents: PreparedEvents {
+    let session: URLSession
+    let task: URLSessionWebSocketTask
+
+    func resume() { task.resume() }
+
+    func cancel() {
+        task.cancel()
+        session.invalidateAndCancel()
+    }
+
+    func stream() -> AsyncThrowingStream<FlatEvent, Error> {
         return AsyncThrowingStream { continuation in
             let snapshotSeen = OSAllocatedUnfairLock(initialState: false)
             let reader = Task {
@@ -57,29 +88,29 @@ nonisolated struct WebSocketEvents: FlatEventSource {
                             if case .snapshot = event { snapshotSeen.withLock { $0 = true } }
                             continuation.yield(event)
                         } else {
-                            Self.log.error("an event did not decode (\(data?.count ?? 0, privacy: .public) bytes)")
+                            WebSocketEvents.log.error("an event did not decode (\(data?.count ?? 0, privacy: .public) bytes)")
                         }
                     }
                 } catch {
                     let status = (task.response as? HTTPURLResponse)?.statusCode
-                    Self.log.notice("events ended (\(status ?? 0, privacy: .public))")
+                    WebSocketEvents.log.notice("events ended (\(status ?? 0, privacy: .public))")
                     continuation.finish(throwing: status == 401 ? FlatdError.refused : FlatdError.unreachable)
                 }
             }
             let deadline = Task {
-                try? await Task.sleep(for: Self.snapshotWithin)
+                try? await Task.sleep(for: WebSocketEvents.snapshotWithin)
                 guard !Task.isCancelled, !snapshotSeen.withLock({ $0 }) else { return }
-                Self.log.notice("no snapshot in time: the stream ends")
+                WebSocketEvents.log.notice("no snapshot in time: the stream ends")
                 task.cancel(with: .goingAway, reason: nil)
                 continuation.finish(throwing: FlatdError.unreachable)
             }
             let pinger = Task {
                 while !Task.isCancelled {
-                    try? await Task.sleep(for: Self.pingEvery)
+                    try? await Task.sleep(for: WebSocketEvents.pingEvery)
                     guard !Task.isCancelled else { return }
                     let answered = await Self.ping(task)
                     if !answered {
-                        Self.log.notice("no pong: the stream is gone")
+                        WebSocketEvents.log.notice("no pong: the stream is gone")
                         task.cancel(with: .goingAway, reason: nil)
                         continuation.finish(throwing: FlatdError.unreachable)
                         return

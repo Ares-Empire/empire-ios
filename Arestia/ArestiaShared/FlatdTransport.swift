@@ -1,189 +1,144 @@
 import Foundation
-import os
 
-/// flatd's HTTP transport: HTTPS only, to a server that proved it holds flatd's key (`FlatdPin`), in an ephemeral
-/// session that never follows a redirect. So the key and every request go only to flatd itself, encrypted: never in
-/// the clear, never to whatever answers at flatd's address, never on to another address.
-nonisolated struct FlatdTransport: GatedTransport {
+/// Prepares a suspended HTTPS request pinned to flatd's key. Admission and resume belong to FlatdLaunch.
+nonisolated struct FlatdTransport: PreparingTransport {
     let pin: FlatdPin
-
+    #if DEBUG
+    @TaskLocal static var fixtureTransport: (@Sendable (FlatdPin) -> any PreparingTransport)?
+    var testSessions: PinnedSession? = nil
+    #endif
     #if ARESTIA_UNIT_TESTS
     @TaskLocal static var loopbackFixtureHost: String?
+    private var fixtureHost: String?
     #endif
-    #if DEBUG
-    @TaskLocal static var fixtureTransport: (@Sendable (FlatdPin) -> any GatedTransport)?
+    #if DEBUG && ARESTIA_GATE
+    private var timing: GateAction?
     #endif
 
-    func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
-        try await send(request, gate: nil, dispatch: nil)
+    init(pin: FlatdPin) { self.pin = pin }
+
+    /// Task locals belong to the caller, before preparation moves to the dispatch queue.
+    func capturingFixturesAndTiming(for request: URLRequest) -> any PreparingTransport {
+        #if DEBUG
+        if let fixture = Self.fixtureTransport { return fixture(pin) }
+        #endif
+        var prepared = self
+        #if ARESTIA_UNIT_TESTS
+        prepared.fixtureHost = Self.loopbackFixtureHost
+        #endif
+        #if DEBUG && ARESTIA_GATE
+        if request.httpMethod == "POST" { prepared.timing = GateAction.current }
+        #endif
+        return prepared
     }
 
-    /// Starts the request inside the gate: the task is made and resumed in the same step that checked its pairing is
-    /// still the saved one, under the lock Forget takes (`FlatdDispatchLock`). A gate that refuses starts nothing.
-    func send(_ request: URLRequest, gate: FlatdGate?, dispatch: FlatdRequestDispatch?) async throws
-        -> (Data, HTTPURLResponse) {
-        // Checked here too, not only by iOS: nothing for flatd ever leaves without TLS.
+    func prepare(_ request: URLRequest, reply: Attempt<HTTPReply>) throws -> any SuspendedRequest {
         guard request.url?.scheme?.lowercased() == "https" else { throw URLError(.unsupportedURL) }
-        if let gate, gate.pin != pin { throw FlatdError.unreachable }
-        #if DEBUG
-        if let fixture = Self.fixtureTransport {
-            return try await fixture(pin).send(request, gate: gate, dispatch: dispatch)
-        }
-        #endif
         #if ARESTIA_UNIT_TESTS
         var request = request
-        if let fixture = Self.loopbackFixtureHost, request.url?.host() == fixture {
-            var url = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)!
-            url.host = "127.0.0.1"
-            request.url = url.url
+        if let fixtureHost, let url = request.url, url.host() == fixtureHost {
+            var parts = URLComponents(url: url, resolvingAgainstBaseURL: false)
+            parts?.host = "127.0.0.1"
+            request.url = parts?.url
         }
         #endif
-        let requestToSend = request.withLanguage()
-        let running = RunningTask()
-        let (replies, reply) = AsyncThrowingStream<(Data, HTTPURLResponse), Error>.makeStream()
-        running.finish = { result in
-            switch result {
-            case let .success(value):
-                reply.yield(value)
-                reply.finish()
-            case let .failure(error):
-                reply.finish(throwing: error)
+        #if DEBUG
+        let session = testSessions?.shared(pin: pin) ?? FlatdSession.shared(pin: pin)
+        #else
+        let session = FlatdSession.shared(pin: pin)
+        #endif
+        #if DEBUG && ARESTIA_GATE
+        let stamps = timing.map { TimingStamps(action: $0) }
+        #endif
+        let task = session.dataTask(with: request) { data, response, error in
+            let result: Result<HTTPReply, Error>
+            if let error {
+                // Our cancellation happens after the attempt has ended. A cancellation that wins
+                // comes from the pin delegate.
+                result = .failure((error as? URLError)?.code == .cancelled
+                                  ? URLError(.serverCertificateUntrusted) : error)
+            } else if let response = response as? HTTPURLResponse {
+                result = .success((data ?? Data(), response))
+            } else {
+                result = .failure(HTTPError.invalidResponse)
             }
+            #if DEBUG && ARESTIA_GATE
+            let time = Date.now
+            let first = reply.end(result)
+            if first { stamps?.complete(result, at: time) }
+            #else
+            reply.end(result)
+            #endif
         }
         #if DEBUG && ARESTIA_GATE
-        if request.httpMethod == "POST" { running.timing = GateAction.current }
+        return RunningTask(task: task, stamps: stamps)
+        #else
+        return RunningTask(task: task)
         #endif
-        let start: @Sendable (Deadline.Work?) throws -> Void = { work in
-            let session = FlatdSession.shared(pin: pin)
-            let task = session.dataTask(with: requestToSend) { data, response, error in
-                if let error {
-                    running.end(.failure(error))
-                } else if let response = response as? HTTPURLResponse {
-                    running.end(.success((data ?? Data(), response)))
-                } else {
-                    running.end(.failure(HTTPError.invalidResponse))
-                }
-            }
-            do {
-                if let work { try work.perform { try running.start(task, dispatch: dispatch) } }
-                else { try running.start(task, dispatch: dispatch) }
-            } catch {
-                task.cancel()
-                throw error
-            }
-        }
-        do {
-            return try await withTaskCancellationHandler {
-                if let gate {
-                    try await gate.start(until: dispatch?.cap ?? Deadline(after: .seconds(request.timeoutInterval))) {
-                        try start($0)
-                    }
-                } else {
-                    try start(nil)
-                }
-                #if DEBUG && ARESTIA_GATE
-                running.appendDispatch()
-                #endif
-                for try await reply in replies { return reply }
-                throw CancellationError()
-            } onCancel: {
-                running.cancel()
-            }
-        } catch let error as URLError where error.code == .cancelled && !Task.isCancelled {
-            // Nobody cancelled this request (and its session is never invalidated): the session's delegate did,
-            // because the server is not flatd (`PinnedServer`).
-            throw URLError(.serverCertificateUntrusted)
-        }
     }
 }
 
-/// A request's task and its one ending. Cancelling and starting are decided under one lock: a request cancelled
-/// before its task started is never resumed (round 7), and the caller hears exactly one ending, whichever comes first.
-private nonisolated final class RunningTask: @unchecked Sendable {
-    private let lock = NSLock()
-    private var task: URLSessionDataTask?
-    private var cancelled = false
-    private var ended = false
-    /// The caller's continuation; set before anything can end it.
-    var finish: (@Sendable (Result<(Data, HTTPURLResponse), Error>) -> Void)?
+private nonisolated struct RunningTask: SuspendedRequest {
+    let task: URLSessionDataTask
     #if DEBUG && ARESTIA_GATE
-    /// Set before starting the task, only for a command made by a traced action.
-    var timing: GateAction?
-    private typealias CompletionStamp = (time: Date, outcome: GateOutcome)
-    private var dispatchTime: Date?
-    private var dispatchFlushed = false
-    private var pendingCompletion: CompletionStamp?
-
-    /// If the reply beat dispatch to the log, write both from the continuation's setup closure.
-    /// The awaiting task cannot resume until that closure returns.
-    func appendDispatch() {
-        guard let timing, let time = lock.withLock({ dispatchTime }) else { return }
-        timing.dispatch(at: time)
-        let pending = lock.withLock {
-            dispatchFlushed = true
-            defer { pendingCompletion = nil }
-            return pendingCompletion
-        }
-        if let pending { timing.completion(pending.outcome, at: pending.time) }
-    }
+    let stamps: TimingStamps?
     #endif
 
-    /// Resumes the task unless the request was cancelled first (then it ends as cancelled, never started). The check
-    /// and the resume are one step under the lock, so a cancellation either comes before (nothing starts) or finds the
-    /// task to cancel (round 8). `resume()` only hands the task to the session's own queue, which reports its ending on
-    /// another thread, so holding the lock across it never waits on `end`.
-    func start(_ task: URLSessionDataTask, dispatch: FlatdRequestDispatch?) throws {
-        try lock.withLock {
-            guard !cancelled else { throw CancellationError() }
-            let resume = {
-                self.task = task
-                #if DEBUG && ARESTIA_GATE
-                if let timing = self.timing {
-                    self.dispatchTime = timing.resume(task)
-                } else {
-                    task.resume()
-                }
-                #else
-                task.resume()
-                #endif
-            }
-            if let dispatch { try dispatch.start(resume) } else { resume() }
-        }
+    func resume() {
+        #if DEBUG && ARESTIA_GATE
+        if let stamps { stamps.resume(task); return }
+        #endif
+        task.resume()
     }
 
-    func cancel() {
-        let task: URLSessionDataTask? = lock.withLock {
-            cancelled = true
-            return self.task
-        }
-        task?.cancel()
-    }
+    func cancel() { task.cancel() }
 
-    func end(_ result: Result<(Data, HTTPURLResponse), Error>) {
+    func afterResume() {
         #if DEBUG && ARESTIA_GATE
-        var completion: CompletionStamp?
+        stamps?.appendDispatch()
         #endif
-        let first: Bool = lock.withLock {
-            guard !ended else { return false }
-            ended = true
-            #if DEBUG && ARESTIA_GATE
-            if let timing, !timing.isFanBatch, dispatchTime != nil {
-                let stamp = (Date.now, GateOutcome(result, cancelled: cancelled))
-                if dispatchFlushed {
-                    completion = stamp
-                } else {
-                    pendingCompletion = stamp
-                }
-            }
-            #endif
-            return true
-        }
-        #if DEBUG && ARESTIA_GATE
-        if let completion { timing?.completion(completion.outcome, at: completion.time) }
-        #endif
-        if first { finish?(result) }
     }
 }
+
+#if DEBUG && ARESTIA_GATE
+private nonisolated final class TimingStamps: @unchecked Sendable {
+    let action: GateAction
+    private let lock = NSLock()
+    private var dispatchTime: Date?
+    private var dispatchFlushed = false
+    private var completion: (GateOutcome, Date)?
+
+    init(action: GateAction) { self.action = action }
+
+    func resume(_ task: URLSessionTask) {
+        let time = Date.now
+        task.resume()
+        if action.claimDispatch() { lock.withLock { dispatchTime = time } }
+    }
+
+    func appendDispatch() {
+        guard let time = lock.withLock({ dispatchTime }) else { return }
+        action.dispatch(at: time)
+        let stamp = lock.withLock {
+            dispatchFlushed = true
+            defer { completion = nil }
+            return completion
+        }
+        if let (outcome, time) = stamp { action.completion(outcome, at: time) }
+    }
+
+    func complete(_ reply: Result<HTTPReply, Error>, at time: Date) {
+        guard !action.isFanBatch else { return }
+        let outcome = GateOutcome(reply, cancelled: false)
+        let flushed = lock.withLock {
+            guard !dispatchFlushed else { return true }
+            completion = (outcome, time)
+            return false
+        }
+        if flushed { action.completion(outcome, at: time) }
+    }
+}
+#endif
 
 nonisolated enum FlatdSession {
     #if DEBUG && ARESTIA_GATE
