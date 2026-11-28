@@ -38,7 +38,7 @@ struct StoreTests {
         #expect(transport.sent.first?.url?.path() == "/api/health")
         #expect(transport.sent.first?.value(forHTTPHeaderField: "Authorization") == nil)
         #expect(transport.sent.dropFirst().first?.value(forHTTPHeaderField: "Authorization") == "Bearer \(Flat.key)")
-        #expect(store.connection.knownDevices.count == 4)
+        #expect(await eventually { store.connection.knownDevices.count == 4 })
         store.stop()
     }
 
@@ -144,7 +144,7 @@ struct StoreTests {
         store.start()
         #expect(await eventually { events.isOpen })
         #expect(events.pins == [Flat.pin])                 // the stream is opened for the pairing's identity
-        #expect(session.forget())
+        #expect(await session.forget())
         #expect(connection.pairing == nil && connection.token == nil && store.isRetired && store.devices.isEmpty)
         #expect(session.store?.link == .notSetUp)
     }

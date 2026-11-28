@@ -93,13 +93,13 @@ enum PageScript {
     /// blind without one), `failed`.
     static func errorWord(_ error: FlatdError) -> String {
         switch error {
-        case .unreachable: "offline"
+        case .unreachable, .awayNeedsUnlock: "offline"
         case .deviceDidNotAnswer, .noAnswer: "timeout"
         case .refused, .notPaired: "unauthorized"
         case .unknown: "unknown"
         case .notPossible, .anotherFlat: "refused"
         case let .failed(status, _) where status == 400: "refused"
-        case .failed, .invalidAnswer, .pairingUnreadable, .renameNotSupported: "failed"
+        case .failed, .invalidAnswer, .pairingUnreadable, .renameNotSupported, .partialFans: "failed"
         }
     }
 

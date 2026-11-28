@@ -157,6 +157,93 @@ started wrong can't freeze the app. The Toggle cooking shortcut reads the cookin
 mode and sends the opposite state to the same paired service. Its dialog reports the confirmed state and any devices
 that did not follow.
 
+### Remote enrollment and controls (B357, P7a)
+
+A live home snapshot queues `GET /api/remote` with the stream's pairing identity, even if the store's
+Keychain read fails. The enrollment worker checks the current pairing before asking flatd 1.7. It saves
+the validated listener URL, pin and enrollment generation against the pairing revision read before asking.
+When only remote enrollment changed since the stream opened, the worker still uses the stream's live
+home address.
+A validated change gets its lock-budgeted commit attempt before any new pairing read. It stays pending
+through lock contention until it commits or the pairing changes. A revision change triggers a fresh lookup.
+Transient pairing read failures and expiry before dispatch retry with a pause in the same worker. The stream applies events
+while enrollment and name-cache writes wait for the lock in the background. Two nulls clear enrollment
+and a 404 leaves it as it was. Re-enrolling after a clearance creates a fresh generation even for the same
+listener. The app's screens and event stream use the home route.
+
+A pending enrollment change lives only in the app process. If the process ends before the write, the next
+home snapshot refreshes the cache. Enrollment stores public facts about the listener, its URL and public-key
+pin. Stale enrollment can cost remote reachability. Withdrawal shuts off both the listener and its server
+route. If a remote private key may have been disclosed, the server invalidates the old token before changing
+the key and listener label (design 340, sections 3 and 7.1).
+
+Renewing with a new token clears the old remote enrollment before the app learns the new listener at home.
+Once the renewal write is admitted, the caller waits for the Keychain result through expiry or cancellation.
+On success the current session restarts the stream for that pairing and reloads the controls, even after a
+root rebuild.
+
+Shortcuts, Siri and Control Center can select the saved home address, a Bonjour candidate, or the enrolled
+remote listener. Only token-free health probes race. Each route uses its own pinned identity. An intent
+has 15 s from entry, including cold connection setup on a bounded worker and up to 5 s for route choice.
+A write needs 3 s left to start. An expired
+in-flight write may have taken effect and is never replayed. For an action with a deadline, a started
+write without an HTTP reply reports that same uncertainty after a timeout or a dropped connection.
+A completed pairing read that finds the flat gone overrides the result. A stalled read or optional
+name, address or trouble cache leaves a started write's result intact. Caller cancellation takes precedence.
+The intent schedules the control reload in the background and checks cancellation before returning.
+A fan batch reports when only some fans confirmed, with an unlock instruction if the marker refused one.
+An unanswered POST takes precedence. Store commands retain their existing transport error mapping.
+
+HTTPS and WebSocket tasks are prepared while suspended. The paired client supplies the stream's request,
+pin and gate. The dispatch gate takes the lock shared with
+Forget, checks the saved pairing and token, and on the remote route also checks the URL, pin and
+enrollment generation. The marker read is the final blocking call. A remote task must resume within
+1 s of the start of that read. Admission commits the request's resume against the same attempt
+that handles expiry and cancellation. A stalled system call can hold the lock while its caller leaves
+at the cap. A failed attempt requests cancellation of the prepared task before returning and schedules
+transport cleanup in the background. A worker returning from a stall cannot
+resume an ended attempt. A marker read that stalls for 1 s denies remote admission while the worker
+still holds the lock. A home retry can probe while it waits for the worker to release the lock.
+
+The app creates the shared Keychain marker in the background on activation with
+`WhenPasscodeSetThisDeviceOnly`. The control extension reads it. Before any write has started, a
+remote lock refusal gets one home-only choice within the original deadline. If home answers, the
+action runs there. A marker lookup that times out during choice also withholds remote. Arestia
+consults LocalAuthentication only when it will show the unlock error. Home dispatch works after
+first unlock. Forget waits off the main actor for up to 10 s to acquire the lock. Once deletion starts,
+the worker finishes and the session reports its outcome even if the caller cancels or its deadline passes.
+After successful deletion the current session retires the store, clears the viewer cache and reloads
+controls, even after a root rebuild.
+If the lock stays busy, Settings shows the existing failure message and
+the owner can retry. Physical lock timing still needs the P7a iPhone measurements.
+
+The app and control extension read their ATS zone from `$ARESTIA_REMOTE_ZONE_FILE`, or
+`~/.config/arestia/remote-zone` when the variable is unset. Use one lowercase DNS name with at least two
+labels. Debug defaults to `home.example.net` when the file is missing. Release requires the file and the
+release audit requires a zone different from the Debug default. The build rejects malformed values and
+requires a regular file. Each target's sandboxed ATS phase declares its source plist, generator and resolved
+zone path as inputs. The phase runs on every build, so the generator can handle a missing input. The
+generated plist goes through Xcode's processing and signing. HTTPS and pin checks apply to each connection.
+
+Debug `-deadFlatdHome` replaces the saved home address with a test address. To exercise rediscovery in a
+control, launch before advertising the replacement home listener. The unified-log category `route` records
+the route, method, path and remaining action budget at dispatch. Gate builds use a 600 s action budget to
+preserve the 120 s request measurements and probe a home-only timing pairing over cellular as well.
+
+The fake flatd can serve remote enrollment with `--remote-url` and `--remote-pin`. The unit runner starts
+two loopback listeners with separate identity folders and checks their arrivals logs for failed TLS handshakes
+and zero HTTP requests when a route is offered the other route's key.
+
+**Known limits** (owner's decision 2026-11-28: merge once a review finds no security issue, write down the rest; the
+deciding review found none). Each costs reachability or responsiveness, never the token:
+- A pending enrollment change lives only in the app process; if the process ends before the write, the next home
+  snapshot refreshes it.
+- If the home connection drops an enrollment reply, remote control may stay unavailable until the next home snapshot.
+- A stall while iOS starts a health probe can delay the route choice and leave too little time to send the action
+  (the action then ends without sending; probes carry no token).
+- Not yet measured on the iPhone: how long after locking the marker still reads, passcode removal, the public route,
+  background completion of controls (the P7a phone tests).
+
 ### Build 4 uploaded 2026-11-26 23:56
 
 **Build 4 uploaded 2026-11-26 23:56** (lamp levels and Toggle cooking for flatd 1.6; the offline text names the flat

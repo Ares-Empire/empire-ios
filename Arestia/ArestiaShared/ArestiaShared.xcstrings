@@ -424,6 +424,36 @@
         }
       }
     },
+    "Set a passcode on your iPhone to control the flat from away." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lege einen Code für dein iPhone fest, um die Wohnung von unterwegs zu steuern."
+          }
+        }
+      }
+    },
+    "Some fans changed. Unlock your iPhone to change the rest." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einige Ventilatoren wurden umgestellt. Entsperre dein iPhone, um die übrigen umzustellen."
+          }
+        }
+      }
+    },
+    "Some fans changed; the others didn't confirm." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einige Ventilatoren wurden umgestellt. Die übrigen haben die Änderung nicht bestätigt."
+          }
+        }
+      }
+    },
     "Start cooking" : {
       "localizations" : {
         "de" : {
@@ -620,6 +650,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Schaltet die Ventilatoren ein, für eine Weile oder bis du sie ausschaltest. Den Timer führt die Steckdose, er endet also auch, wenn flatd nicht erreichbar ist."
+          }
+        }
+      }
+    },
+    "Unlock your iPhone to control the flat from away." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entsperre dein iPhone, um die Wohnung von unterwegs zu steuern."
           }
         }
       }

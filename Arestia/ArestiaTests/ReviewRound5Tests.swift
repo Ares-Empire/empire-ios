@@ -228,7 +228,7 @@ struct CookingFailureTests {
     /// still describe cooking; a change where all followed clears them.
     @Test func theCookingControlReflectsDevicesThatDidNotFollow() async throws {
         let connection = Flat.connection()
-        connection.remember(try Flat.devices([Flat.fan(1), Flat.fan(2)]), for: Flat.id)
+        await connection.remember(try Flat.devices([Flat.fan(1), Flat.fan(2)]), for: Flat.id)
         transport.answer("GET /api/modes", body: ["modes": [Flat.cooking]])
         transport.answer("POST /api/modes/cooking", body: active.merging(["failed": ["fan:fan_2": "timeout"]]) { $1 })
         let change = try await actions(connection).setCooking(true)
@@ -256,17 +256,17 @@ struct CookingFailureTests {
     }
 
     /// Kept only for the paired flat, for the state it describes, and for a while.
-    @Test func aTroubleNoteBelongsToItsPairingAndState() throws {
+    @Test func aTroubleNoteBelongsToItsPairingAndState() async throws {
         let connection = Flat.connection()
         let now = Date.now
-        connection.note(ModeTrouble(pairing: UUID(), mode: "cooking", active: true, names: ["Fan 2"], at: now))
+        try? await connection.note(ModeTrouble(pairing: UUID(), mode: "cooking", active: true, names: ["Fan 2"], at: now))
         #expect(connection.trouble(mode: "cooking", active: true, pairing: Flat.id) == nil)   // another pairing's: not kept
-        connection.note(ModeTrouble(pairing: Flat.id, mode: "cooking", active: true, names: ["Fan 2"], at: now))
+        try? await connection.note(ModeTrouble(pairing: Flat.id, mode: "cooking", active: true, names: ["Fan 2"], at: now))
         #expect(connection.trouble(mode: "cooking", active: true, pairing: Flat.id)?.names == ["Fan 2"])
         #expect(connection.trouble(mode: "cooking", active: false, pairing: Flat.id) == nil)
         #expect(connection.trouble(mode: "cooking", active: true, pairing: Flat.id,
                                    now: now + ModeTrouble.lasts + 1) == nil)
-        try connection.forget()
+        try await connection.forgetSavedPairing()
         try connection.save(Flat.pairing())
         #expect(connection.trouble(mode: "cooking", active: true, pairing: Flat.id) == nil)    // Forget wiped it
     }
@@ -274,7 +274,7 @@ struct CookingFailureTests {
     /// The app says it once, when it next hears flatd; the control goes on showing it (the note stays, said).
     @Test @MainActor func theAppSaysOnceWhatDidNotFollowOutsideIt() async throws {
         let connection = Flat.connection()
-        connection.note(ModeTrouble(pairing: Flat.id, mode: "cooking", active: true, names: ["Fan 2"], at: .now))
+        try? await connection.note(ModeTrouble(pairing: Flat.id, mode: "cooking", active: true, names: ["Fan 2"], at: .now))
         let (store, transport, events, _) = Flat.store(connection: connection)
         transport.answer("GET /api/scenes", body: ["scenes": []])
         store.start()
@@ -305,21 +305,21 @@ struct CookingFailureTests {
         events.send(.mode(FlatMode(id: "cooking", label: "Cooking", active: true, since: .now)))
         #expect(await eventually { store.isCooking })
         #expect(store.offer == nil)
-        connection.note(ModeTrouble(pairing: Flat.id, mode: "cooking", active: true, names: ["Fan 2"], at: .now))
+        try? await connection.note(ModeTrouble(pairing: Flat.id, mode: "cooking", active: true, names: ["Fan 2"], at: .now))
         #expect(await eventually { store.offer?.message == "Cooking was started outside the app. Didn't answer: Fan 2." })
         store.stop()
     }
 
     /// A late answer of a forgotten flat never clears the next flat's trouble, nor keeps one of its own.
-    @Test func aForgottenFlatsLateAnswerLeavesTheNextFlatsTroubleAlone() throws {
+    @Test func aForgottenFlatsLateAnswerLeavesTheNextFlatsTroubleAlone() async throws {
         let connection = Flat.connection()
         let old = Flat.id
-        try connection.forget()
+        try await connection.forgetSavedPairing()
         let next = Flat.pairing(id: UUID())
         #expect(try connection.pairNew(next))
-        connection.note(ModeTrouble(pairing: next.id, mode: "cooking", active: true, names: ["Fan 1"], at: .now))
-        connection.clearTrouble(mode: "cooking", pairing: old, now: false)   // the old flat's answer, late
-        connection.note(ModeTrouble(pairing: old, mode: "cooking", active: true, names: ["Fan 9"], at: .now))
+        try? await connection.note(ModeTrouble(pairing: next.id, mode: "cooking", active: true, names: ["Fan 1"], at: .now))
+        try? await connection.clearTrouble(mode: "cooking", pairing: old, now: false)   // the old flat's answer, late
+        try? await connection.note(ModeTrouble(pairing: old, mode: "cooking", active: true, names: ["Fan 9"], at: .now))
         #expect(connection.trouble(mode: "cooking", active: true, pairing: next.id)?.names == ["Fan 1"])
     }
 }

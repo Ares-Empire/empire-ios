@@ -16,9 +16,11 @@ extension WidgetLanguage {
 /// A failure an intent reports to Siri or Shortcuts, in the app's words.
 nonisolated struct FlatIntentError: Error, CustomLocalizedStringResourceConvertible {
     let message: String
+    let underlying: Error
     var localizedStringResource: LocalizedStringResource { LocalizedStringResource(stringLiteral: message) }
 
     init(_ error: Error) {
+        underlying = error
         if let gone = error as? ChosenDeviceGone {
             message = gone.message()
         } else {
@@ -29,33 +31,40 @@ nonisolated struct FlatIntentError: Error, CustomLocalizedStringResourceConverti
 
 /// Runs an intent's work in the app's language, turns failures into the app's words and asks Control Center to read
 /// its controls again.
-nonisolated func performFlatIntent<T: Sendable>(_ work: @Sendable () async throws -> T) async throws -> T {
-    WidgetLanguage.arestia.follow()
+nonisolated func performFlatIntent<T: Sendable>(
+    deadline: Deadline, reloadControls: @escaping @Sendable () -> Void = ArestiaControlKind.reloadAll,
+    _ work: @Sendable () async throws -> T
+) async throws -> T {
+    let outcome: Result<T, Error>
     do {
-        let result = try await work()
-        ArestiaControlKind.reloadAll()
-        return result
+        let language = try await deadline.blocking { _ in WidgetLanguage.arestia.language }
+        AppLanguage.show(language)
+        let result = try await FlatdReach.$intentBudget.withValue(deadline, operation: work)
+        outcome = .success(result)
     } catch {
-        ArestiaControlKind.reloadAll()
-        throw FlatIntentError(error)
+        outcome = .failure(error is CancellationError ? error : FlatIntentError(error))
     }
+    DispatchQueue.global(qos: .utility).async(execute: reloadControls)
+    try Task.checkCancellation()
+    return try outcome.get()
 }
 #if DEBUG && ARESTIA_GATE
 nonisolated func performFlatIntent<T: Sendable, Output: Sendable>(
-    timing: GateAction, _ work: @Sendable () async throws -> T, result: @Sendable (T) -> Output
+    deadline: Deadline = FlatdReach.intentDeadline(), timing: GateAction, _ work: @Sendable () async throws -> T, result: @Sendable (T) -> Output
 ) async throws -> Output {
-    WidgetLanguage.arestia.follow()
     do {
-        let answer = try await GateAction.$current.withValue(timing, operation: work)
-        ArestiaControlKind.reloadAll()
+        let answer = try await performFlatIntent(deadline: deadline) {
+            try await GateAction.$current.withValue(timing, operation: work)
+        }
         let output = result(answer)
+        try Task.checkCancellation()
         timing.resultReturned(.ok)
+        try Task.checkCancellation()
         return output
     } catch {
-        ArestiaControlKind.reloadAll()
-        let output = FlatIntentError(error)
-        timing.resultReturned(GateOutcome(error))
-        throw output
+        timing.resultReturned(GateOutcome((error as? FlatIntentError)?.underlying ?? error))
+        try Task.checkCancellation()
+        throw error
     }
 }
 #endif
@@ -100,15 +109,22 @@ nonisolated enum DeviceChoices {
         let label: String
     }
 
-    static func load(kind: Device.Kind, connection: FlatdConnection = .live,
+    static func load(kind: Device.Kind, connection supplied: FlatdConnection? = nil,
                      reach: FlatdReach? = nil) async -> [Choice] {
-        let version = connection.devicesVersion
-        if let answer = try? await (reach ?? FlatdReach(connection: connection)).run({ client in
+        let deadline = FlatdReach.intentBudget ?? FlatdReach.intentDeadline()
+        guard let connection = await deadline.bestEffort(default: nil, { _ in supplied ?? FlatdConnection.live }) else {
+            return []
+        }
+        let version = await deadline.bestEffort(default: nil) { _ in connection.devicesVersion }
+        if let answer = try? await (reach ?? FlatdReach(connection: connection)).run(deadline: deadline, { client in
             (try await client.devices(), client)
         }) {
-            connection.remember(answer.0, from: answer.1, readSince: version)
+            _ = await deadline.bestEffort(default: false) { hold in
+                connection.remember(answer.0, from: answer.1, readSince: version, hold: hold)
+            }
         }
-        return choices(kind: kind, from: connection.known)
+        let known = await deadline.bestEffort(default: nil) { _ in connection.known }
+        return choices(kind: kind, from: known)
     }
 
     /// The saved choices iOS asks for (a Shortcut's or a control's parameter), each one kept: one the paired flat does

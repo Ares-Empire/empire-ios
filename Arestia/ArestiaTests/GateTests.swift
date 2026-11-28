@@ -138,7 +138,7 @@ nonisolated final class GateTests: XCTestCase {
             _ = try await performFlatIntent(timing: trace, { try await actions.setFans(on: true) }) { $0.count }
             XCTFail("The offline fan's failure should be reported after both fan commands.")
         } catch is FlatIntentError {}
-        let rows = try GateTimingLog.newestFirst().reversed().map { $0.split(separator: "\t") }
+        let rows = try await GateTimingLog.newestFirst().reversed().map { $0.split(separator: "\t") }
             .filter { $0.count >= 4 && $0[1] == trace.id.uuidString }
         XCTAssertEqual(rows.map { $0.dropFirst(3).joined(separator: "\t") }, [
             "intent entry", "dispatch", "completion\tdeviceDidNotAnswer", "result returned\tdeviceDidNotAnswer"

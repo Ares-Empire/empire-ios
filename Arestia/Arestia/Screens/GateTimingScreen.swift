@@ -41,31 +41,33 @@ private struct GateTimingScreen: View {
         .background { SettingsWall(accent: .arestia) }
         .navigationTitle("Gate timing log")
         .navigationBarTitleDisplayMode(.inline)
-        .task(id: scenePhase) { reload() }
-        .refreshable { reload() }
+        .task(id: scenePhase) { await reload() }
+        .refreshable { await reload() }
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 if !lines.isEmpty, let file = GateTimingLog.file {
                     ShareLink(item: file)
-                    Button("Clear log", systemImage: "trash", role: .destructive, action: clear)
+                    Button("Clear log", systemImage: "trash", role: .destructive) {
+                        Task { await clear() }
+                    }
                 }
             }
         }
     }
 
-    private func reload() {
+    private func reload() async {
         do {
-            lines = try GateTimingLog.newestFirst()
+            lines = try await GateTimingLog.newestFirst()
             hasError = false
         } catch {
             hasError = true
         }
     }
 
-    private func clear() {
+    private func clear() async {
         do {
-            try GateTimingLog.clear()
-            reload()
+            try await GateTimingLog.clear()
+            await reload()
         } catch {
             hasError = true
         }

@@ -5,7 +5,8 @@ import Testing
 /// How the app asks flatd, and how it reads a refusal.
 struct ClientTests {
     let transport = FakeTransport()
-    var client: FlatdClient { FlatdClient(Flat.pairing(), transport: transport) }
+    let connection = Flat.connection()
+    var client: FlatdClient { FlatdClient(Flat.pairing(), transport: transport).gated(by: connection) }
 
     @Test func everyRequestButHealthCarriesTheKey() async throws {
         transport.answer("GET /api/health", body: ["ok": true, "version": "1.1.0"])
@@ -91,6 +92,7 @@ struct ClientTests {
     @Test func theViewerETagIsKeptAndSentBackExactly() async throws {
         let etag = #""abc-123""#
         let pinnedClient = FlatdClient(Flat.pairing(), transport: ViewerTransport(base: transport, etag: etag))
+            .gated(by: connection)
         transport.answer("GET /viewer", body: ["page": true])
         let answer = try await pinnedClient.viewerPage(ifNoneMatch: nil)
         #expect(answer == .page(Data(#"{"page":true}"#.utf8), etag: etag))
@@ -103,15 +105,16 @@ struct ClientTests {
         #expect(request.timeoutInterval == 30)
     }
 
-    private struct ViewerTransport: HTTPTransport, Sendable {
+    private struct ViewerTransport: PreparingTransport, Sendable {
         let base: FakeTransport
         let etag: String
 
-        func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
-            let (data, response) = try await base.send(request)
-            let tagged = HTTPURLResponse(url: request.url!, statusCode: response.statusCode,
-                                         httpVersion: nil, headerFields: ["ETag": etag])!
-            return (response.statusCode == 304 ? Data() : data, tagged)
+        func prepare(_ request: URLRequest, reply: Attempt<HTTPReply>) throws -> any SuspendedRequest {
+            base.prepare(request, reply: reply) { data, response in
+                let tagged = HTTPURLResponse(url: request.url!, statusCode: response.statusCode,
+                                             httpVersion: nil, headerFields: ["ETag": etag])!
+                return (response.statusCode == 304 ? Data() : data, tagged)
+            }
         }
     }
 
@@ -184,12 +187,13 @@ struct ActionsTests {
         #expect(await DeviceChoices.load(kind: .rollo, connection: connection, reach: reach).isEmpty)
     }
 
-    @Test func aFanThatDoesNotAnswerIsReportedAfterTheOthers() async throws {
+    @Test func deviceRefusalAfterOneFanConfirmsReportsPartialChange() async throws {
         transport.answer("GET /api/devices", body: ["devices": [Flat.fan(1), Flat.fan(2)]])
         transport.answer("POST /api/devices/fan:fan_1", body: Flat.fan(1, on: true))
         transport.answer("POST /api/devices/fan:fan_2", status: 504, body: ["error": "timeout"])
-        await #expect(throws: FlatdError.deviceDidNotAnswer) { try await actions().setFans(on: true) }
+        await #expect(throws: FlatdError.partialFans(needsUnlock: false)) { try await actions().setFans(on: true) }
         #expect(transport.bodies(for: "POST /api/devices/fan:fan_1").count == 1)
+        #expect(transport.bodies(for: "POST /api/devices/fan:fan_2").count == 1)
     }
 
     @Test func cookingAndItsState() async throws {

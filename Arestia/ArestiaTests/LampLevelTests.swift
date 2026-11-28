@@ -81,7 +81,7 @@ struct LampLevelTests {
 
     @Test func onlyLevelRequestsHaveFortySeconds() async throws {
         let transport = FakeTransport()
-        let client = FlatdClient(Flat.pairing(), transport: transport)
+        let client = FlatdClient(Flat.pairing(), transport: transport).gated(by: Flat.connection())
         transport.answer(route, body: lamp(level: "high"))
         transport.answer("GET /api/devices/" + id, body: lamp())
         transport.answer("POST /api/modes/cooking", body: Flat.cooking)

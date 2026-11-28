@@ -3,10 +3,21 @@ import SwiftUI
 
 @main
 struct ArestiaApp: App {
+    @Environment(\.scenePhase) private var scenePhase
+
     init() { AppFont.register() }
 
     var body: some Scene {
         WindowGroup { AppRoot(widget: .arestia) { ContentView() } }
+            .onChange(of: scenePhase, initial: true) { _, phase in
+                if phase == .active {
+                    Task.detached {
+                        await Deadline(after: .seconds(1)).bestEffort(default: ()) { hold in
+                            try RemoteUnlock.createIfMissing(hold)
+                        }
+                    }
+                }
+            }
     }
 }
 

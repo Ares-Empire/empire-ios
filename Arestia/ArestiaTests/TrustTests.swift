@@ -143,7 +143,7 @@ struct PinTests {
         var stream = URLRequest(url: URL(string: "ws://192.0.2.10:8787/api/events")!)
         stream.setValue("Bearer " + Flat.key, forHTTPHeaderField: "Authorization")
         await #expect(throws: FlatdError.unreachable) {
-            for try await _ in WebSocketEvents().events(from: stream, pin: Made.pinA) {}
+            for try await _ in await WebSocketEvents().events(from: stream, pin: Made.pinA) {}
         }
     }
 }
@@ -263,7 +263,7 @@ struct RediscoveryTests {
                                rediscover: { [URL(string: "http://192.0.2.77:8787")!] })
         await #expect(throws: FlatdError.unreachable) { try await FlatActions(reach: reach).runScene("all_down") }
         #expect(transport.requests(to: "192.0.2.77").isEmpty)
-        connection.move(Flat.pairing(), to: URL(string: "http://192.0.2.77:8787")!)
+        try? await connection.move(Flat.pairing(), to: FlatdClient(Flat.pairing(), at: URL(string: "http://192.0.2.77:8787")!))
         #expect(connection.pairing?.baseURL == Flat.base)
     }
 
@@ -280,7 +280,7 @@ struct RediscoveryTests {
         #expect(await eventually({ events.requests.last?.url?.host() == "192.0.2.77" }, timeout: .seconds(8)))
         events.send(try Flat.snapshot())
         #expect(await eventually { store.link == .live })
-        #expect(connection.pairing?.baseURL == moved)
+        #expect(await eventually { connection.pairing?.baseURL == moved })
         #expect(events.requests.allSatisfy { $0.url?.host() == "192.0.2.77" && $0.url?.scheme == "wss" })
         #expect(transport.requests(to: "192.0.2.66").allSatisfy { $0.value(forHTTPHeaderField: "Authorization") == nil })
         store.stop()
@@ -313,28 +313,28 @@ struct RediscoveryTests {
         let old = FlatdClient(Flat.pairing(), transport: transport)
         let switching = Task { try await FlatActions(reach: reach).setFans(on: true) }
         try await Task.sleep(for: .milliseconds(100))
-        try connection.forget()
+        try await connection.forgetSavedPairing()
         let other = FlatdPairing(baseURL: Flat.base, token: Flat.key, pin: MadeUpCertificates.pinB)
         #expect(try connection.pairNew(other))
         await #expect(throws: FlatdError.notPaired) { try await switching.value }
         #expect(transport.bodies(for: "POST /api/devices/fan:fan_1").isEmpty)
         #expect(!connection.isCurrent(old))
-        connection.remember(try Flat.devices([Flat.fan(1)]), from: old, readSince: connection.devicesVersion)
+        await connection.remember(try Flat.devices([Flat.fan(1)]), from: old, readSince: connection.devicesVersion)
         #expect(connection.knownDevices.isEmpty)
-        connection.remember(try Flat.devices([Flat.fan(2)]), from: FlatdClient(other, transport: transport),
+        await connection.remember(try Flat.devices([Flat.fan(2)]), from: FlatdClient(other, transport: transport),
                             readSince: connection.devicesVersion)
         #expect(connection.knownDevices.map(\.id) == ["fan:fan_2"])
     }
 
-    @Test func deviceNamesBelongToTheirPairing() throws {
+    @Test func deviceNamesBelongToTheirPairing() async throws {
         let connection = Flat.connection()
-        connection.remember(try Flat.devices([Flat.fan(1)]), for: Flat.id)
+        await connection.remember(try Flat.devices([Flat.fan(1)]), for: Flat.id)
         #expect(connection.knownDevices.map(\.id) == ["fan:fan_1"])
         // Paired anew (even with the same flatd, after Forget): the old pairing's names are not this pairing's.
         try connection.save(Flat.pairing(id: UUID()))
         #expect(connection.knownDevices.isEmpty)
-        try connection.forget()
-        connection.remember(try Flat.devices([Flat.fan(1)]), for: Flat.id)   // a late write after Forget: nothing
+        try await connection.forgetSavedPairing()
+        await connection.remember(try Flat.devices([Flat.fan(1)]), for: Flat.id)   // a late write after Forget: nothing
         #expect(connection.knownDevices.isEmpty)
     }
 
@@ -522,7 +522,7 @@ struct LiveFlatdTests {
     @Test func theEventStreamArrivesOverThePinnedSocket() async throws {
         let client = liveClient()
         var first: FlatEvent?
-        for try await event in WebSocketEvents().events(from: client.eventsRequest, pin: client.pin) {
+        for try await event in await WebSocketEvents().events(from: client.eventsRequest, pin: client.pin) {
             first = event
             break
         }
@@ -553,7 +553,7 @@ struct LiveFlatdTests {
         await #expect(throws: FlatdError.unreachable) { _ = try await client.devices() }
         await #expect(throws: FlatdError.unreachable) { _ = try await client.send(.power(on: true), to: "fan:fan_1") }
         await #expect(throws: FlatdError.unreachable) {
-            for try await _ in WebSocketEvents().events(from: client.eventsRequest, pin: wrong) {}
+            for try await _ in await WebSocketEvents().events(from: client.eventsRequest, pin: wrong) {}
         }
         #expect(try await requestsSeen() == before + 1)                // only this count itself
         // And the right pin still works afterwards (a session per pin: no connection is shared between them).
@@ -571,7 +571,7 @@ struct LiveFlatdTests {
         let client = liveClient(pairing).gated(by: connection)
         #expect(try await client.devices().isEmpty == false)          // through the gate while paired
         let before = try await requestsSeen()
-        try connection.forget()
+        try await connection.forgetSavedPairing()
         await #expect(throws: FlatdError.notPaired) { _ = try await client.devices() }
         await #expect(throws: FlatdError.notPaired) { _ = try await client.send(.power(on: true), to: "fan:fan_1") }
         #expect(try await requestsSeen() == before + 1)                // only this count itself

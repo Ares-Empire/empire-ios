@@ -384,3 +384,26 @@ too (`de.ares-empire.aresium.widget`, `de.ares-empire.aresus.widget`); the share
 prefix. For people besides the owner: external testing with a public TestFlight link per app, entered as `install` in
 `ares-empire/webauth/apps.json` (the Empire app's Install button shows it to accounts that have the app). The forms:
 `docs/APP-STORE.md`. Every build so far: `docs/BUILDS.md`.
+
+## Pinned home services
+
+`Shared/HomeReach/` provides `SPKIPin` for EC P-256 server keys and `PinnedServer` for TLS challenges and
+redirects. `PinnedSession` caches one ephemeral HTTP session per pin and creates a dedicated session for
+events. Session construction happens outside the cache lock. The cache keeps the first session
+installed for a pin and invalidates duplicates.
+
+`HomeRoute.select` reads a mailbox of results from a saved home address, discovery, and a remote
+listener. When the selection ends, it closes probe admission synchronously, including admission
+in nested `HomeRoute.first` races. Losing tasks are cancelled off the return path. The cap bounds
+the wait even when a probe is stalled. Each caller supplies its health probes, discovery, and remote policy.
+The default policy allows remote, including on the lock screen.
+
+`Deadline` uses `ContinuousClock` so time spent suspended counts. An `Attempt` records the first
+ending and whether a commit ran under the same lock. Waiting ends on a result, the cap or caller
+cancellation. An attempt runs its short failure handlers before delivering a failure. The handlers
+can schedule cleanup separately. Synchronous work runs on a
+dispatch queue and can be abandoned when a system call stalls. An ended attempt refuses a late
+commit. An admission timer can end an attempt that has yet to commit. A blocking operation that
+must report the result of an admitted change can keep its waiter through cancellation and expiry
+once its commit succeeds. Tests can supply a clock. Request admission and decisions about repeating an action belong
+to the calling app.

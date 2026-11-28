@@ -8,7 +8,21 @@ import WidgetKit
 nonisolated struct FlatActions: Sendable {
     let reach: FlatdReach
 
-    static var live: FlatActions { FlatActions(reach: FlatdReach(connection: .live)) }
+    #if DEBUG
+    @TaskLocal static var liveFactory: (@Sendable () -> FlatActions)?
+    #endif
+
+    static var live: FlatActions {
+        get async throws {
+            let deadline = FlatdReach.intentBudget ?? FlatdReach.intentDeadline()
+            #if DEBUG
+            let factory = liveFactory ?? { FlatActions(reach: FlatdReach(connection: .live)) }
+            #else
+            let factory: @Sendable () -> FlatActions = { FlatActions(reach: FlatdReach(connection: .live)) }
+            #endif
+            return try await deadline.blocking { _ in factory() }
+        }
+    }
 
     // MARK: cooking (a mode on flatd: fans on and its blind up; ended: fans off, that blind to its favourite spot)
 
@@ -26,20 +40,29 @@ nonisolated struct FlatActions: Sendable {
 
     private func setCooking(resolving active: @Sendable (FlatdClient) async throws -> Bool) async throws -> CookingChange {
         let connection = reach.connection
-        let (change, pairing) = try await reach.run { client in
+        let deadline = FlatdReach.intentBudget ?? FlatdReach.intentDeadline()
+        let (change, pairing) = try await reach.run(deadline: deadline) { client in
             let active = try await active(client)
             let (mode, failed) = try await client.setMode(FlatMode.cookingID, active: active)
-            let names = connection.names(failed, pairing: client.pairingID)
+            let names = await deadline.bestEffort(default: failed) { _ in
+                connection.names(failed, pairing: client.pairingID)
+            }
+            try Task.checkCancellation()
             return (CookingChange(isActive: mode.active, failed: names), client.pairingID)
         }
         if let pairing {
-            if change.failed.isEmpty {
-                connection.clearTrouble(mode: FlatMode.cookingID, pairing: pairing, now: change.isActive)
-            } else {
-                connection.note(ModeTrouble(pairing: pairing, mode: FlatMode.cookingID, active: change.isActive,
-                                            names: change.failed, at: .now))
+            let at = Date.now
+            await deadline.bestEffort(default: ()) { hold in
+                if change.failed.isEmpty {
+                    try connection.clearTrouble(mode: FlatMode.cookingID, pairing: pairing, now: change.isActive,
+                                                through: at, hold: hold)
+                } else {
+                    try connection.note(ModeTrouble(pairing: pairing, mode: FlatMode.cookingID, active: change.isActive,
+                                                   names: change.failed, at: at), hold: hold)
+                }
             }
         }
+        try Task.checkCancellation()
         return change
     }
 
@@ -73,44 +96,59 @@ nonisolated struct FlatActions: Sendable {
     /// 2). Only where no names can be kept at all does a device keep the name flatd just sent.
     private func read() async throws -> (devices: [Device], client: FlatdClient) {
         let connection = reach.connection
-        let version = connection.devicesVersion
-        return try await reach.run { client in
+        let deadline = FlatdReach.intentBudget ?? FlatdReach.intentDeadline()
+        let version = await deadline.bestEffort(default: nil) { _ in connection.devicesVersion }
+        try Task.checkCancellation()
+        return try await reach.run(deadline: deadline) { client in
             let devices = try await client.devices()
-            return (try connection.named(devices, from: client, readSince: version), client)
+            let named = await deadline.bestEffort(default: devices) { hold in
+                try connection.named(devices, from: client, readSince: version, hold: hold)
+            }
+            try Task.checkCancellation()
+            return (named, client)
         }
     }
 
     /// Switches the fans (all, or those in `only`) on (for `minutes`, nil: until switched off) or off, side by side.
-    /// Returns the fans as flatd confirmed them; throws the first failure after every fan was tried. `only` holds
+    /// Returns the fans as flatd confirmed them; reports an unanswered write before other failures. `only` holds
     /// saved choices (`SavedDevice`): one the paired flat does not have (any more), or one chosen before the flat was
     /// forgotten, throws `ChosenDeviceGone.fan`, and nothing is switched.
     @discardableResult
     func setFans(on: Bool, minutes: Int? = nil, only saved: [String]? = nil) async throws -> [Device] {
         let command = DeviceCommand.power(on: on, seconds: minutes.map { max(1, $0) * 60 })
-        let connection = reach.connection
-        return try await reach.run { client in
+        let deadline = FlatdReach.intentBudget ?? FlatdReach.intentDeadline()
+        return try await reach.run(deadline: deadline) { client in
             let ids = try saved?.map { choice in
                 do { return try SavedDevice.device(choice, of: client) } catch { throw ChosenDeviceGone.fan }
             }
             let fans = try await client.devices().filter { $0.kind == .fan && (ids?.contains($0.id) ?? true) }
             if let ids, Set(fans.map(\.id)) != Set(ids) { throw ChosenDeviceGone.fan }
             guard !fans.isEmpty else { throw FlatdError.unknown }
-            // Forgotten while the list was read: then nothing is switched.
-            guard connection.isCurrent(client) else { throw FlatdError.notPaired }
-            return try await withThrowingTaskGroup(of: Result<Device, FlatdError>.self) { group in
+            return try await withThrowingTaskGroup(of: Result<Device, Error>.self) { group in
                 for fan in fans {
                     group.addTask {
                         do { return .success(try await client.send(command, to: fan.id)) }
-                        catch let error as FlatdError { return .failure(error) }
-                        catch { return .failure(.unreachable) }
+                        catch is CancellationError { throw CancellationError() }
+                        catch { return .failure(error) }
                     }
                 }
-                var done: [Device] = [], firstError: FlatdError?
+                var done: [Device] = [], firstError: Error?
                 for try await result in group {
                     switch result {
                     case let .success(device): done.append(device)
-                    case let .failure(error): firstError = firstError ?? error
+                    case let .failure(error):
+                        // Preserve a lock refusal if the whole batch can still retry at home.
+                        if (error as? FlatdError) == .noAnswer {
+                            firstError = error
+                        } else if error is FlatdGate.RemoteDenied, (firstError as? FlatdError) != .noAnswer {
+                            firstError = error
+                        } else {
+                            firstError = firstError ?? error
+                        }
                     }
+                }
+                if !done.isEmpty, let error = firstError, (error as? FlatdError) != .noAnswer {
+                    firstError = FlatdError.partialFans(needsUnlock: error is FlatdGate.RemoteDenied)
                 }
                 #if DEBUG && ARESTIA_GATE
                 GateAction.current?.fansSettled(firstError.map(GateOutcome.init) ?? .ok)
@@ -171,8 +209,14 @@ nonisolated struct FlatActions: Sendable {
     @discardableResult
     func runScene(_ id: String) async throws -> [String] {
         let connection = reach.connection
-        return try await reach.run { client in
-            connection.names(try await client.runScene(id), pairing: client.pairingID)
+        let deadline = FlatdReach.intentBudget ?? FlatdReach.intentDeadline()
+        return try await reach.run(deadline: deadline) { client in
+            let failed = try await client.runScene(id)
+            let names = await deadline.bestEffort(default: failed) { _ in
+                connection.names(failed, pairing: client.pairingID)
+            }
+            try Task.checkCancellation()
+            return names
         }
     }
 }

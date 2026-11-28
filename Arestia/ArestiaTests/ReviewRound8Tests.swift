@@ -91,7 +91,7 @@ struct RoundEightTroubleTests {
     /// device its command again): the trouble is gone. A repeated End still keeps an end's trouble (round 7's test).
     @Test func aConfirmedStartClearsTheTrouble() async throws {
         let connection = Flat.connection()
-        connection.note(ModeTrouble(pairing: Flat.id, mode: "cooking", active: true, names: ["Fan 2"], at: .now))
+        try? await connection.note(ModeTrouble(pairing: Flat.id, mode: "cooking", active: true, names: ["Fan 2"], at: .now))
         var active = Flat.cooking
         active["active"] = true
         transport.answer("POST /api/modes/cooking", body: active.merging(["failed": [:]]) { $1 })
@@ -109,7 +109,7 @@ struct SavedChoiceTests {
     /// with it switches nothing.
     @Test func aChoiceTheFlatDoesNotHaveStaysAChoiceAndActsOnNothing() async throws {
         let connection = Flat.connection()
-        connection.remember(try Flat.devices([Flat.fan(1), Flat.fan(2)]), for: Flat.id)
+        await connection.remember(try Flat.devices([Flat.fan(1), Flat.fan(2)]), for: Flat.id)
         let known = DeviceChoices.choices(kind: .fan, from: connection.known)
         let fromBeforeForget = SavedDevice.id(for: "fan:fan_1", of: UUID())
         let resolved = DeviceChoices.resolve([known[1].id, fromBeforeForget], among: known, language: .english)
