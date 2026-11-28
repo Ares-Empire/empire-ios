@@ -62,7 +62,10 @@ nonisolated enum FlatdLaunch {
                     guard attempt.isLive else { return }
                     let prepared = try prepare(attempt)
                     let request = prepared.request
-                    attempt.onFailure { request.cancel() }
+                    // End the attempt synchronously to seal admission. Transport cleanup can block.
+                    attempt.onFailure {
+                        DispatchQueue.global(qos: .userInitiated).async { request.cancel() }
+                    }
                     switch admission {
                     case .open:
                         try attempt.commit {

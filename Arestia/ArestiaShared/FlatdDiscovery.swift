@@ -171,7 +171,7 @@ nonisolated struct FlatdReach: Sendable {
             let outcome = FlatdOutcome.resolve(result, writeStarted: dispatch.writeStarted,
                                                pairing: postflight, cancelled: Task.isCancelled)
             if case .finish(.success) = outcome, client.route == .home, client.baseURL != pairing.baseURL {
-                await deadline.bestEffort(default: ()) { hold in
+                _ = await deadline.bestEffort(default: false) { hold in
                     try connection.move(pairing, to: client, hold: hold)
                 }
             }

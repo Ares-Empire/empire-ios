@@ -171,8 +171,10 @@ final class MemoryKeys: FlatdKeyStore, @unchecked Sendable {
         }
     }
     var beforeUpdate: (@Sendable () -> Void)?
+    var rejectUpdate: (@Sendable () -> Bool)?
     func update(_ value: String, ifLabel label: String, newLabel: String) -> Bool {
         beforeUpdate?()
+        if rejectUpdate?() == true { return false }
         return lock.withLock {
             guard item?.label == label else { return false }
             item = (value, newLabel)
@@ -308,7 +310,7 @@ nonisolated extension FlatdConnection {
     }
 
     func move(_ pairing: FlatdPairing, to client: FlatdClient) async throws {
-        try await Deadline(after: .seconds(6)).blocking { try move(pairing, to: client, hold: $0) }
+        _ = try await Deadline(after: .seconds(6)).blocking { try move(pairing, to: client, hold: $0) }
     }
 
     func remember(_ devices: [Device], for pairing: UUID) async {

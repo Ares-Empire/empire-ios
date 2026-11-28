@@ -121,18 +121,18 @@ nonisolated final class RemoteEnrollment: Sendable {
     }
 
     private func refresh(_ signal: Signal) async -> Answer? {
-        var shouldMove = true
         while isLatest {
             switch await onWorker({ self.connection.saved }) {
             case .unreadable:
                 try? await Task.sleep(for: Self.retryPause)
             case let .paired(saved) where saved.id == key.pairing && saved.pin == signal.pin:
-                if shouldMove, saved.revision == signal.revision, saved.baseURL != signal.address {
-                    shouldMove = false
-                    await move(saved, using: signal)
-                    continue // Use the revision after the move for the GET and its CAS.
+                if saved.revision == signal.revision, saved.baseURL != signal.address {
+                    if !(await move(saved, using: signal)) {
+                        try? await Task.sleep(for: Self.retryPause)
+                    }
+                    // Re-read before the GET. Retry an unchanged revision and honor a newer saved address.
+                    continue
                 }
-                shouldMove = false
                 let address = saved.revision == signal.revision ? signal.address : saved.baseURL
                 let client = FlatdClient(saved, at: address, transport: signal.transport)
                     .gated(by: connection, revision: saved.revision)
@@ -162,12 +162,12 @@ nonisolated final class RemoteEnrollment: Sendable {
         }
     }
 
-    private func move(_ saved: FlatdPairing, using signal: Signal) async {
+    private func move(_ saved: FlatdPairing, using signal: Signal) async -> Bool {
         let client = FlatdClient(saved, at: signal.address, transport: signal.transport)
-        await onWorker { [self] in
-            guard isLatest else { return }
+        return await onWorker { [self] in
+            guard isLatest else { return false }
             let hold = Attempt<Void>(until: Deadline(after: .seconds(client.readTimeout)))
-            try? connection.move(saved, to: client, hold: hold)
+            return (try? connection.move(saved, to: client, hold: hold)) ?? false
         }
     }
 

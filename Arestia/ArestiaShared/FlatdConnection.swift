@@ -395,14 +395,14 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     /// A new address for this pairing (flatd found again over Bonjour and proved by its key), written only over the
     /// version it was read as: it changes nothing once the pairing was renewed, replaced or forgotten, so a late lookup
     /// (in the app or a control) never brings an old pairing or an old key back.
-    func move(_ pairing: FlatdPairing, to client: FlatdClient, hold: Hold) throws {
-        guard client.route == .home, client.pairingID == pairing.id, client.pin == pairing.pin else { return }
+    func move(_ pairing: FlatdPairing, to client: FlatdClient, hold: Hold) throws -> Bool {
+        guard client.route == .home, client.pairingID == pairing.id, client.pin == pairing.pin else { return false }
         let baseURL = client.baseURL
-        guard pairing.baseURL != baseURL, baseURL.scheme == "https" else { return }
+        guard pairing.baseURL != baseURL, baseURL.scheme == "https" else { return false }
         var moved = pairing
         moved.baseURL = baseURL
         moved.revision = UUID()
-        _ = try renew(pairing, with: moved, hold: hold)
+        return try renew(pairing, with: moved, hold: hold)
     }
 
     /// The client for the saved pairing, at its saved address.

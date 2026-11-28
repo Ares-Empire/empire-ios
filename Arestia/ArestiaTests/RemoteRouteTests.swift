@@ -963,6 +963,36 @@ struct RemoteEnrollmentTests {
         }
     }
 
+    @MainActor @Test func failedHomeMoveRetriesBeforeEnrollmentOnTheSameStream() async throws {
+        let keys = MemoryKeys()
+        let attempts = OSAllocatedUnfairLock(initialState: 0)
+        keys.rejectUpdate = { attempts.withLock { $0 += 1; return $0 == 1 } }
+        let connection = FlatdConnection(defaults: nil, names: Flat.nameFile(), keychain: keys, lock: .processOnly)
+        try connection.save(Flat.pairing())
+        let (store, transport, events, _) = Flat.store(connection: connection, rediscover: { [moved] })
+        defer { store.stop() }
+        let deadHost = try #require(Flat.base.host())
+        let liveHost = try #require(moved.host())
+        transport.answer("GET \(deadHost)/api/health", fails: true)
+        transport.answer("GET \(deadHost)/api/remote", fails: true)
+        transport.answer("GET /api/scenes", body: ["scenes": []])
+        transport.answer("GET \(liveHost)/api/remote", body: ["url": awayURL, "spki_sha256": awayPin])
+
+        store.start()
+        try #require(await eventually({ events.isOpen }, timeout: .seconds(5)))
+        events.send(try Flat.snapshot())
+        try #require(await eventually { connection.pairing?.remote?.url.absoluteString == awayURL })
+        #expect(connection.pairing?.baseURL == moved)
+        #expect(attempts.withLock { $0 } == 3) // Failed move, successful move, enrollment.
+
+        transport.answer("GET \(liveHost)/api/remote", body: ["url": NSNull(), "spki_sha256": NSNull()])
+        events.send(try Flat.snapshot())
+        try #require(await eventually { connection.pairing?.remote == nil })
+        #expect(connection.pairing?.baseURL == moved)
+        #expect(events.requests.count == 1)
+        #expect(transport.sent.filter { $0.url?.path() == "/api/remote" }.map { $0.url?.host() } == [liveHost, liveHost])
+    }
+
     @MainActor @Test func enrollmentCannotMoveOverANewerHomeAddress() async throws {
         let (store, transport, events, _) = Flat.store()
         let connection = store.connection
@@ -1209,6 +1239,49 @@ private nonisolated struct HeldDispatchLock: Sendable {
 }
 
 struct RouteIsolationTests {
+    @Test(arguments: [true, false]) func stalledLoserCleanupDoesNotHoldWinner(selectRoute: Bool) async throws {
+        let flat = try RouteFixture()
+        let clock = TestClock()
+        let cleanup = BlockingStep()
+        defer { cleanup.release.signal() }
+        let homeHost = try #require(Flat.base.host())
+        let resumed = OSAllocatedUnfairLock(initialState: false)
+        let winner = OSAllocatedUnfairLock<URL?>(initialState: nil)
+        flat.health(homeHost, delay: .seconds(60))
+        flat.transport.afterResume = { request in
+            if request.url?.host() == homeHost { resumed.withLock { $0 = true } }
+        }
+        flat.transport.cancelled = { request in
+            if request.url?.host() == homeHost { cleanup.wait() }
+        }
+        let allowWinner = AsyncStream<Void>.makeStream()
+        defer { allowWinner.continuation.finish() }
+        let winnerReady: @Sendable () async -> Void = {
+            for await _ in allowWinner.stream { break }
+        }
+        flat.health(away, after: winnerReady)
+        flat.health(try #require(moved.host()), after: winnerReady)
+        let choice = Task {
+            let deadline = Deadline(after: .seconds(5), clock: clock.clock)
+            let address: URL?
+            if selectRoute {
+                address = try await flat.reach.run(deadline: deadline) { $0.baseURL }
+            } else {
+                address = await FlatdReach.find(flat.pairing, among: [Flat.base, moved], transport: flat.transport,
+                                                within: deadline, deadline: deadline)?.baseURL
+            }
+            winner.withLock { $0 = address }
+        }
+        defer { choice.cancel() }
+        try #require(await eventually { resumed.withLock { $0 } })
+        clock.advance(.milliseconds(500))
+        allowWinner.continuation.yield(())
+        try #require(await eventually { cleanup.entered })
+        try #require(await eventually { winner.withLock { $0 } != nil })
+        #expect(winner.withLock { $0 } == (selectRoute ? flat.pairing.remote?.url : moved))
+        #expect(!cleanup.exited)
+    }
+
     @Test func stalledHomeProbeDoesNotHoldRemoteWinner() async throws {
         let stall = BlockingStep()
         defer { stall.release.signal() }
