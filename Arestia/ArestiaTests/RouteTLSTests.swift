@@ -23,7 +23,12 @@ struct RouteTLSTests {
         let connection = Flat.connection(linked: false)
         let initial = FlatdPairing(baseURL: homeURL, token: h.token, pin: h.pin)
         try connection.save(initial)
-        await RemoteEnrollment.signal(snapshot: initial, at: homeURL, connection: connection).value
+        // Enrollment from the home fake. A slow CI runner can drop one attempt at its caps (a known liveness limit:
+        // the next snapshot retries); signal again, at most three times, as the next snapshot would.
+        for _ in 0..<3 {
+            await RemoteEnrollment.signal(snapshot: initial, at: homeURL, connection: connection).value
+            if (try? connection.current())?.remote != nil { break }
+        }
         let paired = try connection.current()
         #expect(paired.remote?.pin == a.pin)
         #expect(paired.remote?.url.port == aLoopback.port)

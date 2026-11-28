@@ -119,6 +119,11 @@ struct RemoteRouteTests {
         let selected = try await reach.run { $0 }
         #expect(start.duration(to: ContinuousClock().now) < .seconds(2))
         #expect(selected.route == .home && selected.baseURL == moved)
+        // Losers are cancelled off the return path (round 10), so the slow resolver hears it shortly after.
+        let cancelBy = ContinuousClock().now + .seconds(5)
+        while !slowCancelled.withLock({ $0 }) && ContinuousClock().now < cancelBy {
+            try await Task.sleep(for: .milliseconds(10))
+        }
         #expect(slowCancelled.withLock { $0 })
     }
 

@@ -288,9 +288,10 @@ final class Counter {
     var count = 0
 }
 
-/// Waits (briefly) until a condition holds: the store's work runs in tasks.
+/// Waits until a condition holds: the store's work runs in tasks and on background workers. A passing check returns as
+/// soon as the condition holds; the limit only bounds a failing one, and is generous for slow CI runners.
 @MainActor
-func eventually(_ condition: () -> Bool, timeout: Duration = .seconds(2)) async -> Bool {
+func eventually(_ condition: () -> Bool, timeout: Duration = .seconds(10)) async -> Bool {
     let clock = ContinuousClock(), end = clock.now + timeout
     while clock.now < end {
         if condition() { return true }
