@@ -72,7 +72,9 @@ nonisolated struct Deadline: Sendable {
                 do { attempt.end(.success(try await operation())) }
                 catch { attempt.end(.failure(error)) }
             }
-            attempt.onFailure { task.cancel() }
+            attempt.onFailure {
+                DispatchQueue.global(qos: .userInitiated).async { task.cancel() }
+            }
         }
         return try outcome.result.get()
     }
@@ -181,7 +183,7 @@ nonisolated final class Attempt<Value: Sendable>: Hold, @unchecked Sendable {
 
     @discardableResult
     private func finish(_ result: Result<Value, Error>, beforeCommit: Bool) -> Bool {
-        let ending = state.withLock { state -> (Outcome, CheckedContinuation<Outcome, Never>?, [@Sendable () -> Void])? in
+        let ending = state.withLock { state -> (Outcome, CheckedContinuation<Outcome, Never>?)? in
             guard state.outcome == nil, !(beforeCommit && state.committed) else { return nil }
             let result = if case .failure(let error) = result, error is CancellationError {
                 result
@@ -192,18 +194,19 @@ nonisolated final class Attempt<Value: Sendable>: Hold, @unchecked Sendable {
             }
             let outcome = Outcome(result: result, committed: state.committed)
             state.outcome = outcome
+            if case .failure = result { state.cleanups.forEach { $0() } }
+            state.cleanups = []
             let waiter = state.waiter
             state.waiter = nil
-            let cleanups = state.cleanups
-            state.cleanups = []
-            return (outcome, waiter, cleanups)
+            return (outcome, waiter)
         }
-        guard let (outcome, waiter, cleanups) = ending else { return false }
+        guard let (outcome, waiter) = ending else { return false }
         waiter?.resume(returning: outcome)
-        if case .failure = outcome.result { cleanups.forEach { $0() } }
         return true
     }
 
+    /// Registered work runs before the failure is delivered, under the attempt lock.
+    /// It must be short and must not call back into the attempt.
     func onFailure(_ cleanup: @escaping @Sendable () -> Void) {
         let failed = state.withLock { state in
             switch state.outcome?.result {

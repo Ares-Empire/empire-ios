@@ -21,7 +21,8 @@ nonisolated struct FlatdBonjour: Sendable {
         let names = await browse().shuffled().prefix(Self.maxCandidates)
         return await HomeRoute.first(names.map { name in
             { @Sendable in
-                guard !Task.isCancelled, let url = await resolve(name), !Task.isCancelled else { return nil }
+                guard let url = await resolve(name), HomeRoute.admission?.isOpen == true,
+                      !Task.isCancelled else { return nil }
                 return await probe(url)
             }
         })

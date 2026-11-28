@@ -10,7 +10,8 @@ nonisolated final class RemoteEnrollment: Sendable {
 
     private struct Signal: Sendable {
         let pin: FlatdPin
-        let revision: UUID
+        let token: String
+        let savedAddress: URL
         let address: URL
         let transport: FlatdTransportOverride?
     }
@@ -45,7 +46,8 @@ nonisolated final class RemoteEnrollment: Sendable {
     static func signal(snapshot: FlatdPairing, at address: URL, connection: FlatdConnection,
                        transport: FlatdTransportOverride? = nil) -> Task<Void, Never> {
         let key = Key(lock: ObjectIdentifier(connection.lock), pairing: snapshot.id)
-        let signal = Signal(pin: snapshot.pin, revision: snapshot.revision, address: address, transport: transport)
+        let signal = Signal(pin: snapshot.pin, token: snapshot.token, savedAddress: snapshot.baseURL,
+                            address: address, transport: transport)
         return active.withLock { active in
             if var work = active[key] {
                 if !work.stopped {
@@ -126,15 +128,15 @@ nonisolated final class RemoteEnrollment: Sendable {
             case .unreadable:
                 try? await Task.sleep(for: Self.retryPause)
             case let .paired(saved) where saved.id == key.pairing && saved.pin == signal.pin:
-                if saved.revision == signal.revision, saved.baseURL != signal.address {
+                let sameHome = saved.baseURL == signal.savedAddress && saved.token == signal.token
+                if sameHome, saved.baseURL != signal.address {
                     if !(await move(saved, using: signal)) {
                         try? await Task.sleep(for: Self.retryPause)
                     }
-                    // Re-read before the GET. Retry an unchanged revision and honor a newer saved address.
+                    // Re-read before the GET. Remote changes leave the stream's home information current.
                     continue
                 }
-                let address = saved.revision == signal.revision ? signal.address : saved.baseURL
-                let client = FlatdClient(saved, at: address, transport: signal.transport)
+                let client = FlatdClient(saved, transport: signal.transport)
                     .gated(by: connection, revision: saved.revision)
                 guard let fetch = startFetch(client) else { return nil }
                 let answer = await fetch.result

@@ -34,6 +34,7 @@ nonisolated final class FakeTransport: PreparingTransport, @unchecked Sendable {
 
     var onPrepare: (@Sendable (URLRequest) -> Void)?
     var afterResume: (@Sendable (URLRequest) -> Void)?
+    var cancellationRequested: (@Sendable (URLRequest) -> Void)?
     var cancelled: (@Sendable (URLRequest) -> Void)?
 
     func prepare(_ request: URLRequest, reply: Attempt<HTTPReply>) throws -> any SuspendedRequest {
@@ -63,9 +64,11 @@ nonisolated final class FakeTransport: PreparingTransport, @unchecked Sendable {
             }
             work.withLock { $0 = task }
         }, onCancel: {
+            self.cancellationRequested?(request)
+        }, after: { self.afterResume?(request) }, cleanup: {
             work.withLock { $0 }?.cancel()
             self.cancelled?(request)
-        }, after: { self.afterResume?(request) })
+        })
     }
 
     private func start(_ request: URLRequest) -> Answer? {
@@ -89,9 +92,11 @@ nonisolated struct FakeRequest: SuspendedRequest {
     let onResume: @Sendable () -> Void
     let onCancel: @Sendable () -> Void
     var after: @Sendable () -> Void = {}
+    var cleanup: @Sendable () -> Void = {}
 
     func resume() { onResume() }
     func cancel() { onCancel() }
+    func cleanupAfterCancellation() { cleanup() }
     func afterResume() { after() }
 }
 
@@ -118,8 +123,9 @@ nonisolated final class FakeEvents: FlatEventPreparing, @unchecked Sendable {
             }
         }, onCancel: {
             continuation.finish()
+        }, after: { self.afterResume?() }, cleanup: {
             self.cancelled?()
-        }, after: { self.afterResume?() }))
+        }))
     }
 
     private struct Events: PreparedEvents {
@@ -128,6 +134,7 @@ nonisolated final class FakeEvents: FlatEventPreparing, @unchecked Sendable {
 
         func resume() { request.resume() }
         func cancel() { request.cancel() }
+        func cleanupAfterCancellation() { request.cleanupAfterCancellation() }
         func afterResume() { request.afterResume() }
         func stream() -> AsyncThrowingStream<FlatEvent, Error> { events }
     }

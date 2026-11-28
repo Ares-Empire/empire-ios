@@ -1158,6 +1158,7 @@ final class FlatSession {
     private let reloadControls: @MainActor () -> Void
     private var reading: Task<Void, Never>?
     private var readFailures = 0
+    private var hasEnded = false
     private static let log = Logger(subsystem: "de.ares-empire.arestia", category: "session")
 
     /// `makeStore`: the store for a pairing (nil: none) and what it calls when the saved pairing is no longer its own.
@@ -1175,6 +1176,7 @@ final class FlatSession {
 
     /// Register the session the root actually presents. SwiftUI can construct unused initial State values.
     func activate() {
+        hasEnded = false
         Self.current = Self.current.filter { $0.value.session != nil }
         Self.current[ObjectIdentifier(connection.lock)] = WeakSession(session: self)
     }
@@ -1226,6 +1228,7 @@ final class FlatSession {
     /// This session is done (the app's root was built anew, as after a language switch): its store retires, so no
     /// work of it goes on next to the new session's.
     func end() {
+        hasEnded = true
         let key = ObjectIdentifier(connection.lock)
         if Self.current[key]?.session === self { Self.current.removeValue(forKey: key) }
         reading?.cancel()
@@ -1256,11 +1259,13 @@ final class FlatSession {
             Self.log.error("the pairing could not be forgotten")
             return false
         }
-        // Admission already sees the deleted pairing. Retire the old store and clear its page.
-        store?.retire()
-        viewerCache.removeAll()
-        load()
-        reloadControls()
+        let current = Self.current[ObjectIdentifier(connection.lock)]?.session
+        let recipient = current ?? (hasEnded ? nil : self)
+        if recipient !== self { store?.retire() }
+        let owner = recipient ?? self
+        owner.viewerCache.removeAll()
+        recipient?.load()
+        owner.reloadControls()
         return true
     }
 }

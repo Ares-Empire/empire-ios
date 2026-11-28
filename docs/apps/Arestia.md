@@ -162,6 +162,8 @@ that did not follow.
 A live home snapshot queues `GET /api/remote` with the stream's pairing identity, even if the store's
 Keychain read fails. The enrollment worker checks the current pairing before asking flatd 1.7. It saves
 the validated listener URL, pin and enrollment generation against the pairing revision read before asking.
+When only remote enrollment changed since the stream opened, the worker still uses the stream's live
+home address.
 A validated change gets its lock-budgeted commit attempt before any new pairing read. It stays pending
 through lock contention until it commits or the pairing changes. A revision change triggers a fresh lookup.
 Transient pairing read failures and expiry before dispatch retry with a pause in the same worker. The stream applies events
@@ -198,7 +200,8 @@ Forget, checks the saved pairing and token, and on the remote route also checks 
 enrollment generation. The marker read is the final blocking call. A remote task must resume within
 1 s of the start of that read. Admission commits the request's resume against the same attempt
 that handles expiry and cancellation. A stalled system call can hold the lock while its caller leaves
-at the cap. The prepared task is cancelled on failure, and a worker returning from a stall cannot
+at the cap. A failed attempt requests cancellation of the prepared task before returning and schedules
+transport cleanup in the background. A worker returning from a stall cannot
 resume an ended attempt. A marker read that stalls for 1 s denies remote admission while the worker
 still holds the lock. A home retry can probe while it waits for the worker to release the lock.
 
@@ -209,7 +212,8 @@ action runs there. A marker lookup that times out during choice also withholds r
 consults LocalAuthentication only when it will show the unlock error. Home dispatch works after
 first unlock. Forget waits off the main actor for up to 10 s to acquire the lock. Once deletion starts,
 the worker finishes and the session reports its outcome even if the caller cancels or its deadline passes.
-After successful deletion the session retires the store, clears the viewer cache and reloads controls.
+After successful deletion the current session retires the store, clears the viewer cache and reloads
+controls, even after a root rebuild.
 If the lock stays busy, Settings shows the existing failure message and
 the owner can retry. Physical lock timing still needs the P7a iPhone measurements.
 

@@ -42,7 +42,7 @@ private nonisolated func openEventStream(
         })
     let prepared = try outcome.result.get()
     if Task.isCancelled {
-        prepared.cancel()
+        prepared.cancelAndScheduleCleanup()
         throw CancellationError()
     }
     return prepared.stream()
@@ -94,10 +94,9 @@ private nonisolated struct SocketEvents: PreparedEvents {
 
     func resume() { task.resume() }
 
-    func cancel() {
-        task.cancel()
-        session.invalidateAndCancel()
-    }
+    func cancel() { task.cancel() }
+
+    func cleanupAfterCancellation() { session.invalidateAndCancel() }
 
     func stream() -> AsyncThrowingStream<FlatEvent, Error> {
         return AsyncThrowingStream { continuation in

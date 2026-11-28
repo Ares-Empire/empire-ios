@@ -2,12 +2,20 @@ import Foundation
 
 nonisolated protocol SuspendedRequest: Sendable {
     func resume()
+    /// Request cancellation synchronously without waiting for transport teardown.
     func cancel()
+    func cleanupAfterCancellation()
     func afterResume()
 }
 
 nonisolated extension SuspendedRequest {
     func afterResume() {}
+    func cleanupAfterCancellation() {}
+
+    func cancelAndScheduleCleanup() {
+        cancel()
+        DispatchQueue.global(qos: .userInitiated).async { cleanupAfterCancellation() }
+    }
 }
 
 nonisolated protocol PreparingTransport: Sendable {
@@ -52,6 +60,7 @@ nonisolated enum FlatdLaunch {
         didResume: @escaping @Sendable () -> Void = {}
     ) async -> Attempt<Value>.Outcome {
         let attempt = Attempt<Value>(until: rule.cap)
+        let selection = HomeRoute.admission
         let worker = waitForWorker ? AsyncStream<Void>.makeStream() : nil
         var started = false
         let outcome = await rule.cap.wait(for: attempt) {
@@ -62,15 +71,16 @@ nonisolated enum FlatdLaunch {
                     guard attempt.isLive else { return }
                     let prepared = try prepare(attempt)
                     let request = prepared.request
-                    // End the attempt synchronously to seal admission. Transport cleanup can block.
-                    attempt.onFailure {
-                        DispatchQueue.global(qos: .userInitiated).async { request.cancel() }
-                    }
+                    attempt.onFailure { request.cancelAndScheduleCleanup() }
                     switch admission {
                     case .open:
                         try attempt.commit {
                             try rule.check()
-                            rule.start(request)
+                            if let selection {
+                                try selection.start { rule.start(request) }
+                            } else {
+                                rule.start(request)
+                            }
                         }
                     case let .gated(gate):
                         try gate.admit(attempt, rule: rule, request: request)

@@ -393,13 +393,15 @@ events. Session construction happens outside the cache lock. The cache keeps the
 installed for a pin and invalidates duplicates.
 
 `HomeRoute.select` reads a mailbox of results from a saved home address, discovery, and a remote
-listener. A winner cancels losing probes and returns immediately. The cap bounds the wait even
-when a probe is stalled. Each caller supplies its health probes, discovery, and remote policy.
+listener. When the selection ends, it closes probe admission synchronously, including admission
+in nested `HomeRoute.first` races. Losing tasks are cancelled off the return path. The cap bounds
+the wait even when a probe is stalled. Each caller supplies its health probes, discovery, and remote policy.
 The default policy allows remote, including on the lock screen.
 
 `Deadline` uses `ContinuousClock` so time spent suspended counts. An `Attempt` records the first
 ending and whether a commit ran under the same lock. Waiting ends on a result, the cap or caller
-cancellation. Failure triggers the attempt's registered cleanups. Synchronous work runs on a
+cancellation. An attempt runs its short failure handlers before delivering a failure. The handlers
+can schedule cleanup separately. Synchronous work runs on a
 dispatch queue and can be abandoned when a system call stalls. An ended attempt refuses a late
 commit. An admission timer can end an attempt that has yet to commit. A blocking operation that
 must report the result of an admitted change can keep its waiter through cancellation and expiry

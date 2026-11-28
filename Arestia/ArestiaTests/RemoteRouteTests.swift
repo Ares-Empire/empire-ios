@@ -993,6 +993,34 @@ struct RemoteEnrollmentTests {
         #expect(transport.sent.filter { $0.url?.path() == "/api/remote" }.map { $0.url?.host() } == [liveHost, liveHost])
     }
 
+    @MainActor @Test func remoteRevisionChangeBeforeFirstSnapshotKeepsLiveHomeAddress() async throws {
+        let (store, transport, events, _) = Flat.store(rediscover: { [moved] })
+        defer { store.stop() }
+        let connection = store.connection
+        let saved = try connection.current()
+        let deadHost = try #require(saved.baseURL.host())
+        let liveHost = try #require(moved.host())
+        transport.answer("GET \(deadHost)/api/health", fails: true)
+        transport.answer("GET \(deadHost)/api/remote", fails: true)
+        transport.answer("GET /api/scenes", body: ["scenes": []])
+        transport.answer("GET \(liveHost)/api/remote", body: ["url": awayURL, "spki_sha256": awayPin])
+        store.start()
+        try #require(await eventually({ events.isOpen }, timeout: .seconds(5)))
+        #expect(events.requests.last?.url?.host() == liveHost)
+
+        let previous: RemoteListener = try #require(RemoteListener.parse(url: "https://old.home.example.net:8443",
+                                                                         pin: awayPin, homePin: saved.pin))
+        var enrolled = saved
+        enrolled.remote = previous
+        enrolled.revision = UUID()
+        try #require(try await connection.renew(saved, with: enrolled))
+        events.send(try Flat.snapshot())
+
+        try #require(await eventually { connection.pairing?.remote?.url.absoluteString == awayURL })
+        #expect(transport.sent.filter { $0.url?.path() == "/api/remote" }.map { $0.url?.host() } == [liveHost])
+        #expect(connection.pairing?.baseURL == moved)
+    }
+
     @MainActor @Test func enrollmentCannotMoveOverANewerHomeAddress() async throws {
         let (store, transport, events, _) = Flat.store()
         let connection = store.connection
@@ -1239,6 +1267,112 @@ private nonisolated struct HeldDispatchLock: Sendable {
 }
 
 struct RouteIsolationTests {
+    @Test(arguments: [true, false]) func stalledProbeCancellationHandlerDoesNotHoldWinner(selectRoute: Bool) async throws {
+        let clock = TestClock()
+        let handler = BlockingStep()
+        let heldProbe = AsyncStream<Void>.makeStream()
+        let allowWinner = AsyncStream<Void>.makeStream()
+        defer {
+            handler.release.signal()
+            heldProbe.continuation.finish()
+            allowWinner.continuation.finish()
+        }
+        let ready = OSAllocatedUnfairLock(initialState: false)
+        let winner = OSAllocatedUnfairLock<String?>(initialState: nil)
+        let loser: @Sendable () async -> String? = {
+            await withTaskCancellationHandler {
+                ready.withLock { $0 = true }
+                for await _ in heldProbe.stream {}
+                return nil
+            } onCancel: {
+                handler.wait()
+            }
+        }
+        let winningProbe: @Sendable () async -> String? = {
+            for await _ in allowWinner.stream { return "winner" }
+            return nil
+        }
+        let choice = Task {
+            if selectRoute {
+                let selected = try await HomeRoute.select(deadline: Deadline(after: .seconds(5), clock: clock.clock),
+                    path: { .localPossible }, home: { _ in await winningProbe() },
+                    discover: { _ in await loser() }, remote: nil)
+                if case let .reached(result) = selected { winner.withLock { $0 = result } }
+            } else {
+                let result = await HomeRoute.first([loser, winningProbe])
+                winner.withLock { $0 = result }
+            }
+        }
+        defer { choice.cancel() }
+        clock.advance(.milliseconds(300))
+        try #require(await eventually { ready.withLock { $0 } })
+        allowWinner.continuation.yield(())
+        try #require(await eventually { handler.entered })
+        try #require(await eventually { winner.withLock { $0 == "winner" } })
+        #expect(!handler.exited)
+    }
+
+    @Test(arguments: [false, true])
+    func nestedBonjourCandidateCannotSendAfterOuterSelectionEnds(prepared: Bool) async throws {
+        let clock = TestClock()
+        let pairing = Flat.pairing()
+        let transport = FakeTransport()
+        let prepare = BlockingStep()
+        let allowResolution = AsyncStream<URL>.makeStream()
+        let allowHome = AsyncStream<Void>.makeStream()
+        let nestedReturnedNil = OSAllocatedUnfairLock<Bool?>(initialState: nil)
+        defer {
+            prepare.release.signal()
+            allowResolution.continuation.finish()
+            allowHome.continuation.finish()
+        }
+        let resolving = OSAllocatedUnfairLock(initialState: false)
+        let probing = OSAllocatedUnfairLock(initialState: false)
+        let bonjour = FlatdBonjour(browse: { ["fixture"] }, resolve: { _ in
+            resolving.withLock { $0 = true }
+            for await url in allowResolution.stream { return url }
+            return nil
+        })
+        if prepared { transport.onPrepare = { _ in prepare.wait() } }
+        let choice = Task {
+            try await HomeRoute.select(deadline: Deadline(after: .seconds(5), clock: clock.clock),
+                path: { .localPossible }, home: { _ in
+                    for await _ in allowHome.stream { return "home" }
+                    return nil
+                }, discover: { cap in
+                    // Keep the candidate independent of outer task cancellation to exercise admission on its own.
+                    await Task {
+                        let result = await bonjour.firstReachable { url -> String? in
+                            probing.withLock { $0 = true }
+                            let client = FlatdClient(pairing, at: url, transport: transport)
+                            guard (try? await client.verify(within: cap)) != nil else { return nil }
+                            return "bonjour"
+                        }
+                        nestedReturnedNil.withLock { $0 = result == nil }
+                        return result
+                    }.value
+                }, remote: nil)
+        }
+        defer { choice.cancel() }
+        clock.advance(.milliseconds(300))
+        try #require(await eventually { resolving.withLock { $0 } })
+        if prepared {
+            allowResolution.continuation.yield(moved)
+            try #require(await eventually { prepare.entered })
+        }
+        allowHome.continuation.yield(())
+        guard case .reached("home") = try await choice.value else {
+            Issue.record("Home did not win the selection")
+            return
+        }
+        if prepared { prepare.release.signal() }
+        else { allowResolution.continuation.yield(moved) }
+        try #require(await eventually { nestedReturnedNil.withLock { $0 != nil } })
+        #expect(nestedReturnedNil.withLock { $0 } == true)
+        #expect(probing.withLock { $0 } == prepared)
+        #expect(transport.sent.isEmpty)
+    }
+
     @Test(arguments: [true, false]) func stalledLoserCleanupDoesNotHoldWinner(selectRoute: Bool) async throws {
         let flat = try RouteFixture()
         let clock = TestClock()
@@ -1441,6 +1575,28 @@ struct LaunchTests {
         task.cancel()
         await #expect(throws: CancellationError.self) { try await task.value }
         #expect(await eventually { cancelled.withLock { $0 } })
+    }
+
+    @Test func deadlineRequestsWriteCancellationBeforeReturningWithCleanupHeld() async throws {
+        let flat = try RouteFixture()
+        let clock = TestClock()
+        let cleanup = BlockingStep()
+        defer { cleanup.release.signal() }
+        let requested = OSAllocatedUnfairLock(initialState: false)
+        flat.transport.cancellationRequested = { _ in requested.withLock { $0 = true } }
+        flat.transport.cancelled = { _ in cleanup.wait() }
+        flat.transport.answer("POST /api/modes/cooking") { try? await Task.sleep(for: .seconds(60)) }
+        var client = FlatdClient(flat.pairing, transport: flat.transport).gated(by: flat.connection)
+        client.deadline = Deadline(after: .seconds(4), clock: clock.clock)
+        client.action = FlatdActionDispatch()
+        let task = Task { try await client.setMode("cooking", active: true) }
+        try #require(await eventually { flat.writes.count == 1 })
+        clock.advance(.seconds(5))
+
+        await #expect(throws: FlatdError.noAnswer) { try await task.value }
+        #expect(requested.withLock { $0 })
+        try #require(await eventually { cleanup.entered })
+        #expect(!cleanup.exited)
     }
 
     @Test func productionTimeoutStopsLoadingAResumedRequest() async throws {
@@ -1822,6 +1978,36 @@ struct RenewalDispatchTests {
 }
 
 struct ForgetDispatchTests {
+    @MainActor @Test func admittedForgetReachesTheReplacementSession() async throws {
+        let keys = MemoryKeys()
+        let deletion = BlockingStep()
+        defer { deletion.release.signal() }
+        keys.beforeDelete = { deletion.wait() }
+        let connection = FlatdConnection(defaults: nil, names: nil, keychain: keys, lock: .processOnly)
+        try connection.save(Flat.pairing())
+        let (session, _, _, reloads) = Flat.session(connection: connection)
+        let oldStore = try #require(session.store)
+        let forget = Task { await session.forget() }
+        try #require(await eventually { deletion.entered })
+
+        let (replacement, _, _, replacementReloads) = Flat.session(connection: connection)
+        defer { replacement.end() }
+        let visibleStore = try #require(replacement.store)
+        session.end()
+        #expect(oldStore.isRetired)
+        #expect(visibleStore.pairingID == Flat.id)
+        deletion.release.signal()
+
+        #expect(await forget.value)
+        #expect(session.store === oldStore && oldStore.isRetired)
+        #expect(visibleStore.isRetired)
+        try #require(replacement.store != nil)
+        #expect(replacement.store?.pairingID == nil)
+        #expect(replacement.store?.link == .notSetUp)
+        #expect(reloads.count == 0)
+        #expect(replacementReloads.count == 1)
+    }
+
     @MainActor @Test(arguments: [false, true])
     func admittedForgetFinishesAfterCancellationOrDeadline(cancel: Bool) async throws {
         let keys = MemoryKeys()
