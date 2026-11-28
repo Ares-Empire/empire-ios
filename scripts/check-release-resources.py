@@ -4,8 +4,12 @@
 import argparse
 import fnmatch
 import json
+import plistlib
 from pathlib import Path
 import sys
+
+sys.dont_write_bytecode = True
+from arestia_remote_zone import DEBUG_ZONE, ats_settings, read_zone
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -73,6 +77,29 @@ def audit(app, bundle, manifest):
     return problems
 
 
+def audit_arestia_ats(bundle, targets):
+    try:
+        zone = read_zone()
+    except ValueError as error:
+        return [str(error)]
+    if zone == DEBUG_ZONE:
+        return ["the private remote zone must differ from the Debug default"]
+    expected = ats_settings(zone)
+    problems = []
+    for target in targets:
+        path = bundle / target["path"] / "Info.plist"
+        try:
+            with path.open("rb") as file:
+                actual = plistlib.load(file).get("NSAppTransportSecurity")
+            # A plist integer must not stand in for a boolean.
+            matches = plistlib.dumps(actual) == plistlib.dumps(expected)
+        except (OSError, ValueError, AttributeError, TypeError, plistlib.InvalidFileException):
+            matches = False
+        if not matches:
+            problems.append(f"{target['path']}/Info.plist: unexpected Arestia ATS settings")
+    return problems
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--app", required=True)
@@ -85,6 +112,8 @@ def main():
         if args.app not in manifest["apps"]:
             parser.error("unknown app; choose " + ", ".join(manifest["apps"]))
         problems = audit(args.app, args.bundle, manifest)
+        if args.app == "Arestia":
+            problems += audit_arestia_ats(args.bundle, manifest["apps"]["Arestia"]["bundles"])
     except (OSError, ValueError, KeyError, TypeError) as error:
         print(f"{args.app}: release resource audit failed: {error}", file=sys.stderr)
         return 1

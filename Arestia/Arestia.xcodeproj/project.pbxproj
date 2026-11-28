@@ -156,6 +156,7 @@
 				E3A3E89FC3B163F29A56C0D5 /* Sources */,
 				771F20E9CABFAE191B4FCCC0 /* Frameworks */,
 				266DBB434ABAA80B42B4929F /* Resources */,
+				B35700000000000000000001 /* Set remote ATS exception */,
 			);
 			buildRules = (
 			);
@@ -181,6 +182,7 @@
 				D3715F226B0ABE61CA020674,
 				DF28B1AE84FD8327CF943B24,
 				BD839EE12154C4F332B7A597 /* Embed Foundation Extensions */,
+				B35700000000000000000002 /* Set remote ATS exception */,
 			);
 			buildRules = (
 			);
@@ -290,6 +292,39 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		B35700000000000000000001 /* Set remote ATS exception */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = ();
+			inputPaths = (
+				"$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)",
+				"$(SRCROOT)/../scripts/arestia_remote_zone.py",
+			);
+			name = "Set remote ATS exception";
+			outputPaths = ();
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "exec /usr/bin/python3 \"$SCRIPT_INPUT_FILE_1\" \"$SCRIPT_INPUT_FILE_0\"\n";
+		};
+		B35700000000000000000002 /* Set remote ATS exception */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = ();
+			inputPaths = (
+				"$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)",
+				"$(SRCROOT)/../scripts/arestia_remote_zone.py",
+			);
+			name = "Set remote ATS exception";
+			outputPaths = ();
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "exec /usr/bin/python3 \"$SCRIPT_INPUT_FILE_1\" \"$SCRIPT_INPUT_FILE_0\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		E3A3E89FC3B163F29A56C0D5 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -334,6 +369,7 @@
 				CODE_SIGN_ENTITLEMENTS = ArestiaControls.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = ArestiaControls/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Arestia;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
@@ -351,6 +387,7 @@
 				CODE_SIGN_ENTITLEMENTS = ArestiaControls.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = ArestiaControls/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Arestia;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
@@ -433,6 +470,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = Arestia/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Arestia";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = NO;
@@ -455,6 +493,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = Arestia/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Arestia";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = NO;

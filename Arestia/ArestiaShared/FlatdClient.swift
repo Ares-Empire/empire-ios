@@ -11,6 +11,7 @@ nonisolated enum FlatdRequestTimeout {
 nonisolated enum FlatdError: Error, Equatable, Sendable {
     /// No connection at all: the Mac is asleep, flatd is not running, or the phone is not on the home network.
     case unreachable
+    case awayNeedsUnlock(needsPasscode: Bool)
     /// Connected, but no answer in time: flatd may still have done it, so a command is never sent again elsewhere.
     case noAnswer
     /// 401: flatd has a new key (the app pairs again).
@@ -40,6 +41,12 @@ nonisolated enum FlatdError: Error, Equatable, Sendable {
         switch self {
         case .unreachable:
             language.string(LocalizedStringResource("Can't reach the flat. You may not be at home, or the flat service isn't answering.",
+                                                    table: "ArestiaShared"))
+        case .awayNeedsUnlock(needsPasscode: true):
+            language.string(LocalizedStringResource("Set a passcode on your iPhone to control the flat from away.",
+                                                    table: "ArestiaShared"))
+        case .awayNeedsUnlock(needsPasscode: false):
+            language.string(LocalizedStringResource("Unlock your iPhone to control the flat from away.",
                                                     table: "ArestiaShared"))
         case .noAnswer:
             language.string(LocalizedStringResource("The flat service didn't answer in time. It may still have done it.",
@@ -87,6 +94,9 @@ nonisolated struct FlatdClient: Sendable {
     /// The pairing this client speaks for (`FlatdPairing.id`); nil for a pairing code being tried, which belongs to no
     /// pairing yet. What it reads or does counts only while that pairing is the saved one (`FlatdConnection.isCurrent`).
     let pairingID: UUID?
+    let route: HomeRoute?
+    var deadline: Deadline?
+    var action: FlatdActionDispatch?
     let transport: any HTTPTransport & Sendable
     /// Where a request with the key is started only while this client's pairing is still the saved one (`gated(by:)`);
     /// nil for a pairing code being tried, which belongs to no pairing yet.
@@ -104,38 +114,54 @@ nonisolated struct FlatdClient: Sendable {
     var commandTimeout: TimeInterval = 12
     #endif
 
-    /// `transport` nil: the real one, which accepts only a server holding the pin's key (the tests pass a fake).
-    init(baseURL: URL, token: String, pin: FlatdPin, pairingID: UUID? = nil,
-         transport: (any HTTPTransport & Sendable)? = nil) {
+    /// A pairing code being tried. Its identity is supplied by the code itself.
+    init(baseURL: URL, token: String, pin: FlatdPin, transport: (any HTTPTransport & Sendable)? = nil) {
         self.baseURL = baseURL
         self.token = token
         self.pin = pin
-        self.pairingID = pairingID
+        pairingID = nil
+        route = nil
         self.transport = transport ?? FlatdTransport(pin: pin)
     }
 
-    /// The pairing's client, at its saved address or at another one where flatd may be now.
+    /// Home, at the saved address or a Bonjour candidate, always using the home pin.
     init(_ pairing: FlatdPairing, at baseURL: URL? = nil, transport: (any HTTPTransport & Sendable)? = nil) {
-        self.init(baseURL: baseURL ?? pairing.baseURL, token: pairing.token, pin: pairing.pin, pairingID: pairing.id,
-                  transport: transport)
+        self.baseURL = baseURL ?? pairing.baseURL
+        token = pairing.token
+        pin = pairing.pin
+        pairingID = pairing.id
+        route = .home
+        self.transport = transport ?? FlatdTransport(pin: pairing.pin)
+    }
+
+    init?(remoteOf pairing: FlatdPairing, transport: (any HTTPTransport & Sendable)? = nil) {
+        guard let remote = pairing.remote, remote.pin != pairing.pin else { return nil }
+        baseURL = remote.url
+        token = pairing.token
+        pin = remote.pin
+        pairingID = pairing.id
+        route = .remote
+        self.transport = transport ?? FlatdTransport(pin: remote.pin)
     }
 
     /// The same client, its every request with the key started only while its pairing is the saved one in this
     /// connection, under the lock Forget takes (`FlatdConnection.start(for:_:)`): after Forget it sends nothing.
-    func gated(by connection: FlatdConnection) -> FlatdClient {
-        guard let pairingID else { return self }
+    func gated(by connection: FlatdConnection, allowsRemote: @escaping @Sendable () -> Bool = RemoteUnlock.allowsRemote,
+               needsPasscode: @escaping @Sendable () -> Bool = RemoteUnlock.needsPasscode) -> FlatdClient {
+        guard let pairingID, let route else { return self }
         var client = self
-        client.gate = FlatdGate(connection: connection, pairing: pairingID)
+        client.gate = FlatdGate(connection: connection, pairing: pairingID, route: route, pin: pin,
+                               baseURL: baseURL, allowsRemote: allowsRemote, needsPasscode: needsPasscode)
         return client
     }
 
     // MARK: reads
 
     /// `GET /api/health`, without the key: whether flatd answers at this address (`{"ok": true, "version": …}`).
-    func health() async throws -> Bool {
+    func health(within cap: Deadline? = nil) async throws -> Bool {
         let data: Data
         do {
-            data = try await send(request("api/health", timeout: readTimeout, authorized: false))
+            data = try await send(request("api/health", timeout: readTimeout, authorized: false), within: cap)
         } catch let error as FlatdError where error != .unreachable && error != .noAnswer {
             return false                         // something answered, but not flatd's health
         }
@@ -148,8 +174,38 @@ nonisolated struct FlatdClient: Sendable {
     /// server's key against the pin (anything else at the address ends as `.unreachable`, having received nothing), and
     /// flatd answered. This settles *where* flatd is, so a command is sent once, to the right address; *who* answers is
     /// settled by the pin on every connection, also without this call. Throws `.unreachable` otherwise.
-    func verify() async throws {
-        guard try await health() else { throw FlatdError.unreachable }
+    func verify(within cap: Deadline? = nil) async throws {
+        guard try await health(within: cap) else { throw FlatdError.unreachable }
+    }
+
+    enum RemoteEnrollment {
+        case unchanged
+        case replace(RemoteListener?)
+    }
+
+    func remoteEnrollment() async throws -> RemoteEnrollment {
+        guard route == .home else { return .unchanged }
+        struct Answer: Decodable {
+            let url: String?
+            let pin: String?
+
+            init(from decoder: Decoder) throws {
+                let values = try decoder.container(keyedBy: Keys.self)
+                url = try values.decode(String?.self, forKey: .url)
+                pin = try values.decode(String?.self, forKey: .pin)
+            }
+
+            enum Keys: String, CodingKey { case url, pin = "spki_sha256" }
+        }
+        let data: Data
+        do { data = try await send(request("api/remote", timeout: readTimeout)) }
+        catch FlatdError.unknown { return .unchanged }
+        let answer = try decode(Answer.self, data)
+        if answer.url == nil && answer.pin == nil { return .replace(nil) }
+        guard let remote = RemoteListener.parse(url: answer.url, pin: answer.pin, homePin: pin) else {
+            return .unchanged
+        }
+        return .replace(remote)
     }
 
     func devices() async throws -> [Device] {
@@ -315,26 +371,38 @@ nonisolated struct FlatdClient: Sendable {
         return request
     }
 
-    private func send(_ request: URLRequest) async throws -> Data {
-        let (data, response) = try await response(to: request)
+    private func send(_ request: URLRequest, within limit: Deadline? = nil) async throws -> Data {
+        let (data, response) = try await response(to: request, within: limit)
         guard (200..<300).contains(response.statusCode) else { throw Self.rejection(response.statusCode, data: data) }
         return data
     }
 
-    private func response(to request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+    private func response(to request: URLRequest, within limit: Deadline? = nil) async throws -> (Data, HTTPURLResponse) {
+        var request = request
+        let usual = Duration.seconds(request.timeoutInterval)
+        let budget = limit ?? deadline
+        let cap = budget?.capped(by: usual) ?? Deadline(after: usual)
+        if let budget {
+            request.timeoutInterval = max(0.001, min(request.timeoutInterval, budget.remainingSeconds))
+        }
+        let authorized = request.value(forHTTPHeaderField: "Authorization") != nil
+        let dispatch = FlatdRequestDispatch(request: request, route: route, cap: cap,
+                                           deadline: deadline, action: action)
+        let boundedRequest = request
         do {
-            if let gate, request.value(forHTTPHeaderField: "Authorization") != nil {
-                if let gated = transport as? any GatedTransport {
-                    return try await gated.send(request, gate: gate)
-                } else {
-                    try gate.start {}                       // a transport that cannot start inside the gate (the tests')
-                    return try await transport.send(request)
+            if authorized && route == .remote && gate == nil { throw FlatdError.unreachable }
+            return try await cap.run {
+                if let pinned = transport as? any GatedTransport {
+                    return try await pinned.send(boundedRequest, gate: authorized ? gate : nil, dispatch: dispatch)
                 }
-            } else {
-                return try await transport.send(request)
+                if authorized, let gate { try gate.start { try dispatch.start {} } }
+                else { try dispatch.start {} }
+                return try await transport.send(boundedRequest)
             }
         } catch let error as FlatdError {
-            throw error                                     // the gate: not paired (any more), or unreadable
+            throw error
+        } catch is Deadline.Expired {
+            throw dispatch.isWrite && !dispatch.started ? FlatdError.unreachable : FlatdError.noAnswer
         } catch is CancellationError {
             throw CancellationError()
         } catch let error as URLError where error.code == .cancelled {
@@ -370,18 +438,70 @@ nonisolated struct FlatdClient: Sendable {
     private static let log = Logger(subsystem: "de.ares-empire.arestia", category: "flatd")
 }
 
-/// Where requests with a pairing's key start: only while that pairing is the saved one (`FlatdClient.gated(by:)`).
+/// All clients built for one action share this record, including concurrent writes in a fan batch.
+nonisolated final class FlatdActionDispatch: Sendable {
+    private let written = OSAllocatedUnfairLock(initialState: false)
+    var writeStarted: Bool { written.withLock { $0 } }
+    func startingWrite() { written.withLock { $0 = true } }
+}
+
+nonisolated struct FlatdRequestDispatch: Sendable {
+    let request: URLRequest
+    let route: HomeRoute?
+    let cap: Deadline
+    let deadline: Deadline?
+    let action: FlatdActionDispatch?
+    private let state = OSAllocatedUnfairLock(initialState: false)
+
+    var started: Bool { state.withLock { $0 } }
+    var isWrite: Bool { request.httpMethod != "GET" }
+
+    func start(_ resume: () -> Void) throws {
+        try cap.check()
+        if isWrite, let deadline, deadline.remaining < .seconds(3) { throw FlatdError.unreachable }
+        if isWrite { action?.startingWrite() }
+        state.withLock { $0 = true }
+        resume()
+        #if DEBUG
+        Self.log(request, route: route, deadline: deadline)
+        #endif
+    }
+
+    #if DEBUG
+    private static let logger = Logger(subsystem: "de.ares-empire.arestia", category: "route")
+
+    static func log(_ request: URLRequest, route: HomeRoute?, deadline: Deadline?) {
+        let routeName = route.map { String(describing: $0) } ?? "pairing-code"
+        let method = request.httpMethod ?? "GET"
+        let path = request.url?.path() ?? ""
+        let time = deadline.map { String(format: "%.3f s", max(0, $0.remainingSeconds)) } ?? "no action deadline"
+        logger.notice("\(routeName, privacy: .public) \(method, privacy: .public) \(path, privacy: .public) \(time, privacy: .public)")
+    }
+    #endif
+}
+
+/// Checks the saved identity and the lock marker inside the same lock that protects dispatch.
 nonisolated struct FlatdGate: Sendable {
     let connection: FlatdConnection
     let pairing: UUID
+    let route: HomeRoute
+    let pin: FlatdPin
+    let baseURL: URL
+    let allowsRemote: @Sendable () -> Bool
+    let needsPasscode: @Sendable () -> Bool
 
-    /// Runs `start` under the lock Forget takes, only while the pairing is the saved one; throws otherwise.
-    func start(_ start: () -> Void) throws {
-        try connection.start(for: pairing, start)
+    func start(_ start: () throws -> Void) throws {
+        try connection.start(for: pairing, checking: { saved in
+            guard saved.matches(route: route, pin: pin, url: baseURL) else { throw FlatdError.unreachable }
+            if route == .remote, !allowsRemote() {
+                throw FlatdError.awayNeedsUnlock(needsPasscode: needsPasscode())
+            }
+        }, start)
     }
 }
 
-/// A transport that starts a request inside a gate: the last check and the start are one step (`FlatdTransport`).
+/// A transport that starts a request inside a gate: the last check and the start are one step.
 nonisolated protocol GatedTransport: HTTPTransport, Sendable {
-    func send(_ request: URLRequest, gate: FlatdGate) async throws -> (Data, HTTPURLResponse)
+    func send(_ request: URLRequest, gate: FlatdGate?, dispatch: FlatdRequestDispatch?) async throws
+        -> (Data, HTTPURLResponse)
 }

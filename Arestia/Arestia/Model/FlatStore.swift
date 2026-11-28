@@ -325,7 +325,13 @@ final class FlatStore {
         // The stream (with the key in its header) starts inside the gate too: only while this pairing is saved.
         var opened: AsyncThrowingStream<FlatEvent, Error>?
         if let gate = client.gate {
-            try gate.start { opened = eventSource.events(from: client.eventsRequest, pin: client.pin) }
+            let request = client.eventsRequest
+            try gate.start {
+                opened = eventSource.events(from: request, pin: client.pin)
+                #if DEBUG
+                FlatdRequestDispatch.log(request, route: client.route, deadline: client.deadline)
+                #endif
+            }
         }
         guard let stream = opened else { throw FlatdError.notPaired }
         for try await event in stream {
@@ -343,13 +349,31 @@ final class FlatStore {
                 live()
                 link = .live
                 liveBase = client.baseURL
-                if let saved, saved.token == client.token { connection.move(saved, to: client.baseURL) }
+                if let saved, saved.token == client.token, saved.pin == client.pin, client.route == .home {
+                    connection.move(saved, to: client)
+                    // Read the revision after a possible home address move, before asking for remote enrollment.
+                    if let current = connection.pairing, current.id == saved.id,
+                       current.token == saved.token, current.pin == saved.pin {
+                        Task { await Self.enrollRemote(from: client, read: current, connection: connection) }
+                    }
+                }
                 sayTroubleFromOutside()
             } else {
                 apply(event)
             }
         }
         throw FlatdError.unreachable            // the stream ended: reconnect
+    }
+
+    nonisolated static func enrollRemote(from client: FlatdClient, read saved: FlatdPairing,
+                                        connection: FlatdConnection) async {
+        guard client.route == .home, client.pairingID == saved.id, client.token == saved.token,
+              case let .replace(remote)? = try? await client.remoteEnrollment(),
+              remote != saved.remote else { return }
+        var renewed = saved
+        renewed.remote = remote
+        renewed.revision = UUID()
+        _ = connection.renew(saved, with: renewed)
     }
 
     /// Cooking changed outside the app (a control, a Shortcut) while devices did not follow, and it still describes
@@ -507,9 +531,10 @@ final class FlatStore {
     /// Where among these addresses the flatd of this pairing code answers (its identity proved by the transport, its
     /// health asked without the key); nil when nowhere.
     func locate(_ code: PairingCode, among candidates: [URL]) async -> URL? {
-        guard let first = candidates.first else { return nil }
-        let probe = FlatdPairing(baseURL: first, token: code.token, pin: code.pin)
-        return await FlatdReach.find(probe, among: candidates, transport: transport)?.baseURL
+        let transport = transport
+        return await FlatdReach.find(among: candidates) {
+            FlatdClient(baseURL: $0, token: code.token, pin: code.pin, transport: transport)
+        }?.baseURL
     }
 
     /// Whether a code with this pin is another flat than this store's: then it is refused (one flat per install).
@@ -528,12 +553,11 @@ final class FlatStore {
     func connect(to baseURL: URL, token: String, pin: FlatdPin) async -> FlatdError? {
         guard !isRetired else { return .notPossible }
         if isAnotherFlat(pin) { return .anotherFlat }
-        // A fresh code of this store's flat asks flatd only while that flat is still the saved one (the gate); only a
-        // first pairing asks before anything is saved.
-        let candidate = FlatdClient(baseURL: baseURL, token: token, pin: pin, pairingID: pairingID, transport: transport)
-            .gated(by: connection)
+        let candidate = FlatdClient(baseURL: baseURL, token: token, pin: pin, transport: transport)
         do {
             try await candidate.verify()
+            guard !Task.isCancelled, !isRetired else { return .notPossible }
+            if let pairingID, try connection.current().id != pairingID { return .notPaired }
             let version = connection.devicesVersion
             let found = Found(devices: try await candidate.devices(), version: version)
             // The screen went away, or the store's part ended meanwhile: this attempt keeps nothing.
@@ -561,7 +585,6 @@ final class FlatStore {
     /// A fresh code of this store's flat: written over the version read (a control that only moved the address
     /// meanwhile is written over too, after reading again).
     private func renew(_ id: UUID, baseURL: URL, token: String, pin: FlatdPin, found: Found) -> FlatdError? {
-        let renewed = FlatdPairing(baseURL: baseURL, token: token, pin: pin, id: id)
         for _ in 0..<3 {
             let current: FlatdPairing
             switch readPairing() {
@@ -570,6 +593,8 @@ final class FlatStore {
             case .gone: return .notPossible
             }
             guard current.pin == pin else { return .anotherFlat }
+            var renewed = FlatdPairing(baseURL: baseURL, token: token, pin: pin, id: id)
+            renewed.remote = current.remote
             if connection.renew(current, with: renewed) {
                 connection.remember(found.devices, for: id, readSince: found.version)
                 credentials += 1

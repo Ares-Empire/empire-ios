@@ -310,7 +310,7 @@ struct OneFlatTests {
         let read = try #require(connection.pairing)
         let renewed = FlatdPairing(baseURL: Flat.base, token: Flat.renewedKey, pin: Flat.pin, id: read.id)
         #expect(connection.renew(read, with: renewed))
-        connection.move(read, to: URL(string: "https://192.0.2.77:8788")!)       // from before the renewal
+        connection.move(read, to: FlatdClient(read, at: URL(string: "https://192.0.2.77:8788")!))       // from before the renewal
         #expect(connection.token == Flat.renewedKey && connection.pairing?.baseURL == Flat.base)
         // A renewal never changes the identity or the flatd.
         let other = FlatdPairing(baseURL: Flat.base, token: Flat.key, pin: MadeUpCertificates.pinB, id: read.id)

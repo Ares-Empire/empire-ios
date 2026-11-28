@@ -54,8 +54,22 @@ ci_skips() {
     esac
 }
 
+flatd_pairing() {
+    local log="$1" pairing
+    for _ in $(seq 1 50); do
+        pairing=$(sed -n 's/^pairing code: //p' "$log" 2>/dev/null || true)
+        if [[ -n "$pairing" ]]; then
+            printf '%s\n' "$pairing"
+            return
+        fi
+        sleep 0.2
+    done
+    echo "The fake flatd did not start. See $log." >&2
+    return 1
+}
+
 mkdir -p build/test-unit
-udid='' child='' summary='' fake=''
+udid='' child='' summary='' fake='' remote_fake=''
 locks=()
 cleanup() {
     cleanup_status=$?
@@ -64,10 +78,12 @@ cleanup() {
         kill -TERM "$child" 2>/dev/null || true
         wait "$child" 2>/dev/null || true
     fi
-    if [[ -n "$fake" ]]; then
-        kill -TERM "$fake" 2>/dev/null || true
-        wait "$fake" 2>/dev/null || true
-    fi
+    for server in "$fake" "$remote_fake"; do
+        if [[ -n "$server" ]]; then
+            kill -TERM "$server" 2>/dev/null || true
+            wait "$server" 2>/dev/null || true
+        fi
+    done
     if [[ -n "$udid" ]]; then
         if (( keep )); then
             echo "Kept simulator: $udid"
@@ -133,24 +149,24 @@ for app in "${apps[@]}"; do
     case "$app" in
         Aresium|Empire) filters+=("-skip-testing:${app}Tests/SharedLoginProbe") ;;
     esac
-    # Arestia's pinned URLSession and WebSocket over real TLS (`LiveFlatdTests`): against a fake flatd of this run's
-    # own (loopback, a free port, no Bonjour; never the real flatd), unless a code was handed in.
-    if [[ "$app" == Arestia && -z "${TEST_RUNNER_ARESTIA_LIVE_FLATD:-}" ]] && (( ! timing )); then
-        port=$(python3 -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')
-        python3 scripts/fake-flatd.py --host 127.0.0.1 --port "$port" --no-bonjour \
-            >build/test-unit/fake-flatd.log 2>&1 &
+    # Use two independently pinned loopback listeners. Port 0 lets the OS assign the ports atomically.
+    if [[ "$app" == Arestia ]] && (( ! timing )); then
+        fake_root="$PWD/build/test-unit/fake-flatd"
+        mkdir -p "$fake_root"
+        python3 scripts/fake-flatd.py --host 127.0.0.1 --port 0 --no-bonjour \
+            --identity-dir "$fake_root/remote" --arrivals "$fake_root/remote.arrivals" >"$fake_root/remote.log" 2>&1 &
+        remote_fake=$!
+        TEST_RUNNER_ARESTIA_REMOTE_FLATD=$(flatd_pairing "$fake_root/remote.log")
+        remote_pin=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["spki_sha256"])' <<< "$TEST_RUNNER_ARESTIA_REMOTE_FLATD")
+        remote_port=$(python3 -c 'import json,sys,urllib.parse; print(urllib.parse.urlsplit(json.load(sys.stdin)["url"]).port)' <<< "$TEST_RUNNER_ARESTIA_REMOTE_FLATD")
+        python3 scripts/fake-flatd.py --host 127.0.0.1 --port 0 --no-bonjour \
+            --identity-dir "$fake_root/home" --arrivals "$fake_root/home.arrivals" \
+            --remote-url "https://listener.home.example.net:$remote_port" --remote-pin "$remote_pin" >"$fake_root/home.log" 2>&1 &
         fake=$!
-        for _ in $(seq 1 50); do
-            grep -q '^pairing code:' build/test-unit/fake-flatd.log 2>/dev/null && break
-            sleep 0.2
-        done
-        if ! grep -q '^pairing code:' build/test-unit/fake-flatd.log; then
-            echo "The fake flatd did not start:" >&2
-            cat build/test-unit/fake-flatd.log >&2
-            exit 1
-        fi
-        TEST_RUNNER_ARESTIA_LIVE_FLATD=$(python3 scripts/fake-flatd.py --host 127.0.0.1 --port "$port" --pairing)
-        export TEST_RUNNER_ARESTIA_LIVE_FLATD
+        TEST_RUNNER_ARESTIA_HOME_FLATD=$(flatd_pairing "$fake_root/home.log")
+        TEST_RUNNER_ARESTIA_LIVE_FLATD=${TEST_RUNNER_ARESTIA_LIVE_FLATD:-$TEST_RUNNER_ARESTIA_HOME_FLATD}
+        export TEST_RUNNER_ARESTIA_LIVE_FLATD TEST_RUNNER_ARESTIA_HOME_FLATD TEST_RUNNER_ARESTIA_REMOTE_FLATD
+        export TEST_RUNNER_ARESTIA_ARRIVALS="$fake_root"
     fi
     result="build/test-unit/$app.xcresult"
     rm -rf "$result"
@@ -175,8 +191,9 @@ for app in "${apps[@]}"; do
         failed=1
     fi
     # Arestia's live TLS suite must have run, not been skipped for a missing or unreadable pairing code.
-    if [[ "$app" == Arestia ]] && (( ! timing )) && ! grep -q 'Suite LiveFlatdTests passed' "build/test-unit/$app.log"; then
-        echo "Arestia: the live TLS suite (LiveFlatdTests) did not run and pass." >&2
+    if [[ "$app" == Arestia ]] && (( ! timing )) && { ! grep -q 'Suite LiveFlatdTests passed' "build/test-unit/$app.log" ||
+        ! grep -q 'Suite RouteTLSTests passed' "build/test-unit/$app.log"; }; then
+        echo "Arestia: the live TLS suites did not run and pass." >&2
         failed=1
     fi
 done

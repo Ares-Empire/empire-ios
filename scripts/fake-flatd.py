@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A fake flatd for Arestia on the simulator and in screenshots: the flat service's contract v1.3 as the app sees it
+"""A fake flatd for Arestia on the simulator and in screenshots: the flat service's contract v1.7 as the app sees it
 (HTTPS only, with an identity the app pins through a pairing code; REST, the event stream over a WebSocket, Bonjour as
 `_flatd._tcp`) with made-up devices, and a stand-in 3D page at `/viewer` that speaks the viewer's bridge (BRIDGE.md v1).
 The viewer answers with a quoted ETag and Cache-Control: no-store, or an empty 304 for a matching If-None-Match.
@@ -395,7 +395,7 @@ class WebSocket:
         return data
 
 
-def make_handler(flat: Flat, key: str, latency: float, viewer_file: Path | None):
+def make_handler(flat: Flat, key: str, latency: float, viewer_file: Path | None, remote: dict, arrival):
     sockets: list[WebSocket] = []
 
     def broadcast(event: dict) -> None:
@@ -411,6 +411,13 @@ def make_handler(flat: Flat, key: str, latency: float, viewer_file: Path | None)
     class Handler(BaseHTTPRequestHandler):
         server_version = "fake-flatd/1.3"
         protocol_version = "HTTP/1.1"
+
+        def parse_request(self):
+            parsed = super().parse_request()
+            if parsed:
+                arrival("request", method=self.command, path=urlparse(self.path).path,
+                        authorized="Authorization" in self.headers)
+            return parsed
 
         def log_message(self, format, *args):       # one short line per request
             sys.stderr.write("fake-flatd: %s %s\n" % (self.command, self.path.split("?")[0]))
@@ -462,9 +469,11 @@ def make_handler(flat: Flat, key: str, latency: float, viewer_file: Path | None)
                 # refused this identity must not have added any (ArestiaTests, LiveFlatdTests).
                 return self.answer(200, {"requests": seen})
             if url.path == "/api/health":
-                return self.answer(200, {"ok": True, "version": "1.3.0-fake" if flat.renames else "1.2.0-fake"})
+                return self.answer(200, {"ok": True, "version": "1.7.0-fake" if flat.renames else "1.2.0-fake"})
             if not self.authorized(query):
                 return self.refuse()
+            if url.path == "/api/remote" and flat.renames:
+                return self.answer(200, remote)
             if url.path == "/api/devices":
                 return self.answer(200, {"devices": flat.snapshot()["devices"]})
             if url.path.startswith("/api/devices/"):
@@ -657,12 +666,12 @@ post({type:'ready', devices:['fan:fan_1','fan:fan_2','light:desk_lamp','rollo:bl
 IDENTITY_DIR = Path(__file__).resolve().parent.parent / "build" / "fake-flatd"
 
 
-def identity(fresh: bool) -> tuple[Path, Path, str]:
+def identity(folder: Path, fresh: bool) -> tuple[Path, Path, str]:
     """The fake's key and certificate (made with openssl on first use, or anew), and its pin: the SHA-256 of the
     certificate's SubjectPublicKeyInfo, as flatd's contract defines `spki_sha256`."""
-    key, cert = IDENTITY_DIR / "key.pem", IDENTITY_DIR / "cert.pem"
+    key, cert = folder / "key.pem", folder / "cert.pem"
     if fresh or not (key.exists() and cert.exists()):
-        IDENTITY_DIR.mkdir(parents=True, exist_ok=True)
+        folder.mkdir(parents=True, exist_ok=True)
         key.unlink(missing_ok=True)
         cert.unlink(missing_ok=True)
         previous = os.umask(0o077)
@@ -684,16 +693,19 @@ class TLSServer(ThreadingHTTPServer):
     """HTTPS only, as flatd on the home network. The handshake runs in each connection's own thread."""
     daemon_threads = True
 
-    def __init__(self, address, handler, context: ssl.SSLContext):
+    def __init__(self, address, handler, context: ssl.SSLContext, arrival):
         super().__init__(address, handler)
+        self.arrival = arrival
         self.socket = context.wrap_socket(self.socket, server_side=True, do_handshake_on_connect=False)
 
     def finish_request(self, request, client_address):
+        self.arrival("tls_accept")
         try:
             request.settimeout(5)
             request.do_handshake()
             request.settimeout(None)
-        except (OSError, ssl.SSLError):
+        except OSError:
+            self.arrival("tls_failed")
             return          # not TLS, or a client that refused this identity: nothing was served
         super().finish_request(request, client_address)
 
@@ -718,7 +730,13 @@ def main() -> None:
     parser.add_argument("--pairing", action="store_true", help="print the pairing code only, and exit")
     parser.add_argument("--new-identity", action="store_true",
                         help="make a new key and certificate, as if flatd had lost its identity")
+    parser.add_argument("--identity-dir", type=Path, default=IDENTITY_DIR)
+    parser.add_argument("--arrivals", type=Path, help="write TLS and request arrivals as JSON lines")
+    parser.add_argument("--remote-url")
+    parser.add_argument("--remote-pin")
     args = parser.parse_args()
+    if (args.remote_url is None) != (args.remote_pin is None):
+        parser.error("--remote-url and --remote-pin must be set together")
     if args.port in (8787, 8788):
         sys.exit("8787 and 8788 are the real flatd's ports; pick another one.")
 
@@ -731,14 +749,17 @@ def main() -> None:
         args.key = secrets.token_hex(16) if private else DEFAULT_KEY
     if private and args.host == "127.0.0.1":
         args.no_bonjour = True
-    key_file, cert_file, pin = identity(args.new_identity)
-    pairing = json.dumps({"url": f"https://127.0.0.1:{args.port}", "token": args.key, "spki_sha256": pin},
-                         separators=(",", ":"))
+    key_file, cert_file, pin = identity(args.identity_dir, args.new_identity)
+
+    def pairing(port):
+        return json.dumps({"url": f"https://127.0.0.1:{port}", "token": args.key, "spki_sha256": pin},
+                          separators=(",", ":"))
+
     if args.pairing:
         if private and args.key != DEFAULT_KEY and "--key" not in sys.argv:
             sys.exit("With --viewer or --devices the key is made up anew on every start: pass --key to both runs, "
                      "or copy the pairing code the running fake printed.")
-        print(pairing)
+        print(pairing(args.port))
         return
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.minimum_version = ssl.TLSVersion.TLSv1_2
@@ -746,7 +767,19 @@ def main() -> None:
     devices = json.loads(open(args.devices).read()) if args.devices else None
     viewer_file = Path(args.viewer) if args.viewer else None
     flat = Flat(travel=args.travel, extra=args.extra, devices=devices, renames=not args.no_rename)
-    server = TLSServer((args.host, args.port), make_handler(flat, args.key, args.latency, viewer_file), context)
+    arrival_lock = threading.Lock()
+    if args.arrivals:
+        args.arrivals.write_text("")
+
+    def arrival(event, **details):
+        if args.arrivals:
+            with arrival_lock, args.arrivals.open("a") as log:
+                log.write(json.dumps({"event": event, **details}) + "\n")
+
+    remote = {"url": args.remote_url, "spki_sha256": args.remote_pin}
+    handler = make_handler(flat, args.key, args.latency, viewer_file, remote, arrival)
+    server = TLSServer((args.host, args.port), handler, context, arrival)
+    port = server.server_port
 
     def ticking():
         while True:
@@ -756,7 +789,7 @@ def main() -> None:
     threading.Thread(target=ticking, daemon=True).start()
     bonjour = None
     if not args.no_bonjour:
-        bonjour = subprocess.Popen(["dns-sd", "-R", args.name, "_flatd._tcp", "local", str(args.port), "version=fake"],
+        bonjour = subprocess.Popen(["dns-sd", "-R", args.name, "_flatd._tcp", "local", str(port), "version=fake"],
                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def stop(*_):
@@ -764,9 +797,9 @@ def main() -> None:
         raise KeyboardInterrupt
 
     signal.signal(signal.SIGTERM, stop)
-    print(f"fake flatd on https://127.0.0.1:{args.port}  identity: {' '.join(pin[i:i + 4] for i in range(0, 16, 4))}"
+    print(f"fake flatd on https://127.0.0.1:{port}  identity: {' '.join(pin[i:i + 4] for i in range(0, 16, 4))}"
           + ("" if args.no_bonjour else f"  Bonjour: {args.name!r}"), flush=True)
-    print(f"pairing code: {pairing}", flush=True)
+    print(f"pairing code: {pairing(port)}", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

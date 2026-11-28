@@ -95,13 +95,13 @@ nonisolated struct FlatActions: Sendable {
             let fans = try await client.devices().filter { $0.kind == .fan && (ids?.contains($0.id) ?? true) }
             if let ids, Set(fans.map(\.id)) != Set(ids) { throw ChosenDeviceGone.fan }
             guard !fans.isEmpty else { throw FlatdError.unknown }
-            // Forgotten while the list was read: then nothing is switched.
-            guard connection.isCurrent(client) else { throw FlatdError.notPaired }
+            try connection.checkCurrent(client)
             return try await withThrowingTaskGroup(of: Result<Device, FlatdError>.self) { group in
                 for fan in fans {
                     group.addTask {
                         do { return .success(try await client.send(command, to: fan.id)) }
                         catch let error as FlatdError { return .failure(error) }
+                        catch is CancellationError { throw CancellationError() }
                         catch { return .failure(.unreachable) }
                     }
                 }
@@ -109,7 +109,13 @@ nonisolated struct FlatActions: Sendable {
                 for try await result in group {
                     switch result {
                     case let .success(device): done.append(device)
-                    case let .failure(error): firstError = firstError ?? error
+                    case let .failure(error):
+                        // Preserve a lock refusal if the whole batch can still retry at home.
+                        if case .awayNeedsUnlock = error, client.action?.writeStarted == false {
+                            firstError = error
+                        } else {
+                            firstError = firstError ?? error
+                        }
                     }
                 }
                 #if DEBUG && ARESTIA_GATE

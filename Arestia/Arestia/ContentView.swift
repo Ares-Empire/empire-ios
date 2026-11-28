@@ -182,11 +182,16 @@ final class ArestiaNavigation {
 enum DebugConnection {
     static func apply(arguments: [String], to connection: FlatdConnection) {
         if arguments.contains("-forgetFlatd") { try? connection.forget() }
-        guard let index = arguments.firstIndex(of: "-flatdPairing"), arguments.indices.contains(index + 1),
-              let code = PairingCode.parse(arguments[index + 1]), let url = code.baseURL else { return }
-        // The same fake flatd keeps its pairing's identity from launch to launch (its choices in controls stay).
-        let same = connection.pairing.flatMap { $0.pin == code.pin ? $0.id : nil }
-        try? connection.save(FlatdPairing(baseURL: url, token: code.token, pin: code.pin, id: same ?? UUID()))
+        if let index = arguments.firstIndex(of: "-flatdPairing"), arguments.indices.contains(index + 1),
+           let code = PairingCode.parse(arguments[index + 1]), let url = code.baseURL {
+            // The same fake flatd keeps its pairing identity across launches, so its controls keep their choices.
+            let same = connection.pairing.flatMap { $0.pin == code.pin ? $0.id : nil }
+            try? connection.save(FlatdPairing(baseURL: url, token: code.token, pin: code.pin, id: same ?? UUID()))
+        }
+        if arguments.contains("-deadFlatdHome"), let saved = connection.pairing {
+            let dead = URL(string: "https://192.0.2.1:8788")!
+            connection.move(saved, to: FlatdClient(saved, at: dead))
+        }
     }
 }
 #endif

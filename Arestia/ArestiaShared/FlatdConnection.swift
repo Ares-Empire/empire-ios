@@ -10,6 +10,7 @@ nonisolated struct FlatdPairing: Codable, Equatable, Sendable {
     var baseURL: URL
     let token: String
     let pin: FlatdPin
+    var remote: RemoteListener?
     /// **The pairing's identity**: made new for every pairing, kept while the same flatd (the same pin) gets a new key
     /// or address. One flat per install (docs/ARESTIA-APP.md): the app's store lives for one identity (`FlatStore`), and
     /// another flat is paired only after Forget, so it always gets a new identity. A blind or fan chosen in a Shortcut or
@@ -26,6 +27,28 @@ nonisolated struct FlatdPairing: Codable, Equatable, Sendable {
         self.pin = pin
         self.id = id
         self.revision = revision
+    }
+
+    func matches(route: HomeRoute?, pin: FlatdPin, url: URL) -> Bool {
+        switch route {
+        case .home: self.pin == pin
+        case .remote: remote?.pin == pin && remote?.url == url
+        case nil: false
+        }
+    }
+
+    private enum CodingKeys: String, CodingKey { case baseURL, token, pin, id, revision, remote }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        baseURL = try values.decode(URL.self, forKey: .baseURL)
+        token = try values.decode(String.self, forKey: .token)
+        pin = try values.decode(FlatdPin.self, forKey: .pin)
+        id = try values.decode(UUID.self, forKey: .id)
+        revision = try values.decode(UUID.self, forKey: .revision)
+        if let saved = try? values.decode(RemoteListener.Saved.self, forKey: .remote) {
+            remote = RemoteListener.parse(url: saved.url, pin: saved.pin, homePin: pin)
+        }
     }
 }
 
@@ -309,11 +332,14 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
 
     /// Runs `start` (starting a request with this pairing's key) only while this pairing is the saved one, under the
     /// lock Forget takes too: throws `.notPaired` once it is not, `.pairingUnreadable` while it cannot be read.
-    func start(for pairing: UUID, _ start: () -> Void) throws {
+    func start(for pairing: UUID, checking: (FlatdPairing) throws -> Void = { _ in },
+               _ start: () throws -> Void) throws {
         do {
             try lock.withLock {
-                guard try current().id == pairing else { throw FlatdError.notPaired }
-                start()
+                let saved = try current()
+                guard saved.id == pairing else { throw FlatdError.notPaired }
+                try checking(saved)
+                try start()
             }
         } catch is FlatdDispatchLock.Unavailable {
             throw FlatdError.pairingUnreadable          // nothing was started: the lock could not be taken
@@ -335,9 +361,13 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     /// The same flatd (the same identity) with a new key or address, written only over the version `saved` was read
     /// as: false when the pairing changed meanwhile. Keeps the pairing's identity, so its choices go on.
     func renew(_ saved: FlatdPairing, with renewed: FlatdPairing) -> Bool {
-        guard renewed.id == saved.id, renewed.pin == saved.pin, renewed.revision != saved.revision,
-              let text = try? Self.text(renewed) else { return false }
-        return keychain.update(text, ifLabel: saved.revision.uuidString, newLabel: renewed.revision.uuidString)
+        guard renewed.id == saved.id, renewed.pin == saved.pin, renewed.revision != saved.revision else { return false }
+        var renewed = renewed
+        if renewed.token != saved.token { renewed.remote = nil }
+        guard let text = try? Self.text(renewed) else { return false }
+        return (try? lock.withLock {
+            keychain.update(text, ifLabel: saved.revision.uuidString, newLabel: renewed.revision.uuidString)
+        }) ?? false
     }
 
     private static func text(_ pairing: FlatdPairing) throws -> String {
@@ -347,7 +377,9 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     /// A new address for this pairing (flatd found again over Bonjour and proved by its key), written only over the
     /// version it was read as: it changes nothing once the pairing was renewed, replaced or forgotten, so a late lookup
     /// (in the app or a control) never brings an old pairing or an old key back.
-    func move(_ pairing: FlatdPairing, to baseURL: URL) {
+    func move(_ pairing: FlatdPairing, to client: FlatdClient) {
+        guard client.route == .home, client.pairingID == pairing.id, client.pin == pairing.pin else { return }
+        let baseURL = client.baseURL
         guard pairing.baseURL != baseURL, baseURL.scheme == "https" else { return }
         var moved = pairing
         moved.baseURL = baseURL
@@ -424,8 +456,15 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     /// Whether this client still speaks for the saved pairing: the same identity (and so the same flatd). False after
     /// Forget, and for a client made for no pairing (a code being tried).
     func isCurrent(_ client: FlatdClient) -> Bool {
-        guard let id = client.pairingID, let pairing else { return false }
-        return pairing.id == id && pairing.pin == client.pin
+        (try? checkCurrent(client)) != nil
+    }
+
+    func checkCurrent(_ client: FlatdClient) throws {
+        let saved = try current()
+        guard saved.id == client.pairingID else { throw FlatdError.notPaired }
+        guard saved.matches(route: client.route, pin: client.pin, url: client.baseURL) else {
+            throw FlatdError.unreachable
+        }
     }
 
     // Three ways names come in, each with its own rule (Codex's review of the renaming, round 2):
@@ -519,18 +558,14 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
     /// just sent shown: the cache is unavailable, which is not the same as a retired pairing.
     func named(_ devices: [Device], from client: FlatdClient, readSince version: UUID?) throws -> [Device] {
         guard let id = client.pairingID else { throw FlatdError.notPaired }
-        func stillPaired() throws {
-            let saved = try current()
-            guard saved.id == id, saved.pin == client.pin else { throw FlatdError.notPaired }
-        }
         guard let names else {
-            try stillPaired()
+            try checkCurrent(client)
             return devices
         }
         let kept: [KnownDevice]?
         do {
             kept = try lock.withLock { () throws -> [KnownDevice]? in
-                try stillPaired()
+                try checkCurrent(client)
                 let known = Self.known(devices)
                 let now = names.read()
                 if now?.version == version, !(now?.pairing == id && now?.devices == known) {
@@ -539,7 +574,7 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
                 return names.read().flatMap { $0.pairing == id ? $0.devices : nil }
             }
         } catch is FlatdDispatchLock.Unavailable {
-            try stillPaired()                       // no lock, so no names: nothing could have been kept either
+            try checkCurrent(client)                       // no lock, so no names: nothing could have been kept either
             return devices
         }
         guard let kept else { return devices }      // none kept for this pairing: the file could not be written

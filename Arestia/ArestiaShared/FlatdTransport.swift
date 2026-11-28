@@ -8,19 +8,16 @@ struct FlatdTransport: GatedTransport {
     let pin: FlatdPin
 
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
-        try await send(request, starting: { start in start() })
+        try await send(request, gate: nil, dispatch: nil)
     }
 
     /// Starts the request inside the gate: the task is made and resumed in the same step that checked its pairing is
     /// still the saved one, under the lock Forget takes (`FlatdDispatchLock`). A gate that refuses starts nothing.
-    func send(_ request: URLRequest, gate: FlatdGate) async throws -> (Data, HTTPURLResponse) {
-        try await send(request, starting: { start in try gate.start(start) })
-    }
-
-    private func send(_ request: URLRequest, starting: (() -> Void) throws -> Void) async throws
+    func send(_ request: URLRequest, gate: FlatdGate?, dispatch: FlatdRequestDispatch?) async throws
         -> (Data, HTTPURLResponse) {
         // Checked here too, not only by iOS: nothing for flatd ever leaves without TLS.
         guard request.url?.scheme?.lowercased() == "https" else { throw URLError(.unsupportedURL) }
+        if let gate, gate.pin != pin { throw FlatdError.unreachable }
         let session = FlatdSession.shared(pin: pin)
         let running = RunningTask()
         #if DEBUG && ARESTIA_GATE
@@ -31,7 +28,7 @@ struct FlatdTransport: GatedTransport {
                 try await withCheckedThrowingContinuation { (done: CheckedContinuation<(Data, HTTPURLResponse), Error>) in
                     running.finish = { result in done.resume(with: result) }
                     do {
-                        try starting {
+                        let start = {
                             let task = session.dataTask(with: request.withLanguage()) { data, response, error in
                                 if let error {
                                     running.end(.failure(error))
@@ -41,8 +38,14 @@ struct FlatdTransport: GatedTransport {
                                     running.end(.failure(HTTPError.invalidResponse))
                                 }
                             }
-                            running.start(task)
+                            do { try running.start(task, dispatch: dispatch) }
+                            catch {
+                                running.end(.failure(error))
+                                task.cancel()
+                                return
+                            }
                         }
+                        if let gate { try gate.start(start) } else { try start() }
                         #if DEBUG && ARESTIA_GATE
                         // Both the pairing lock and the task's start lock have been released.
                         running.appendDispatch()
@@ -97,22 +100,23 @@ private nonisolated final class RunningTask: @unchecked Sendable {
     /// and the resume are one step under the lock, so a cancellation either comes before (nothing starts) or finds the
     /// task to cancel (round 8). `resume()` only hands the task to the session's own queue, which reports its ending on
     /// another thread, so holding the lock across it never waits on `end`.
-    func start(_ task: URLSessionDataTask) {
-        let started: Bool = lock.withLock {
-            guard !cancelled else { return false }
-            self.task = task
-            #if DEBUG && ARESTIA_GATE
-            if let timing {
-                dispatchTime = timing.resume(task)
-            } else {
+    func start(_ task: URLSessionDataTask, dispatch: FlatdRequestDispatch?) throws {
+        try lock.withLock {
+            guard !cancelled else { throw CancellationError() }
+            let resume = {
+                self.task = task
+                #if DEBUG && ARESTIA_GATE
+                if let timing = self.timing {
+                    self.dispatchTime = timing.resume(task)
+                } else {
+                    task.resume()
+                }
+                #else
                 task.resume()
+                #endif
             }
-            #else
-            task.resume()
-            #endif
-            return true
+            if let dispatch { try dispatch.start(resume) } else { resume() }
         }
-        if !started { end(.failure(CancellationError())) }
     }
 
     func cancel() {
@@ -150,76 +154,22 @@ private nonisolated final class RunningTask: @unchecked Sendable {
 }
 
 nonisolated enum FlatdSession {
-    private static let sessions = OSAllocatedUnfairLock<[FlatdPin: URLSession]>(initialState: [:])
+    #if DEBUG && ARESTIA_GATE
+    private static let factory = PinnedSession(requestTimeout: FlatdRequestTimeout.gate,
+                                               resourceTimeout: FlatdRequestTimeout.gate)
+    #else
+    private static let factory = PinnedSession()
+    #endif
 
-    /// The session for this pin: no cookies or cache kept, no redirects followed, only flatd's key accepted. One
-    /// session per pin, because a session reuses its connections: a connection checked against one pin must never
-    /// carry a request meant for another. A session is never invalidated: a caller may still be about to start a
-    /// request on it (pairing again while the old pairing is in use), and a task on an invalidated session is a crash.
-    /// There are only ever as many as pairing codes were tried since the app (or the extension) started.
     static func shared(pin: FlatdPin) -> URLSession {
-        sessions.withLock { sessions in
-            if let session = sessions[pin] { return session }
-            #if DEBUG && ARESTIA_GATE
-            let configuration = configuration()
-            configuration.timeoutIntervalForRequest = FlatdRequestTimeout.gate
-            configuration.timeoutIntervalForResource = FlatdRequestTimeout.gate
-            let session = URLSession(configuration: configuration, delegate: PinnedServer(pin: pin),
-                                     delegateQueue: nil)
-            #else
-            let session = URLSession(configuration: configuration(), delegate: PinnedServer(pin: pin),
-                                     delegateQueue: nil)
-            #endif
-            sessions[pin] = session
-            return session
-        }
+        factory.shared(pin: pin)
     }
 
-    /// Nothing kept (no cookies, cache or credentials), and straight to flatd: a proxy set up on the iPhone is not
-    /// used, so not even the address flatd has is told to anyone on the way.
-    private static func configuration() -> URLSessionConfiguration {
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.connectionProxyDictionary = [:]
-        return configuration
-    }
-
-    /// A session for the event stream: idle for long stretches (its liveness comes from pings); the same rules.
     static func events(pin: FlatdPin) -> URLSession {
-        let configuration = configuration()
         #if DEBUG && ARESTIA_GATE
-        configuration.timeoutIntervalForRequest = FlatdRequestTimeout.gate
+        PinnedSession.events(pin: pin, requestTimeout: FlatdRequestTimeout.gate)
         #else
-        configuration.timeoutIntervalForRequest = 3600
+        PinnedSession.events(pin: pin, requestTimeout: 3600)
         #endif
-        configuration.waitsForConnectivity = false
-        return URLSession(configuration: configuration, delegate: PinnedServer(pin: pin), delegateQueue: nil)
-    }
-}
-
-/// The session's delegate: a server is accepted only when its certificate holds flatd's key, and no redirect is
-/// followed. iOS's own verdict on the certificate (a CA, the name, the dates) is not asked: flatd's certificate is
-/// self-signed and names no address, and the pin is stricter than any of that.
-nonisolated final class PinnedServer: NSObject, URLSessionTaskDelegate, Sendable {
-    let pin: FlatdPin
-
-    init(pin: FlatdPin) { self.pin = pin }
-
-    /// What to answer a challenge with; separate from the delegate call so the tests can ask it.
-    func verdict(method: String, trust: SecTrust?) -> (URLSession.AuthChallengeDisposition, URLCredential?) {
-        guard method == NSURLAuthenticationMethodServerTrust else { return (.performDefaultHandling, nil) }
-        guard let trust, pin.matches(trust) else { return (.cancelAuthenticationChallenge, nil) }
-        return (.useCredential, URLCredential(trust: trust))
-    }
-
-    func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge,
-                    completionHandler: @escaping @Sendable (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
-        let (disposition, credential) = verdict(method: challenge.protectionSpace.authenticationMethod,
-                                                trust: challenge.protectionSpace.serverTrust)
-        completionHandler(disposition, credential)
-    }
-
-    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
-                    newRequest request: URLRequest, completionHandler: @escaping @Sendable (URLRequest?) -> Void) {
-        completionHandler(nil)
     }
 }

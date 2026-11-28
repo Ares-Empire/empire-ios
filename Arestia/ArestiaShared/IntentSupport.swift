@@ -29,24 +29,28 @@ nonisolated struct FlatIntentError: Error, CustomLocalizedStringResourceConverti
 
 /// Runs an intent's work in the app's language, turns failures into the app's words and asks Control Center to read
 /// its controls again.
-nonisolated func performFlatIntent<T: Sendable>(_ work: @Sendable () async throws -> T) async throws -> T {
+nonisolated func performFlatIntent<T: Sendable>(deadline: Deadline, _ work: @Sendable () async throws -> T) async throws -> T {
     WidgetLanguage.arestia.follow()
     do {
-        let result = try await work()
+        let result = try await FlatdReach.$intentBudget.withValue(deadline, operation: work)
         ArestiaControlKind.reloadAll()
         return result
     } catch {
         ArestiaControlKind.reloadAll()
+        try Task.checkCancellation()
+        if error is CancellationError { throw error }
         throw FlatIntentError(error)
     }
 }
 #if DEBUG && ARESTIA_GATE
 nonisolated func performFlatIntent<T: Sendable, Output: Sendable>(
-    timing: GateAction, _ work: @Sendable () async throws -> T, result: @Sendable (T) -> Output
+    deadline: Deadline = FlatdReach.intentDeadline(), timing: GateAction, _ work: @Sendable () async throws -> T, result: @Sendable (T) -> Output
 ) async throws -> Output {
     WidgetLanguage.arestia.follow()
     do {
-        let answer = try await GateAction.$current.withValue(timing, operation: work)
+        let answer = try await FlatdReach.$intentBudget.withValue(deadline) {
+            try await GateAction.$current.withValue(timing, operation: work)
+        }
         ArestiaControlKind.reloadAll()
         let output = result(answer)
         timing.resultReturned(.ok)
@@ -55,6 +59,8 @@ nonisolated func performFlatIntent<T: Sendable, Output: Sendable>(
         ArestiaControlKind.reloadAll()
         let output = FlatIntentError(error)
         timing.resultReturned(GateOutcome(error))
+        try Task.checkCancellation()
+        if error is CancellationError { throw error }
         throw output
     }
 }

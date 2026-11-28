@@ -384,3 +384,15 @@ too (`de.ares-empire.aresium.widget`, `de.ares-empire.aresus.widget`); the share
 prefix. For people besides the owner: external testing with a public TestFlight link per app, entered as `install` in
 `ares-empire/webauth/apps.json` (the Empire app's Install button shows it to accounts that have the app). The forms:
 `docs/APP-STORE.md`. Every build so far: `docs/BUILDS.md`.
+
+## Pinned home services
+
+`Shared/HomeReach/` provides `SPKIPin` for EC P-256 server keys and `PinnedServer` for TLS challenges and
+redirects. `PinnedSession` caches one ephemeral HTTP session per pin and creates a dedicated session for
+events. Callers supply their timeouts.
+
+`HomeRoute.select` races a saved home address, discovery, and a remote listener. Each caller supplies its
+health probes, discovery, and remote policy. The default policy allows remote, including on the lock screen.
+`Deadline` uses `ContinuousClock` so time spent suspended counts, and cancels work when its absolute
+limit is reached. Tests can supply a clock. Request authorization and the decision to retry an action
+before its first write belong to the calling app.
