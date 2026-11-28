@@ -152,9 +152,11 @@ final class MemoryKeys: FlatdKeyStore, @unchecked Sendable {
     var failsToDelete = false
     var beforeDelete: (@Sendable () -> Void)?
     var failsToRead = false
+    var beforeRead: (@Sendable () throws -> Void)?
     /// Runs after each read: another process changing the pairing between two readings of one caller.
     var afterRead: (@Sendable () -> Void)?
     func read() throws -> String? {
+        try beforeRead?()
         if failsToRead { throw FlatdKeychainError(status: -1) }
         let value = lock.withLock { item?.value }
         afterRead?()
@@ -267,6 +269,7 @@ enum Flat {
             FlatStore(pairing: pairing, connection: connection, transport: transport, eventSource: events,
                       rediscover: { [] }, reloadControls: { reloads.count += 1 }, pairingChanged: changed)
         }
+        session.activate()
         return (session, transport, events, reloads)
     }
 }

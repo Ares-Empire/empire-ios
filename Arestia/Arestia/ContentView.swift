@@ -54,6 +54,7 @@ struct ContentView: View {
         }
         .onOpenURL { url in navigation.open(url) }
         .onChange(of: session?.generation) { old, _ in if old != nil { navigation.reset() } }
+        .onChange(of: session.map(ObjectIdentifier.init), initial: true) { _, _ in session?.activate() }
         #if DEBUG
         .task {
             guard session == nil else { return }

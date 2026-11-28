@@ -83,19 +83,19 @@ nonisolated final class RemoteEnrollment: Sendable {
     }
 
     private func run() async {
-        var answer: Answer?
         var refetch: Signal?
         while let signal = nextSignal(or: refetch) {
-            // A failed refresh leaves the last validated answer pending at its original revision.
-            if let fresh = await refresh(signal) { answer = fresh }
             refetch = nil
-            while let pending = answer, isLatest {
-                switch await commit(pending) {
-                case .done: answer = nil
+            guard let answer = await refresh(signal) else { continue }
+            // Finish the validated answer before a replacement refresh can stall in a read.
+            committing: while isRunning {
+                switch await commit(answer) {
+                case .done: break committing
                 case .refetch:
-                    answer = nil
                     refetch = signal
-                case .retry: try? await Task.sleep(for: Self.retryPause)
+                    break committing
+                case .retry:
+                    try? await Task.sleep(for: Self.retryPause)
                 }
             }
         }
@@ -114,6 +114,10 @@ nonisolated final class RemoteEnrollment: Sendable {
 
     private var isLatest: Bool {
         Self.active.withLock { $0[key]?.stopped == false && $0[key]?.pending == nil }
+    }
+
+    private var isRunning: Bool {
+        Self.active.withLock { $0[key]?.stopped == false }
     }
 
     private func refresh(_ signal: Signal) async -> Answer? {
@@ -139,6 +143,8 @@ nonisolated final class RemoteEnrollment: Sendable {
                 case let .success(.replace(remote)):
                     return Answer(remote: remote, saved: saved, timeout: client.readTimeout)
                 case .failure(is FlatdGate.RevisionChanged): break
+                case .failure(FlatdError.pairingUnreadable), .failure(is Deadline.Expired):
+                    try? await Task.sleep(for: Self.retryPause)
                 default: return nil
                 }
             default: return nil // Forgotten or replaced.
@@ -174,19 +180,22 @@ nonisolated final class RemoteEnrollment: Sendable {
         let renewed = updated
         let changed = remote?.url != saved.remote?.url || remote?.pin != saved.remote?.pin
         return await onWorker { [self] in
+            guard isRunning else { return .done }
+            // The Keychain CAS checks the saved revision under the dispatch lock.
+            if changed {
+                let hold = Attempt<Void>(until: Deadline(after: .seconds(answer.timeout)))
+                do {
+                    if try connection.renew(saved, with: renewed, hold: hold, isLatest: { isRunning }) { return .done }
+                } catch {
+                    return .retry
+                }
+            }
+            // A rejected CAS can mean a transient Keychain failure or a newer revision.
             switch connection.saved {
             case .unreadable: return .retry
             case let .paired(current) where current.id == saved.id:
                 guard current.revision == saved.revision else { return .refetch }
-                guard changed else { return .done }
-                guard isLatest else { return .retry }
-                let hold = Attempt<Void>(until: Deadline(after: .seconds(answer.timeout)))
-                do {
-                    let committed = try connection.renew(saved, with: renewed, hold: hold, isLatest: { isLatest })
-                    return committed ? .done : .retry
-                } catch {
-                    return .retry
-                }
+                return changed ? .retry : .done
             default: return .done
             }
         }

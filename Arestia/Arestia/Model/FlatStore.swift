@@ -602,7 +602,7 @@ final class FlatStore {
 
     /// The devices a pairing code's check read, and the version of the names kept when it began: kept only while no
     /// newer names were (`FlatdConnection.remember(_:for:readSince:)`).
-    private struct Found: Sendable {
+    fileprivate struct Found: Sendable {
         let devices: [Device]
         let version: UUID?
     }
@@ -624,20 +624,27 @@ final class FlatStore {
                 catch is FlatdDispatchLock.Unavailable { return false }
             }
             let updated = try outcome.result.get()
-            guard !isRetired else { return .notPossible }
             if updated {
-                enqueueNameWrite { connection, hold in
-                    _ = connection.remember(found.devices, for: id, readSince: found.version, hold: hold)
+                if !FlatSession.completeRenewal(from: self, found: found) {
+                    applyRenewal(found)
+                    reloadControls()
                 }
-                credentials += 1
-                stop()                                  // the stream again, with the new key and address
-                if link == .refused || !hasSnapshot { link = .connecting }
-                start()
-                reloadControls()
                 return nil
             }
+            guard !isRetired else { return .notPossible }
         }
         return .notPossible
+    }
+
+    fileprivate func applyRenewal(_ found: Found) {
+        guard !isRetired, let pairingID else { return }
+        enqueueNameWrite { connection, hold in
+            _ = connection.remember(found.devices, for: pairingID, readSince: found.version, hold: hold)
+        }
+        credentials += 1
+        stop()
+        if link == .refused || !hasSnapshot { link = .connecting }
+        start()
     }
 
     /// The first pairing, from a store with none: saved only while nothing usable is saved (an item that is no pairing,
@@ -1133,6 +1140,12 @@ final class FlatStore {
 /// never reused, so nothing it started or still hears lands anywhere; the screens are built anew with the new store.
 @MainActor @Observable
 final class FlatSession {
+    private struct WeakSession {
+        weak var session: FlatSession?
+    }
+
+    private static var current: [ObjectIdentifier: WeakSession] = [:]
+
     /// The store for the saved pairing (one without a pairing shows the connect screen); nil while the Keychain could
     /// not be read yet.
     private(set) var store: FlatStore?
@@ -1158,6 +1171,22 @@ final class FlatSession {
             FlatStore(pairing: pairing, connection: connection, pairingChanged: changed)
         }
         load()
+    }
+
+    /// Register the session the root actually presents. SwiftUI can construct unused initial State values.
+    func activate() {
+        Self.current = Self.current.filter { $0.value.session != nil }
+        Self.current[ObjectIdentifier(connection.lock)] = WeakSession(session: self)
+    }
+
+    /// An admitted update can finish after the root that began it has disappeared.
+    fileprivate static func completeRenewal(from store: FlatStore, found: FlatStore.Found) -> Bool {
+        guard let session = current[ObjectIdentifier(store.connection.lock)]?.session else { return false }
+        if let currentStore = session.store, currentStore.pairingID == store.pairingID {
+            currentStore.applyRenewal(found)
+        }
+        session.reloadControls()
+        return true
     }
 
     /// Reads the saved pairing and makes sure the store is for it: kept when it already is, else a new one. While the
@@ -1197,6 +1226,8 @@ final class FlatSession {
     /// This session is done (the app's root was built anew, as after a language switch): its store retires, so no
     /// work of it goes on next to the new session's.
     func end() {
+        let key = ObjectIdentifier(connection.lock)
+        if Self.current[key]?.session === self { Self.current.removeValue(forKey: key) }
         reading?.cancel()
         reading = nil
         store?.retire()

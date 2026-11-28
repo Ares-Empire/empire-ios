@@ -162,14 +162,23 @@ that did not follow.
 A live home snapshot queues `GET /api/remote` with the stream's pairing identity, even if the store's
 Keychain read fails. The enrollment worker checks the current pairing before asking flatd 1.7. It saves
 the validated listener URL, pin and enrollment generation against the pairing revision read before asking.
-A newer snapshot triggers another lookup. A validated answer stays pending through a failed lookup and
-lock contention until it commits, a newer validated answer supersedes it, the pairing revision changes,
-or the pairing is forgotten. A revision change triggers a fresh lookup. The stream applies events while
-enrollment and name-cache writes wait for the lock in the background. Two nulls clear enrollment and a
-404 leaves it as it was. Renewing with a new token clears the remote part. Once the renewal write is
-admitted, the store waits for the Keychain result through expiry or cancellation. On success it restarts
-the stream and reloads the controls. Re-enrolling after a clearance creates a fresh generation even for
-the same listener. The app's screens and event stream use the home route.
+A validated change gets its lock-budgeted commit attempt before any new pairing read. It stays pending
+through lock contention until it commits or the pairing changes. A revision change triggers a fresh lookup.
+Transient pairing read failures and expiry before dispatch retry with a pause in the same worker. The stream applies events
+while enrollment and name-cache writes wait for the lock in the background. Two nulls clear enrollment
+and a 404 leaves it as it was. Re-enrolling after a clearance creates a fresh generation even for the same
+listener. The app's screens and event stream use the home route.
+
+A pending enrollment change lives only in the app process. If the process ends before the write, the next
+home snapshot refreshes the cache. Enrollment stores public facts about the listener, its URL and public-key
+pin. Stale enrollment can cost remote reachability. Withdrawal shuts off both the listener and its server
+route. If a remote private key may have been disclosed, the server invalidates the old token before changing
+the key and listener label (design 340, sections 3 and 7.1).
+
+Renewing with a new token clears the old remote enrollment before the app learns the new listener at home.
+Once the renewal write is admitted, the caller waits for the Keychain result through expiry or cancellation.
+On success the current session restarts the stream for that pairing and reloads the controls, even after a
+root rebuild.
 
 Shortcuts, Siri and Control Center can select the saved home address, a Bonjour candidate, or the enrolled
 remote listener. Only token-free health probes race. Each route uses its own pinned identity. An intent

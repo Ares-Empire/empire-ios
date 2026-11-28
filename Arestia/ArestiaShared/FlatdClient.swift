@@ -444,6 +444,10 @@ nonisolated struct FlatdClient: Sendable {
             Self.logDispatch(boundedRequest, route: route, deadline: deadline)
             #endif
         })
+        // Enrollment retries a capped admission read. A dispatched GET still uses the normal timeout result.
+        if waitForWorker, !outcome.committed, case let .failure(error) = outcome.result, error is Deadline.Expired {
+            throw error
+        }
         return try Self.classify(outcome, isWrite: rule.isWrite, inAction: action != nil)
     }
 
