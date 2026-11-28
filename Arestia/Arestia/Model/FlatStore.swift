@@ -274,7 +274,7 @@ final class FlatStore {
             }
             let client = FlatdClient(pairing, at: foundAt, transport: transport).gated(by: connection)
             do {
-                try await follow(client, generation: generation) {
+                try await follow(client, streamPairing: pairing, generation: generation) {
                     failures = 0
                     movedSinceLive = false
                 }
@@ -325,7 +325,7 @@ final class FlatStore {
 
     /// The address checked, scenes over HTTPS (also telling a refused key apart at once), then the event stream until
     /// it ends. A first snapshot resets the failures and, at a new address, keeps it in the pairing.
-    private func follow(_ client: FlatdClient, generation: Int, live: () -> Void) async throws {
+    private func follow(_ client: FlatdClient, streamPairing: FlatdPairing, generation: Int, live: () -> Void) async throws {
         // However the stream ends, its checked address stops counting at once: a command in the retry's pause checks
         // the address again (Codex's review, round 3).
         defer { if generation == loopGeneration { liveBase = nil } }
@@ -346,20 +346,15 @@ final class FlatStore {
             if case .snapshot = event {
                 // Each connection's first word: still this store's pairing? (Forget retires the store before anything
                 // else, so this only guards a pairing changed outside the app's own flow.)
-                let saved: FlatdPairing?
                 let reading = (try? await readSavedPairing()) ?? .unreadable
                 guard owns(generation) else { return }
-                switch readPairing(reading) {
-                case let .here(pairing): saved = pairing
-                case .unreadable: saved = nil
-                case .gone: return
-                }
+                if case .gone = readPairing(reading) { return }
                 apply(event)
                 live()
                 link = .live
                 liveBase = client.baseURL
-                if let saved, saved.token == client.token, saved.pin == client.pin, client.route == .home {
-                    RemoteEnrollment.signal(snapshot: saved, at: client.baseURL,
+                if client.route == .home {
+                    RemoteEnrollment.signal(snapshot: streamPairing, at: client.baseURL,
                                             connection: connection, transport: transport)
                 }
                 sayTroubleFromOutside()
@@ -564,7 +559,8 @@ final class FlatStore {
     /// - A code of this store's flat (the same identity) renews key and address in place; the stream starts again with
     ///   the new key, and the 3D page loads again.
     /// - Another flat is never paired in place: that takes Forget first (`FlatSession.forget`).
-    func connect(to baseURL: URL, token: String, pin: FlatdPin) async -> FlatdError? {
+    func connect(to baseURL: URL, token: String, pin: FlatdPin,
+                 renewalClock: Deadline.Clock = .continuous) async -> FlatdError? {
         guard !isRetired else { return .notPossible }
         if isAnotherFlat(pin) { return .anotherFlat }
         let candidate = FlatdClient(baseURL: baseURL, token: token, pin: pin, transport: transport)
@@ -590,7 +586,7 @@ final class FlatStore {
             guard !Task.isCancelled, !isRetired else { return .notPossible }
             if let pairingID {
                 return try await renew(pairingID, baseURL: baseURL, token: token, pin: pin, found: found,
-                                       deadline: Deadline(after: .seconds(candidate.readTimeout)))
+                                       deadline: Deadline(after: .seconds(candidate.readTimeout), clock: renewalClock))
             }
             return try await pairFirst(baseURL: baseURL, token: token, pin: pin, found: found)
         } catch let error as FlatdError {
@@ -617,7 +613,8 @@ final class FlatStore {
                        deadline: Deadline) async throws -> FlatdError? {
         let connection = connection
         for _ in 0..<3 {
-            let updated = try await deadline.blocking { hold in
+            // Once admitted, the store waits for the CAS result so it can reconcile even after expiry or cancellation.
+            let outcome = await deadline.blockingOutcome(finishAdmittedWork: true) { hold in
                 let current = try connection.current()
                 guard current.id == id else { throw FlatdError.notPaired }
                 guard current.pin == pin else { throw FlatdError.anotherFlat }
@@ -626,6 +623,7 @@ final class FlatStore {
                 do { return try connection.renew(current, with: renewed, hold: hold) }
                 catch is FlatdDispatchLock.Unavailable { return false }
             }
+            let updated = try outcome.result.get()
             guard !isRetired else { return .notPossible }
             if updated {
                 enqueueNameWrite { connection, hold in

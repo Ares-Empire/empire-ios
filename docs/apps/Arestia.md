@@ -159,15 +159,17 @@ that did not follow.
 
 ### Remote enrollment and controls (B357, P7a)
 
-After a live home snapshot, the app asks flatd 1.7 for `GET /api/remote` in the background. It saves the
-validated listener URL, pin and enrollment generation against the pairing revision read before asking.
-A newer snapshot replaces the previous lookup. A validated answer supersedes any queued change.
-The background commit retries under contention against the original revision until it succeeds,
-a newer answer supersedes it, the revision changes, or the store retires. The stream applies events
-while enrollment and name-cache writes wait for the lock in the background. Two nulls clear enrollment
-and a 404 preserves it. Renewing with a
-new token clears the remote part. Re-enrolling after a clearance creates a fresh generation even for the
-same listener. The app's screens and event stream use the home route.
+A live home snapshot queues `GET /api/remote` with the stream's pairing identity, even if the store's
+Keychain read fails. The enrollment worker checks the current pairing before asking flatd 1.7. It saves
+the validated listener URL, pin and enrollment generation against the pairing revision read before asking.
+A newer snapshot triggers another lookup. A validated answer stays pending through a failed lookup and
+lock contention until it commits, a newer validated answer supersedes it, the pairing revision changes,
+or the pairing is forgotten. A revision change triggers a fresh lookup. The stream applies events while
+enrollment and name-cache writes wait for the lock in the background. Two nulls clear enrollment and a
+404 leaves it as it was. Renewing with a new token clears the remote part. Once the renewal write is
+admitted, the store waits for the Keychain result through expiry or cancellation. On success it restarts
+the stream and reloads the controls. Re-enrolling after a clearance creates a fresh generation even for
+the same listener. The app's screens and event stream use the home route.
 
 Shortcuts, Siri and Control Center can select the saved home address, a Bonjour candidate, or the enrolled
 remote listener. Only token-free health probes race. Each route uses its own pinned identity. An intent

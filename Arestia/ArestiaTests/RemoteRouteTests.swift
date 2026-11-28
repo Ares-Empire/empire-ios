@@ -589,6 +589,62 @@ struct ActionDeadlineTests {
 }
 
 struct RemoteEnrollmentTests {
+    @MainActor @Test func failedRefreshKeepsValidatedWithdrawal() async throws {
+        let held = HeldDispatchLock()
+        defer { held.stall.release.signal() }
+        let connection = FlatdConnection(defaults: nil, names: nil, keychain: MemoryKeys(), lock: held.lock)
+        var pairing = Flat.pairing()
+        pairing.remote = try #require(RemoteListener.parse(url: awayURL, pin: awayPin, homePin: pairing.pin))
+        try connection.save(pairing)
+        let (store, transport, events, _) = Flat.store(connection: connection)
+        defer { store.stop() }
+        let old = try #require(FlatdClient(remoteOf: pairing, transport: transport))
+            .gated(by: connection, marker: RemoteMarker(read: { true }))
+        transport.answer("GET /api/scenes", body: ["scenes": []])
+        transport.answer("GET /api/remote", body: ["url": NSNull(), "spki_sha256": NSNull()]) {
+            await held.take()
+        }
+        store.start()
+        try #require(await eventually { events.isOpen })
+        events.send(try Flat.snapshot(fans: 1))
+        try #require(await eventually { held.waiting.withLock { $0 } })
+        transport.answer("GET /api/remote", fails: true, failure: .timedOut)
+        events.send(try Flat.snapshot(fans: 2))
+        try #require(await eventually { store.fans.count == 2 })
+        #expect(connection.pairing?.remote == pairing.remote)
+        held.stall.release.signal()
+
+        try #require(await eventually { connection.pairing?.remote == nil })
+        #expect(transport.sent.filter { $0.url?.path() == "/api/remote" }.count == 2)
+        await #expect(throws: FlatdError.unreachable) { try await old.devices() }
+        #expect(transport.requests(to: away).isEmpty)
+    }
+
+    @MainActor @Test func unreadableSnapshotPairingStillSignalsEnrollment() async throws {
+        let keys = MemoryKeys()
+        let connection = FlatdConnection(defaults: nil, names: nil, keychain: keys, lock: .processOnly)
+        try connection.save(Flat.pairing())
+        let (store, transport, events, _) = Flat.store(connection: connection)
+        defer { store.stop() }
+        transport.answer("GET /api/scenes", body: ["scenes": []])
+        transport.answer("GET /api/remote", body: ["url": awayURL, "spki_sha256": awayPin])
+        store.start()
+        try #require(await eventually { events.isOpen })
+        let snapshots = Counter()
+        _ = store.listen { event in
+            guard case .snapshot = event else { return }
+            snapshots.count += 1
+            keys.failsToRead = false
+        }
+        keys.failsToRead = true
+        events.send(try Flat.snapshot())
+
+        try #require(await eventually { connection.pairing?.remote?.url.absoluteString == awayURL })
+        #expect(snapshots.count == 1)
+        #expect(store.link == .live)
+        #expect(events.requests.count == 1)
+    }
+
     @MainActor @Test func supersededEnrollmentCannotCommitEvenIfItReturnsSuccessfully() async throws {
         let held = HeldDispatchLock()
         defer { held.stall.release.signal() }
@@ -1529,6 +1585,46 @@ struct IntentBoundaryTests {
                 }
             }.value
         }
+    }
+}
+
+struct RenewalDispatchTests {
+    @MainActor @Test(arguments: [false, true])
+    func admittedRenewalReconcilesAfterDeadlineOrCancellation(cancel: Bool) async throws {
+        let keys = MemoryKeys()
+        let update = BlockingStep()
+        defer { update.release.signal() }
+        keys.beforeUpdate = { update.wait() }
+        let connection = FlatdConnection(defaults: nil, names: nil, keychain: keys, lock: .processOnly)
+        var pairing = Flat.pairing()
+        pairing.remote = try #require(RemoteListener.parse(url: awayURL, pin: awayPin, homePin: pairing.pin))
+        try connection.save(pairing)
+        let (store, transport, events, reloads) = Flat.store(connection: connection)
+        defer { store.stop() }
+        transport.answer("GET /api/scenes", status: 401)
+        store.start()
+        try #require(await eventually { store.link == .refused })
+        transport.answer("GET /api/scenes", body: ["scenes": []])
+        transport.answer("GET /api/devices", body: ["devices": [Flat.fan(1)]])
+        transport.answer("GET /api/remote", status: 404)
+        let clock = TestClock()
+        let renewal = Task {
+            await store.connect(to: Flat.base, token: Flat.renewedKey, pin: Flat.pin, renewalClock: clock.clock)
+        }
+        try #require(await eventually { update.entered })
+        if cancel { renewal.cancel() } else { clock.advance(.seconds(60)) }
+        #expect(connection.pairing == pairing)
+        update.release.signal()
+
+        #expect(await renewal.value == nil)
+        #expect(connection.pairing?.token == Flat.renewedKey)
+        #expect(connection.pairing?.remote == nil)
+        #expect(store.credentials == 1)
+        #expect(reloads.count == 1)
+        try #require(await eventually { events.isOpen })
+        #expect(events.requests.last?.value(forHTTPHeaderField: "Authorization") == "Bearer \(Flat.renewedKey)")
+        events.send(try Flat.snapshot())
+        try #require(await eventually { store.link == .live })
     }
 }
 

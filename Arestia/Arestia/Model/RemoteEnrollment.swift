@@ -9,6 +9,7 @@ nonisolated final class RemoteEnrollment: Sendable {
     }
 
     private struct Signal: Sendable {
+        let pin: FlatdPin
         let revision: UUID
         let address: URL
         let transport: FlatdTransportOverride?
@@ -19,6 +20,12 @@ nonisolated final class RemoteEnrollment: Sendable {
         var pending: Signal?
         var fetch: Task<FlatdClient.RemoteEnrollment, Error>?
         var stopped = false
+    }
+
+    private struct Answer: Sendable {
+        let remote: RemoteListener?
+        let saved: FlatdPairing
+        let timeout: TimeInterval
     }
 
     private enum Next: Sendable { case done, retry, refetch }
@@ -38,7 +45,7 @@ nonisolated final class RemoteEnrollment: Sendable {
     static func signal(snapshot: FlatdPairing, at address: URL, connection: FlatdConnection,
                        transport: FlatdTransportOverride? = nil) -> Task<Void, Never> {
         let key = Key(lock: ObjectIdentifier(connection.lock), pairing: snapshot.id)
-        let signal = Signal(revision: snapshot.revision, address: address, transport: transport)
+        let signal = Signal(pin: snapshot.pin, revision: snapshot.revision, address: address, transport: transport)
         return active.withLock { active in
             if var work = active[key] {
                 if !work.stopped {
@@ -76,15 +83,32 @@ nonisolated final class RemoteEnrollment: Sendable {
     }
 
     private func run() async {
-        while let signal = Self.active.withLock({ active -> Signal? in
-            guard let signal = active[key]?.pending else {
+        var answer: Answer?
+        var refetch: Signal?
+        while let signal = nextSignal(or: refetch) {
+            // A failed refresh leaves the last validated answer pending at its original revision.
+            if let fresh = await refresh(signal) { answer = fresh }
+            refetch = nil
+            while let pending = answer, isLatest {
+                switch await commit(pending) {
+                case .done: answer = nil
+                case .refetch:
+                    answer = nil
+                    refetch = signal
+                case .retry: try? await Task.sleep(for: Self.retryPause)
+                }
+            }
+        }
+    }
+
+    private func nextSignal(or refetch: Signal?) -> Signal? {
+        Self.active.withLock { active in
+            guard let work = active[key], !work.stopped, let signal = work.pending ?? refetch else {
                 active.removeValue(forKey: key)
                 return nil
             }
             active[key]?.pending = nil
             return signal
-        }) {
-            await refresh(signal)
         }
     }
 
@@ -92,13 +116,13 @@ nonisolated final class RemoteEnrollment: Sendable {
         Self.active.withLock { $0[key]?.stopped == false && $0[key]?.pending == nil }
     }
 
-    private func refresh(_ signal: Signal) async {
+    private func refresh(_ signal: Signal) async -> Answer? {
         var shouldMove = true
         while isLatest {
             switch await onWorker({ self.connection.saved }) {
             case .unreadable:
                 try? await Task.sleep(for: Self.retryPause)
-            case let .paired(saved) where saved.id == key.pairing:
+            case let .paired(saved) where saved.id == key.pairing && saved.pin == signal.pin:
                 if shouldMove, saved.revision == signal.revision, saved.baseURL != signal.address {
                     shouldMove = false
                     await move(saved, using: signal)
@@ -108,18 +132,19 @@ nonisolated final class RemoteEnrollment: Sendable {
                 let address = saved.revision == signal.revision ? signal.address : saved.baseURL
                 let client = FlatdClient(saved, at: address, transport: signal.transport)
                     .gated(by: connection, revision: saved.revision)
-                guard let fetch = startFetch(client) else { return }
+                guard let fetch = startFetch(client) else { return nil }
                 let answer = await fetch.result
                 Self.active.withLock { $0[key]?.fetch = nil }
                 switch answer {
                 case let .success(.replace(remote)):
-                    guard await commit(remote, over: saved, timeout: client.readTimeout) == .refetch else { return }
+                    return Answer(remote: remote, saved: saved, timeout: client.readTimeout)
                 case .failure(is FlatdGate.RevisionChanged): break
-                default: return
+                default: return nil
                 }
-            default: return // Forgotten or replaced.
+            default: return nil // Forgotten or replaced.
             }
         }
+        return nil
     }
 
     private func startFetch(_ client: FlatdClient) -> Task<FlatdClient.RemoteEnrollment, Error>? {
@@ -140,34 +165,31 @@ nonisolated final class RemoteEnrollment: Sendable {
         }
     }
 
-    private func commit(_ remote: RemoteListener?, over saved: FlatdPairing, timeout: TimeInterval) async -> Next {
+    private func commit(_ answer: Answer) async -> Next {
+        let saved = answer.saved
+        let remote = answer.remote
         var updated = saved
         updated.remote = remote
         updated.revision = UUID()
         let renewed = updated
         let changed = remote?.url != saved.remote?.url || remote?.pin != saved.remote?.pin
-        while isLatest {
-            let next: Next = await onWorker { [self] in
-                switch connection.saved {
-                case .unreadable: return .retry
-                case let .paired(current) where current.id == saved.id:
-                    guard current.revision == saved.revision else { return .refetch }
-                    guard changed, isLatest else { return .done }
-                    let hold = Attempt<Void>(until: Deadline(after: .seconds(timeout)))
-                    do {
-                        let committed = try connection.renew(saved, with: renewed, hold: hold, isLatest: { isLatest })
-                        return committed ? .done : .retry
-                    } catch {
-                        return .retry
-                    }
-                default: return .done
+        return await onWorker { [self] in
+            switch connection.saved {
+            case .unreadable: return .retry
+            case let .paired(current) where current.id == saved.id:
+                guard current.revision == saved.revision else { return .refetch }
+                guard changed else { return .done }
+                guard isLatest else { return .retry }
+                let hold = Attempt<Void>(until: Deadline(after: .seconds(answer.timeout)))
+                do {
+                    let committed = try connection.renew(saved, with: renewed, hold: hold, isLatest: { isLatest })
+                    return committed ? .done : .retry
+                } catch {
+                    return .retry
                 }
+            default: return .done
             }
-            if next == .done { return .done }
-            try? await Task.sleep(for: Self.retryPause)
-            if next == .refetch { return .refetch }
         }
-        return .done
     }
 
     /// Wait for Security itself to return, even if a system call takes longer than the lock budget.
