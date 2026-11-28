@@ -234,6 +234,16 @@ The fake flatd can serve remote enrollment with `--remote-url` and `--remote-pin
 two loopback listeners with separate identity folders and checks their arrivals logs for failed TLS handshakes
 and zero HTTP requests when a route is offered the other route's key.
 
+**Known limits** (owner's decision 2026-11-28: merge once a review finds no security issue, write down the rest; the
+deciding review found none). Each costs reachability or responsiveness, never the token:
+- A pending enrollment change lives only in the app process; if the process ends before the write, the next home
+  snapshot refreshes it.
+- If the home connection drops an enrollment reply, remote control may stay unavailable until the next home snapshot.
+- A stall while iOS starts a health probe can delay the route choice and leave too little time to send the action
+  (the action then ends without sending; probes carry no token).
+- Not yet measured on the iPhone: how long after locking the marker still reads, passcode removal, the public route,
+  background completion of controls (the P7a phone tests).
+
 ### Build 4 uploaded 2026-11-26 23:56
 
 **Build 4 uploaded 2026-11-26 23:56** (lamp levels and Toggle cooking for flatd 1.6; the offline text names the flat
