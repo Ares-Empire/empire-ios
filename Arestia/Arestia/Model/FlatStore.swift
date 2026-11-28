@@ -93,8 +93,6 @@ final class FlatStore {
     private var loop: Task<Void, Never>?
     /// Which loop may change the store (`run`); a stopped or replaced loop finds it changed and ends.
     private var loopGeneration = 0
-    private var enrollmentRead: Task<Void, Never>?
-    private var enrollmentCommit: Task<Void, Never>?
     /// Commands under way, cancelled when the store retires.
     private var tasks: [UUID: Task<Void, Never>] = [:]
     /// Name cache writes preserve event order independently of the stream and its UI updates.
@@ -198,8 +196,6 @@ final class FlatStore {
         guard !isRetired else { return }
         isRetired = true
         stop()
-        enrollmentRead?.cancel()
-        enrollmentCommit?.cancel()
         tasks.values.forEach { $0.cancel() }
         tasks = [:]
         listeners = [:]
@@ -363,7 +359,8 @@ final class FlatStore {
                 link = .live
                 liveBase = client.baseURL
                 if let saved, saved.token == client.token, saved.pin == client.pin, client.route == .home {
-                    queueEnrollment(from: client, moveFrom: saved)
+                    RemoteEnrollment.signal(snapshot: saved, at: client.baseURL,
+                                            connection: connection, transport: transport)
                 }
                 sayTroubleFromOutside()
             } else {
@@ -371,63 +368,6 @@ final class FlatStore {
             }
         }
         throw FlatdError.unreachable            // the stream ended: reconnect
-    }
-
-    private func queueEnrollment(from client: FlatdClient, moveFrom snapshotPairing: FlatdPairing) {
-        enrollmentRead?.cancel()
-        let connection = connection
-        enrollmentRead = Task { [weak self] in
-            let deadline = Deadline(after: .seconds(client.readTimeout))
-            // Move only over the snapshot's revision. For enrollment, read again after any earlier commit.
-            guard let saved = try? await deadline.blocking({ hold in
-                try connection.move(snapshotPairing, to: client, hold: hold)
-                let current = try connection.lock.withLock(until: hold.deadline, hold: hold) { try connection.current() }
-                guard current.id == client.pairingID, current.token == client.token, current.pin == client.pin else {
-                    throw FlatdError.unreachable
-                }
-                return current
-            }) else { return }
-            guard case let .replace(remote)? = try? await client.remoteEnrollment(),
-                  !Task.isCancelled, let self else { return }
-            // A new enrollment answer supersedes queued work even if it agrees with the saved listener.
-            enrollmentCommit?.cancel()
-            enrollmentCommit = Task {
-                await Self.commitEnrollment(remote, over: saved, connection: connection, timeout: client.readTimeout)
-            }
-        }
-    }
-
-    #if DEBUG
-    static func enrollRemote(from client: FlatdClient, read saved: FlatdPairing, connection: FlatdConnection,
-                             isLatest: @escaping @Sendable () -> Bool = { true }) async {
-        guard client.route == .home, client.pairingID == saved.id, client.token == saved.token, client.pin == saved.pin,
-              case let .replace(remote)? = try? await client.remoteEnrollment() else { return }
-        await commitEnrollment(remote, over: saved, connection: connection, timeout: client.readTimeout,
-                               isLatest: isLatest)
-    }
-    #endif
-
-    private static func commitEnrollment(_ remote: RemoteListener?, over saved: FlatdPairing,
-                                         connection: FlatdConnection, timeout: TimeInterval,
-                                         isLatest: @escaping @Sendable () -> Bool = { true }) async {
-        guard remote?.url != saved.remote?.url || remote?.pin != saved.remote?.pin else { return }
-        var updated = saved
-        updated.remote = remote
-        updated.revision = UUID()
-        let renewed = updated
-        // Every retry still writes against the revision read before GET /api/remote.
-        while !Task.isCancelled, isLatest() {
-            let finished = try? await Deadline(after: .seconds(timeout)).blocking { hold in
-                switch connection.saved {
-                case .unreadable: return false
-                case let .paired(current) where current.revision == saved.revision && current.id == saved.id:
-                    return try connection.renew(saved, with: renewed, hold: hold, isLatest: isLatest)
-                default: return true
-                }
-            }
-            if finished == true { return }
-            try? await Task.sleep(for: .milliseconds(100))
-        }
     }
 
     private func clearTrouble(mode: String, pairing: UUID, active: Bool) {
@@ -1240,10 +1180,12 @@ final class FlatSession {
                 self?.load()
             }
         case let .paired(pairing):
+            RemoteEnrollment.stop(for: connection, except: pairing.id)
             readFailures = 0
             if let store, !store.isRetired, store.pairingID == pairing.id { return }
             replace(with: pairing)
         case .none, .invalid:
+            RemoteEnrollment.stop(for: connection, except: nil)
             readFailures = 0
             // No pairing for certain: a page kept for one is no one's. Forget queues its removal, which never runs
             // when the app ends first, so it is tried again here, at every launch without a pairing (Codex's review of

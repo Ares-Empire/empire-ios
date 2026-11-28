@@ -180,12 +180,12 @@ nonisolated struct FlatdClient: Sendable {
 
     /// The same client, with each authenticated request started under the lock that Forget takes.
     func gated(by connection: FlatdConnection,
-               marker: RemoteMarker = .live) -> FlatdClient {
+               marker: RemoteMarker = .live, revision: UUID? = nil) -> FlatdClient {
         guard let pairingID, let route else { return self }
         var client = self
         client.gate = FlatdGate(connection: connection, pairing: pairingID, route: route, pin: pin,
                                baseURL: baseURL, savedToken: token, remoteGeneration: remoteGeneration,
-                               marker: marker)
+                               marker: marker, revision: revision)
         return client
     }
 
@@ -232,7 +232,7 @@ nonisolated struct FlatdClient: Sendable {
             enum Keys: String, CodingKey { case url, pin = "spki_sha256" }
         }
         let data: Data
-        do { data = try await send(request("api/remote", timeout: readTimeout)) }
+        do { data = try await send(request("api/remote", timeout: readTimeout), waitForWorker: true) }
         catch FlatdError.unknown { return .unchanged }
         let answer = try decode(Answer.self, data)
         if answer.url == nil && answer.pin == nil { return .replace(nil) }
@@ -405,13 +405,14 @@ nonisolated struct FlatdClient: Sendable {
         return request
     }
 
-    private func send(_ request: URLRequest, within limit: Deadline? = nil) async throws -> Data {
-        let (data, response) = try await response(to: request, within: limit)
+    private func send(_ request: URLRequest, within limit: Deadline? = nil, waitForWorker: Bool = false) async throws -> Data {
+        let (data, response) = try await response(to: request, within: limit, waitForWorker: waitForWorker)
         guard (200..<300).contains(response.statusCode) else { throw Self.rejection(response.statusCode, data: data) }
         return data
     }
 
-    private func response(to request: URLRequest, within limit: Deadline? = nil) async throws -> (Data, HTTPURLResponse) {
+    private func response(to request: URLRequest, within limit: Deadline? = nil,
+                          waitForWorker: Bool = false) async throws -> (Data, HTTPURLResponse) {
         var request = request
         let usual = Duration.seconds(request.timeoutInterval)
         let budget = limit ?? deadline
@@ -436,7 +437,7 @@ nonisolated struct FlatdClient: Sendable {
         } else {
             preparing = transport
         }
-        let outcome = await FlatdLaunch.run(admission: admission, rule: rule, prepare: { reply in
+        let outcome = await FlatdLaunch.run(admission: admission, rule: rule, waitForWorker: waitForWorker, prepare: { reply in
             .init(request: try preparing.prepare(boundedRequest, reply: reply))
         }, didResume: {
             #if DEBUG
@@ -453,7 +454,7 @@ nonisolated struct FlatdClient: Sendable {
             if error is CancellationError { throw error }
             if !outcome.committed {
                 if let admission = error as? FlatdError { throw admission }
-                if error is FlatdGate.RemoteDenied { throw error }
+                if error is FlatdGate.RemoteDenied || error is FlatdGate.RevisionChanged { throw error }
                 throw FlatdError.unreachable
             }
             if error is Deadline.Expired || (error as? URLError)?.code == .timedOut || (isWrite && inAction) {

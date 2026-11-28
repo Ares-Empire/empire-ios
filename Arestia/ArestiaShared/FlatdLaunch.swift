@@ -47,12 +47,17 @@ nonisolated enum FlatdLaunch {
 
     static func run<Value: Sendable>(
         admission: FlatdAdmission, rule: WriteRule,
+        waitForWorker: Bool = false,
         prepare: @escaping @Sendable (Attempt<Value>) throws -> Prepared<Value>,
         didResume: @escaping @Sendable () -> Void = {}
     ) async -> Attempt<Value>.Outcome {
         let attempt = Attempt<Value>(until: rule.cap)
-        return await rule.cap.wait(for: attempt) {
+        let worker = waitForWorker ? AsyncStream<Void>.makeStream() : nil
+        var started = false
+        let outcome = await rule.cap.wait(for: attempt) {
+            started = true
             DispatchQueue.global(qos: .userInitiated).async {
+                defer { worker?.continuation.finish() }
                 do {
                     guard attempt.isLive else { return }
                     let prepared = try prepare(attempt)
@@ -75,6 +80,11 @@ nonisolated enum FlatdLaunch {
                 }
             }
         }
+        // Enrollment cannot start another Keychain operation while admission is still reading.
+        if started, let worker {
+            await Task { for await _ in worker.stream {} }.value
+        }
+        return outcome
     }
 }
 
@@ -92,6 +102,7 @@ nonisolated struct RemoteMarker: Sendable {
 /// Admission shares the lock used to change or delete the saved pairing.
 nonisolated struct FlatdGate: Sendable {
     struct RemoteDenied: Error {}
+    struct RevisionChanged: Error {}
     private static let markerAge: Duration = .seconds(1)
 
     let connection: FlatdConnection
@@ -102,16 +113,19 @@ nonisolated struct FlatdGate: Sendable {
     let savedToken: String
     let remoteGeneration: UUID?
     let marker: RemoteMarker
+    var revision: UUID? = nil
 
     fileprivate func admit<Value>(_ attempt: Attempt<Value>, rule: WriteRule, request: any SuspendedRequest) throws {
         do {
             try connection.lock.withLock(until: rule.cap, hold: attempt) {
                 let saved = try connection.current()
                 guard saved.id == pairing else { throw FlatdError.notPaired }
+                if let revision, saved.revision != revision { throw RevisionChanged() }
                 guard saved.matches(route: route, pin: pin, url: baseURL, token: savedToken,
                                     remoteGeneration: remoteGeneration) else { throw FlatdError.unreachable }
                 try attempt.check()
                 if route == .remote {
+                    try attempt.beginAdmission(expiringWith: RemoteDenied())
                     let clock = rule.cap.clock
                     let freshUntil = clock.now() + Self.markerAge
                     let timer = Task {

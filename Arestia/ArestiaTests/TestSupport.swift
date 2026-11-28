@@ -168,8 +168,10 @@ final class MemoryKeys: FlatdKeyStore, @unchecked Sendable {
             return true
         }
     }
+    var beforeUpdate: (@Sendable () -> Void)?
     func update(_ value: String, ifLabel label: String, newLabel: String) -> Bool {
-        lock.withLock {
+        beforeUpdate?()
+        return lock.withLock {
             guard item?.label == label else { return false }
             item = (value, newLabel)
             return true

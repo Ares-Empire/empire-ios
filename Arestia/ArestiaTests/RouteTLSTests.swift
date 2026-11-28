@@ -23,8 +23,7 @@ struct RouteTLSTests {
         let connection = Flat.connection(linked: false)
         let initial = FlatdPairing(baseURL: homeURL, token: h.token, pin: h.pin)
         try connection.save(initial)
-        let home = FlatdClient(initial).gated(by: connection)
-        await FlatStore.enrollRemote(from: home, read: initial, connection: connection)
+        await RemoteEnrollment.signal(snapshot: initial, at: homeURL, connection: connection).value
         let paired = try connection.current()
         #expect(paired.remote?.pin == a.pin)
         #expect(paired.remote?.url.port == aLoopback.port)

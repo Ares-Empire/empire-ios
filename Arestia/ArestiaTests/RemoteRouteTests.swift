@@ -313,10 +313,17 @@ private nonisolated struct TestClock: Sendable {
 }
 
 struct ActionDeadlineTests {
-    @Test func stalledRemoteMarkerLeavesTimeForOneHomeAction() async throws {
+    @Test(arguments: [false, true])
+    func stalledRemoteMarkerLeavesTimeForOneHomeAction(capExpiresFirst: Bool) async throws {
         let flat = try RouteFixture()
         flat.cooking()
         let clock = TestClock()
+        let remoteHost = away
+        flat.transport.onPrepare = { request in
+            if capExpiresFirst, request.url?.host() == remoteHost, request.url?.path() == "/api/modes" {
+                clock.advance(.milliseconds(5500))
+            }
+        }
         let stall = BlockingStep()
         defer { stall.release.signal() }
         var reach = flat.reach
@@ -332,7 +339,7 @@ struct ActionDeadlineTests {
             try await FlatdReach.$intentBudget.withValue(deadline) { try await actions.toggleCooking() }
         }
         try #require(await eventually { stall.entered })
-        clock.advance(.milliseconds(1100))
+        clock.advance(.milliseconds(capExpiresFirst ? 600 : 1100))
         try #require(await eventually {
             flat.transport.requests(to: Flat.base.host()!).contains { $0.url?.path() == "/api/health" }
         })
@@ -344,7 +351,8 @@ struct ActionDeadlineTests {
         #expect(flat.writes.count == 1)
     }
 
-    @Test func stalledMarkerAfterLockReturnsByDeadlineAndNeverDispatches() async throws {
+    @Test(arguments: [false, true])
+    func stalledMarkerAfterLockNeverDispatches(cancelled: Bool) async throws {
         let flat = try RouteFixture()
         let clock = TestClock()
         var reach = flat.reach
@@ -362,8 +370,13 @@ struct ActionDeadlineTests {
             try await reach.run(deadline: deadline) { try await $0.setMode(FlatMode.cookingID, active: true) }
         }
         try #require(await eventually { stall.entered })
-        clock.advance(.seconds(5))
-        await #expect(throws: FlatdError.unreachable) { try await task.value }
+        if cancelled {
+            task.cancel()
+            await #expect(throws: CancellationError.self) { try await task.value }
+        } else {
+            clock.advance(.seconds(5))
+            await #expect(throws: FlatdError.awayNeedsUnlock(needsPasscode: false)) { try await task.value }
+        }
         #expect(!stall.exited)
         #expect(flat.transport.sent.count == 1)   // only the remote health probe
         stall.release.signal()
@@ -577,14 +590,151 @@ struct ActionDeadlineTests {
 
 struct RemoteEnrollmentTests {
     @MainActor @Test func supersededEnrollmentCannotCommitEvenIfItReturnsSuccessfully() async throws {
-        let connection = Flat.connection()
-        let pairing = try connection.current()
+        let held = HeldDispatchLock()
+        defer { held.stall.release.signal() }
+        let keys = MemoryKeys()
+        let connection = FlatdConnection(defaults: nil, names: nil, keychain: keys, lock: held.lock)
+        let pairing = Flat.pairing()
+        try connection.save(pairing)
+        let transport = FakeTransport()
+        transport.answer("GET /api/remote", body: ["url": awayURL, "spki_sha256": awayPin]) {
+            await held.take()
+        }
+        RemoteEnrollment.signal(snapshot: pairing, at: pairing.baseURL, connection: connection, transport: transport)
+        try #require(await eventually { held.waiting.withLock { $0 } })
+        transport.answer("GET /api/remote", body: ["url": NSNull(), "spki_sha256": NSNull()])
+        let refresh = RemoteEnrollment.signal(snapshot: pairing, at: pairing.baseURL, connection: connection, transport: transport)
+        held.stall.release.signal()
+        await refresh.value
+        #expect(transport.sent.map { $0.url?.path() } == ["/api/remote", "/api/remote"])
+        #expect(connection.pairing == pairing)
+    }
+
+    @MainActor @Test func newerWithdrawalReadsAfterTheAdmittedOlderCommit() async throws {
+        let keys = MemoryKeys()
+        let commit = BlockingStep()
+        let newerReply = BlockingStep()
+        defer {
+            commit.release.signal()
+            newerReply.release.signal()
+        }
+        let connection = FlatdConnection(defaults: nil, names: nil, keychain: keys, lock: .processOnly)
+        let pairing = Flat.pairing()
+        try connection.save(pairing)
+        let reads = OSAllocatedUnfairLock(initialState: 0)
+        keys.afterRead = { reads.withLock { $0 += 1 } }
+        let writes = OSAllocatedUnfairLock(initialState: 0)
+        keys.beforeUpdate = {
+            if writes.withLock({ $0 += 1; return $0 }) == 1 { commit.wait() }
+        }
         let transport = FakeTransport()
         transport.answer("GET /api/remote", body: ["url": awayURL, "spki_sha256": awayPin])
-        let home = FlatdClient(pairing, transport: transport).gated(by: connection)
-        await FlatStore.enrollRemote(from: home, read: pairing, connection: connection, isLatest: { false })
-        #expect(transport.sent.map { $0.url?.path() } == ["/api/remote"])
-        #expect(connection.pairing == pairing)
+        RemoteEnrollment.signal(snapshot: pairing, at: pairing.baseURL, connection: connection, transport: transport)
+        try #require(await eventually { commit.entered })
+        let before = reads.withLock { $0 }
+        transport.answer("GET /api/remote", body: ["url": NSNull(), "spki_sha256": NSNull()]) {
+            newerReply.wait()
+        }
+        let refresh = RemoteEnrollment.signal(snapshot: pairing, at: pairing.baseURL, connection: connection, transport: transport)
+        try await Task.sleep(for: .milliseconds(150))
+        #expect(reads.withLock { $0 } == before)
+        #expect(transport.sent.count == 1)
+        commit.release.signal()
+        try #require(await eventually { newerReply.entered })
+        #expect(connection.pairing?.remote?.url.absoluteString == awayURL)
+        newerReply.release.signal()
+        await refresh.value
+        #expect(connection.pairing?.remote == nil)
+        #expect(writes.withLock { $0 } == 2)
+    }
+
+    @MainActor @Test func queuedWithdrawalSurvivesReplacingTheSessionAndStore() async throws {
+        let held = HeldDispatchLock()
+        defer { held.stall.release.signal() }
+        let keys = MemoryKeys()
+        let connection = FlatdConnection(defaults: nil, names: nil, keychain: keys, lock: held.lock)
+        var pairing = Flat.pairing()
+        let remote: RemoteListener = try #require(RemoteListener.parse(url: awayURL, pin: awayPin, homePin: pairing.pin))
+        pairing.remote = remote
+        try connection.save(pairing)
+        let (session, transport, events, _) = Flat.session(connection: connection)
+        defer { session.end() }
+        let store = try #require(session.store)
+        transport.answer("GET /api/scenes", body: ["scenes": []])
+        transport.answer("GET /api/remote", body: ["url": NSNull(), "spki_sha256": NSNull()]) {
+            await held.take()
+        }
+        store.start()
+        try #require(await eventually { events.isOpen })
+        events.send(try Flat.snapshot())
+        try #require(await eventually { held.waiting.withLock { $0 } })
+        session.end()
+        let (replacement, replacementTransport, _, _) = Flat.session(connection: connection)
+        defer { replacement.end() }
+        #expect(store.isRetired)
+        #expect(replacement.store?.pairingID == pairing.id)
+        #expect(connection.pairing?.remote == pairing.remote)
+        held.stall.release.signal()
+        try #require(await eventually { connection.pairing?.remote == nil })
+        #expect(transport.sent.filter { $0.url?.path() == "/api/remote" }.count == 1)
+        #expect(replacementTransport.sent.isEmpty)
+    }
+
+    @MainActor @Test func stalledCommitReadDoesNotStartAnotherKeychainWorker() async throws {
+        let keys = MemoryKeys()
+        let connection = FlatdConnection(defaults: nil, names: nil, keychain: keys, lock: .processOnly)
+        let pairing = Flat.pairing()
+        try connection.save(pairing)
+        let transport = FakeTransport()
+        let stall = BlockingStep(timeout: 20)
+        defer { stall.release.signal() }
+        let trackReads = OSAllocatedUnfairLock(initialState: false)
+        let reads = OSAllocatedUnfairLock(initialState: 0)
+        keys.afterRead = {
+            guard trackReads.withLock({ $0 }) else { return }
+            if reads.withLock({ $0 += 1; return $0 }) == 1 { stall.wait() }
+        }
+        transport.answer("GET /api/remote", body: ["url": awayURL, "spki_sha256": awayPin]) {
+            trackReads.withLock { $0 = true }
+        }
+        let refresh = RemoteEnrollment.signal(snapshot: pairing, at: pairing.baseURL, connection: connection, transport: transport)
+        try #require(await eventually { stall.entered })
+        // More than two six-second budgets and their retry pauses pass while the first read is in Security.
+        try await Task.sleep(for: .milliseconds(12500))
+        #expect(!stall.exited)
+        #expect(reads.withLock { $0 } == 1)
+        stall.release.signal()
+        await refresh.value
+        #expect(connection.pairing?.remote?.url.absoluteString == awayURL)
+    }
+
+    @MainActor @Test func supersedingAStalledAdmissionWaitsForItsKeychainRead() async throws {
+        let keys = MemoryKeys()
+        let connection = FlatdConnection(defaults: nil, names: nil, keychain: keys, lock: .processOnly)
+        let pairing = Flat.pairing()
+        try connection.save(pairing)
+        let stall = BlockingStep()
+        defer { stall.release.signal() }
+        let reads = OSAllocatedUnfairLock(initialState: 0)
+        keys.afterRead = {
+            // The first read selects the revision. The second is the request's admission check.
+            if reads.withLock({ $0 += 1; return $0 }) == 2 { stall.wait() }
+        }
+        let transport = FakeTransport()
+        let cancelled = OSAllocatedUnfairLock(initialState: false)
+        transport.cancelled = { _ in cancelled.withLock { $0 = true } }
+        transport.answer("GET /api/remote", body: ["url": awayURL, "spki_sha256": awayPin])
+        RemoteEnrollment.signal(snapshot: pairing, at: pairing.baseURL, connection: connection, transport: transport)
+        try #require(await eventually { stall.entered })
+        let refresh = RemoteEnrollment.signal(snapshot: pairing, at: pairing.baseURL, connection: connection, transport: transport)
+        try #require(await eventually { cancelled.withLock { $0 } })
+        try await Task.sleep(for: .milliseconds(150))
+        #expect(reads.withLock { $0 } == 2)
+        #expect(transport.sent.isEmpty)
+        stall.release.signal()
+        await refresh.value
+        #expect(transport.sent.count == 1)
+        #expect(connection.pairing?.remote?.url.absoluteString == awayURL)
     }
 
     @MainActor @Test func newerSnapshotSupersedesDelayedEnrollmentAcrossReconnect() async throws {
@@ -706,15 +856,14 @@ struct RemoteEnrollmentTests {
 
     @Test func clearingAndReenrollingIdenticalRemoteRetiresOldClient() async throws {
         let flat = try RouteFixture()
-        let home = FlatdClient(flat.pairing, transport: flat.transport).gated(by: flat.connection)
         let old = try #require(FlatdClient(remoteOf: flat.pairing, transport: flat.transport))
             .gated(by: flat.connection, marker: RemoteMarker(read: { true }))
         flat.transport.answer("GET /api/remote", body: ["url": NSNull(), "spki_sha256": NSNull()])
-        await FlatStore.enrollRemote(from: home, read: flat.pairing, connection: flat.connection)
+        await RemoteEnrollment.signal(snapshot: flat.pairing, at: flat.pairing.baseURL, connection: flat.connection, transport: flat.transport).value
         let cleared = try flat.connection.current()
         try #require(cleared.remote == nil)
         flat.transport.answer("GET /api/remote", body: ["url": awayURL, "spki_sha256": awayPin])
-        await FlatStore.enrollRemote(from: home, read: cleared, connection: flat.connection)
+        await RemoteEnrollment.signal(snapshot: cleared, at: cleared.baseURL, connection: flat.connection, transport: flat.transport).value
         let reenrolled = try flat.connection.current()
         #expect(reenrolled.token == flat.pairing.token)
         #expect(reenrolled.remote?.url == flat.pairing.remote?.url)
@@ -744,7 +893,6 @@ struct RemoteEnrollmentTests {
 
         let remote = try #require(FlatdClient(remoteOf: saved, transport: transport))
             .gated(by: connection, marker: RemoteMarker(read: { true }))
-        await FlatStore.enrollRemote(from: remote, read: saved, connection: connection)
         _ = try await remote.remoteEnrollment()
         try? await connection.move(saved, to: remote)
         #expect(transport.sent.filter { $0.url?.path() == "/api/remote" }.count == 1)
@@ -789,15 +937,14 @@ struct RemoteEnrollmentTests {
 
     @Test func equalHomePinAnd404LeaveEnrollmentWhileNullsClearIt() async throws {
         let flat = try RouteFixture()
-        let client = FlatdClient(flat.pairing, transport: flat.transport).gated(by: flat.connection)
         flat.transport.answer("GET /api/remote", body: ["url": awayURL, "spki_sha256": flat.pairing.pin.hex])
-        await FlatStore.enrollRemote(from: client, read: flat.pairing, connection: flat.connection)
+        await RemoteEnrollment.signal(snapshot: flat.pairing, at: flat.pairing.baseURL, connection: flat.connection, transport: flat.transport).value
         #expect(flat.connection.pairing == flat.pairing)
         flat.transport.answer("GET /api/remote", status: 404)
-        await FlatStore.enrollRemote(from: client, read: flat.pairing, connection: flat.connection)
+        await RemoteEnrollment.signal(snapshot: flat.pairing, at: flat.pairing.baseURL, connection: flat.connection, transport: flat.transport).value
         #expect(flat.connection.pairing == flat.pairing)
         flat.transport.answer("GET /api/remote", body: ["url": NSNull(), "spki_sha256": NSNull()])
-        await FlatStore.enrollRemote(from: client, read: flat.pairing, connection: flat.connection)
+        await RemoteEnrollment.signal(snapshot: flat.pairing, at: flat.pairing.baseURL, connection: flat.connection, transport: flat.transport).value
         #expect(flat.connection.pairing?.remote == nil)
     }
 
@@ -817,8 +964,7 @@ struct RemoteEnrollmentTests {
             let answer: [String: Any] = change == "nulls" ? ["url": NSNull(), "spki_sha256": NSNull()]
                 : ["url": url, "spki_sha256": pin]
             flat.transport.answer("GET /api/remote", body: answer)
-            let home = FlatdClient(old, transport: flat.transport).gated(by: flat.connection)
-            await FlatStore.enrollRemote(from: home, read: old, connection: flat.connection)
+            await RemoteEnrollment.signal(snapshot: old, at: old.baseURL, connection: flat.connection, transport: flat.transport).value
             #expect(flat.connection.pairing?.remote != old.remote)
         }
         await #expect(throws: FlatdError.unreachable) { try await client.devices() }
@@ -842,8 +988,7 @@ struct RemoteEnrollmentTests {
         let renewed = Flat.pairing(token: Flat.renewedKey)
         try #require(try await flat.connection.renew(flat.pairing, with: renewed))
         flat.transport.answer("GET /api/remote", body: ["url": awayURL, "spki_sha256": awayPin])
-        let home = FlatdClient(renewed, transport: flat.transport).gated(by: flat.connection)
-        await FlatStore.enrollRemote(from: home, read: renewed, connection: flat.connection)
+        await RemoteEnrollment.signal(snapshot: renewed, at: renewed.baseURL, connection: flat.connection, transport: flat.transport).value
         try #require(flat.connection.pairing?.remote?.url == flat.pairing.remote?.url)
         for client in [oldHome, oldRemote] {
             await #expect(throws: FlatdError.unreachable) { try await client.devices() }
@@ -866,20 +1011,22 @@ struct RemoteEnrollmentTests {
     @Test(arguments: ["move", "renew", "forget"]) func lateEnrollmentCannotOverwritePairingChange(change: String) async throws {
         let flat = try RouteFixture()
         let old = flat.pairing
-        let home = FlatdClient(old, transport: flat.transport).gated(by: flat.connection)
         let changed = Flat.pairing(token: Flat.renewedKey)
         flat.transport.answer("GET /api/remote", body: ["url": NSNull(), "spki_sha256": NSNull()]) {
             switch change {
-            case "move": try? await flat.connection.move(old, to: FlatdClient(old, at: moved))
+            case "move":
+                try? await flat.connection.move(old, to: FlatdClient(old, at: moved))
+                flat.transport.answer("GET /api/remote", status: 404)
             case "renew": _ = try? await flat.connection.renew(old, with: changed)
             default: try? await flat.connection.forgetSavedPairing()
             }
         }
-        await FlatStore.enrollRemote(from: home, read: old, connection: flat.connection)
+        await RemoteEnrollment.signal(snapshot: old, at: old.baseURL, connection: flat.connection, transport: flat.transport).value
         switch change {
         case "move":
             #expect(flat.connection.pairing?.baseURL == moved)
             #expect(flat.connection.pairing?.remote == old.remote)
+            #expect(flat.authenticated.map { $0.url?.host() } == [old.baseURL.host(), moved.host()])
         case "renew": #expect(flat.connection.pairing == changed)
         default: #expect(flat.connection.pairing == nil)
         }

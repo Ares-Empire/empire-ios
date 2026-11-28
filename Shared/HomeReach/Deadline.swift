@@ -128,6 +128,7 @@ nonisolated final class Attempt<Value: Sendable>: Hold, @unchecked Sendable {
     private struct State: Sendable {
         var outcome: Outcome?
         var committed = false
+        var expiryBeforeCommit: Error?
         var waiter: CheckedContinuation<Outcome, Never>?
         var cleanups: [@Sendable () -> Void] = []
     }
@@ -142,6 +143,15 @@ nonisolated final class Attempt<Value: Sendable>: Hold, @unchecked Sendable {
 
     override var isLive: Bool {
         state.withLock { $0.outcome == nil && deadline.remaining > .zero }
+    }
+
+    /// Record the outcome of expiry in a new admission phase before entering a blocking check.
+    func beginAdmission(expiringWith error: Error) throws {
+        try state.withLock { state in
+            guard state.outcome == nil else { throw Deadline.Abandoned() }
+            try deadline.check()
+            state.expiryBeforeCommit = error
+        }
     }
 
     /// Only short, synchronous operations belong here. A rejected step has no effect.
@@ -176,7 +186,7 @@ nonisolated final class Attempt<Value: Sendable>: Hold, @unchecked Sendable {
             let result = if case .failure(let error) = result, error is CancellationError {
                 result
             } else if !(finishAdmittedWork && state.committed), deadline.remaining <= .zero {
-                Result<Value, Error>.failure(Deadline.Expired())
+                Result<Value, Error>.failure((state.committed ? nil : state.expiryBeforeCommit) ?? Deadline.Expired())
             } else {
                 result
             }
