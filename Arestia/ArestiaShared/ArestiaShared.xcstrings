@@ -434,6 +434,26 @@
         }
       }
     },
+    "Some fans changed. Unlock your iPhone to change the rest." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einige Ventilatoren wurden umgestellt. Entsperre dein iPhone, um die übrigen umzustellen."
+          }
+        }
+      }
+    },
+    "Some fans changed; the others didn't confirm." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einige Ventilatoren wurden umgestellt. Die übrigen haben die Änderung nicht bestätigt."
+          }
+        }
+      }
+    },
     "Start cooking" : {
       "localizations" : {
         "de" : {

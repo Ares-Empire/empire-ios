@@ -49,18 +49,18 @@ nonisolated struct Deadline: Sendable {
 
     func wait<V>(for attempt: Attempt<V>, starting start: () -> Void = {}) async -> Attempt<V>.Outcome {
         await withTaskCancellationHandler {
-            if remaining <= .zero { attempt.end(.failure(Expired())) }
+            if remaining <= .zero { attempt.interrupt(with: Expired()) }
             let timer = Task {
                 do {
                     try await clock.sleepUntil(instant)
-                    attempt.end(.failure(Expired()))
+                    attempt.interrupt(with: Expired())
                 } catch {}
             }
             defer { timer.cancel() }
             if attempt.isLive { start() }
             return await attempt.outcome
         } onCancel: {
-            attempt.end(.failure(CancellationError()))
+            attempt.interrupt(with: CancellationError())
         }
     }
 
@@ -79,9 +79,9 @@ nonisolated struct Deadline: Sendable {
 
     /// The caller can leave while a system call on the worker is stalled.
     func blockingOutcome<T: Sendable>(
-        _ body: @escaping @Sendable (Hold) throws -> T
+        finishAdmittedWork: Bool = false, _ body: @escaping @Sendable (Hold) throws -> T
     ) async -> Attempt<T>.Outcome {
-        let attempt = Attempt<T>(until: self)
+        let attempt = Attempt<T>(until: self, finishAdmittedWork: finishAdmittedWork)
         return await wait(for: attempt) {
             DispatchQueue.global(qos: .userInitiated).async {
                 guard attempt.isLive else { return }
@@ -133,8 +133,12 @@ nonisolated final class Attempt<Value: Sendable>: Hold, @unchecked Sendable {
     }
 
     private let state = OSAllocatedUnfairLock(initialState: State())
+    private let finishAdmittedWork: Bool
 
-    override init(until deadline: Deadline) { super.init(until: deadline) }
+    init(until deadline: Deadline, finishAdmittedWork: Bool = false) {
+        self.finishAdmittedWork = finishAdmittedWork
+        super.init(until: deadline)
+    }
 
     override var isLive: Bool {
         state.withLock { $0.outcome == nil && deadline.remaining > .zero }
@@ -152,11 +156,26 @@ nonisolated final class Attempt<Value: Sendable>: Hold, @unchecked Sendable {
     }
 
     @discardableResult func end(_ result: Result<Value, Error>) -> Bool {
+        finish(result, beforeCommit: false)
+    }
+
+    /// Forget keeps its waiter until the worker reports the result of an admitted deletion.
+    func interrupt(with error: Error) {
+        finish(.failure(error), beforeCommit: finishAdmittedWork)
+    }
+
+    /// An admission timer can deny a pending request but cannot replace an admitted request's reply.
+    func endBeforeCommit(with error: Error) {
+        finish(.failure(error), beforeCommit: true)
+    }
+
+    @discardableResult
+    private func finish(_ result: Result<Value, Error>, beforeCommit: Bool) -> Bool {
         let ending = state.withLock { state -> (Outcome, CheckedContinuation<Outcome, Never>?, [@Sendable () -> Void])? in
-            guard state.outcome == nil else { return nil }
+            guard state.outcome == nil, !(beforeCommit && state.committed) else { return nil }
             let result = if case .failure(let error) = result, error is CancellationError {
                 result
-            } else if deadline.remaining <= .zero {
+            } else if !(finishAdmittedWork && state.committed), deadline.remaining <= .zero {
                 Result<Value, Error>.failure(Deadline.Expired())
             } else {
                 result

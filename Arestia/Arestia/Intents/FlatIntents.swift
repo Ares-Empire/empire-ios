@@ -107,17 +107,20 @@ struct ToggleCookingIntent: AppIntent {
     init() { actions = nil }
     init(actions: FlatActions) { self.actions = actions }
 
+    private func toggleCooking() async throws -> CookingChange {
+        if let actions { return try await actions.toggleCooking() }
+        return try await FlatActions.live.toggleCooking()
+    }
+
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let deadline = FlatdReach.intentDeadline()
         #if DEBUG && ARESTIA_GATE
         let timing = GateAction(String(describing: Self.self))
-        let actions = actions ?? .live
-        return try await performFlatIntent(deadline: deadline, timing: timing, { try await actions.toggleCooking() }) { change in
+        return try await performFlatIntent(deadline: deadline, timing: timing, { try await toggleCooking() }) { change in
             IntentResultContainer.result(dialog: IntentDialog(stringLiteral: CookingDialog.text(change)))
         }
         #else
-        let actions = actions ?? .live
-        let change = try await performFlatIntent(deadline: deadline) { try await actions.toggleCooking() }
+        let change = try await performFlatIntent(deadline: deadline) { try await toggleCooking() }
         return .result(dialog: IntentDialog(stringLiteral: CookingDialog.text(change)))
         #endif
     }

@@ -161,36 +161,45 @@ that did not follow.
 
 After a live home snapshot, the app asks flatd 1.7 for `GET /api/remote` in the background. It saves the
 validated listener URL, pin and enrollment generation against the pairing revision read before asking.
-A newer snapshot cancels the previous attempt. The background commit checks both the latest attempt and
-saved revision under the dispatch lock. The stream applies events while name-cache writes wait for
-the lock in the background. Two nulls clear enrollment and a 404 preserves it. Renewing with a
+A newer snapshot replaces the previous lookup. A validated answer supersedes any queued change.
+The background commit retries under contention against the original revision until it succeeds,
+a newer answer supersedes it, the revision changes, or the store retires. The stream applies events
+while enrollment and name-cache writes wait for the lock in the background. Two nulls clear enrollment
+and a 404 preserves it. Renewing with a
 new token clears the remote part. Re-enrolling after a clearance creates a fresh generation even for the
 same listener. The app's screens and event stream use the home route.
 
 Shortcuts, Siri and Control Center can select the saved home address, a Bonjour candidate, or the enrolled
 remote listener. Only token-free health probes race. Each route uses its own pinned identity. An intent
-has 15 s from entry, including up to 5 s for route choice. A write needs 3 s left to start. An expired
+has 15 s from entry, including cold connection setup on a bounded worker and up to 5 s for route choice.
+A write needs 3 s left to start. An expired
 in-flight write may have taken effect and is never replayed. For an action with a deadline, a started
 write without an HTTP reply reports that same uncertainty after a timeout or a dropped connection.
 A completed pairing read that finds the flat gone overrides the result. A stalled read or optional
 name, address or trouble cache leaves a started write's result intact. Caller cancellation takes precedence.
-Store commands retain their existing transport error mapping.
+The intent schedules the control reload in the background and checks cancellation before returning.
+A fan batch reports when only some fans confirmed, with an unlock instruction if the marker refused one.
+An unanswered POST takes precedence. Store commands retain their existing transport error mapping.
 
-HTTPS and WebSocket tasks are prepared while suspended. The dispatch gate takes the lock shared with
+HTTPS and WebSocket tasks are prepared while suspended. The paired client supplies the stream's request,
+pin and gate. The dispatch gate takes the lock shared with
 Forget, checks the saved pairing and token, and on the remote route also checks the URL, pin and
 enrollment generation. The marker read is the final blocking call. A remote task must resume within
 1 s of the start of that read. Admission commits the request's resume against the same attempt
 that handles expiry and cancellation. A stalled system call can hold the lock while its caller leaves
 at the cap. The prepared task is cancelled on failure, and a worker returning from a stall cannot
-resume an ended attempt.
+resume an ended attempt. A marker read that stalls for 1 s denies remote admission while the worker
+still holds the lock. A home retry can probe while it waits for the worker to release the lock.
 
 The app creates the shared Keychain marker in the background on activation with
 `WhenPasscodeSetThisDeviceOnly`. The control extension reads it. Before any write has started, a
 remote lock refusal gets one home-only choice within the original deadline. If home answers, the
 action runs there. A marker lookup that times out during choice also withholds remote. Arestia
 consults LocalAuthentication only when it will show the unlock error. Home dispatch works after
-first unlock. Forget waits off the main actor for up to 10 s to acquire the lock, then reports
-success after deletion. If the lock stays busy, Settings shows the existing failure message and
+first unlock. Forget waits off the main actor for up to 10 s to acquire the lock. Once deletion starts,
+the worker finishes and the session reports its outcome even if the caller cancels or its deadline passes.
+After successful deletion the session retires the store, clears the viewer cache and reloads controls.
+If the lock stays busy, Settings shows the existing failure message and
 the owner can retry. Physical lock timing still needs the P7a iPhone measurements.
 
 The app and control extension read their ATS zone from `$ARESTIA_REMOTE_ZONE_FILE`, or

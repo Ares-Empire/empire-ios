@@ -187,12 +187,13 @@ struct ActionsTests {
         #expect(await DeviceChoices.load(kind: .rollo, connection: connection, reach: reach).isEmpty)
     }
 
-    @Test func aFanThatDoesNotAnswerIsReportedAfterTheOthers() async throws {
+    @Test func deviceRefusalAfterOneFanConfirmsReportsPartialChange() async throws {
         transport.answer("GET /api/devices", body: ["devices": [Flat.fan(1), Flat.fan(2)]])
         transport.answer("POST /api/devices/fan:fan_1", body: Flat.fan(1, on: true))
         transport.answer("POST /api/devices/fan:fan_2", status: 504, body: ["error": "timeout"])
-        await #expect(throws: FlatdError.deviceDidNotAnswer) { try await actions().setFans(on: true) }
+        await #expect(throws: FlatdError.partialFans(needsUnlock: false)) { try await actions().setFans(on: true) }
         #expect(transport.bodies(for: "POST /api/devices/fan:fan_1").count == 1)
+        #expect(transport.bodies(for: "POST /api/devices/fan:fan_2").count == 1)
     }
 
     @Test func cookingAndItsState() async throws {

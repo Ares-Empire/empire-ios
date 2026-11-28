@@ -8,7 +8,21 @@ import WidgetKit
 nonisolated struct FlatActions: Sendable {
     let reach: FlatdReach
 
-    static var live: FlatActions { FlatActions(reach: FlatdReach(connection: .live)) }
+    #if DEBUG
+    @TaskLocal static var liveFactory: (@Sendable () -> FlatActions)?
+    #endif
+
+    static var live: FlatActions {
+        get async throws {
+            let deadline = FlatdReach.intentBudget ?? FlatdReach.intentDeadline()
+            #if DEBUG
+            let factory = liveFactory ?? { FlatActions(reach: FlatdReach(connection: .live)) }
+            #else
+            let factory: @Sendable () -> FlatActions = { FlatActions(reach: FlatdReach(connection: .live)) }
+            #endif
+            return try await deadline.blocking { _ in factory() }
+        }
+    }
 
     // MARK: cooking (a mode on flatd: fans on and its blind up; ended: fans off, that blind to its favourite spot)
 
@@ -133,8 +147,11 @@ nonisolated struct FlatActions: Sendable {
                         }
                     }
                 }
+                if !done.isEmpty, let error = firstError, (error as? FlatdError) != .noAnswer {
+                    firstError = FlatdError.partialFans(needsUnlock: error is FlatdGate.RemoteDenied)
+                }
                 #if DEBUG && ARESTIA_GATE
-                GateAction.current?.fansSettled(firstError.map { GateOutcome($0 as? FlatdError ?? .unreachable) } ?? .ok)
+                GateAction.current?.fansSettled(firstError.map(GateOutcome.init) ?? .ok)
                 #endif
                 if let firstError { throw firstError }
                 return done

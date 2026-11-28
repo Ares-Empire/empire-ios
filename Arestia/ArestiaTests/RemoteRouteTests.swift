@@ -286,7 +286,9 @@ struct RemoteRouteTests {
             // Choice, devices read, first write, second write.
             reads.withLock { $0 += 1; return $0 <= 3 }
         })
-        await #expect(throws: unlockError) { try await FlatActions(reach: reach).setFans(on: true) }
+        await #expect(throws: FlatdError.partialFans(needsUnlock: true)) {
+            try await FlatActions(reach: reach).setFans(on: true)
+        }
         #expect(flat.writes.count == 1)
         #expect(flat.writes.first?.url?.host() == away)
         #expect(flat.transport.requests(to: Flat.base.host()!).isEmpty)
@@ -311,6 +313,37 @@ private nonisolated struct TestClock: Sendable {
 }
 
 struct ActionDeadlineTests {
+    @Test func stalledRemoteMarkerLeavesTimeForOneHomeAction() async throws {
+        let flat = try RouteFixture()
+        flat.cooking()
+        let clock = TestClock()
+        let stall = BlockingStep()
+        defer { stall.release.signal() }
+        var reach = flat.reach
+        reach.path = { .remoteOnly }
+        let reads = OSAllocatedUnfairLock(initialState: 0)
+        reach.marker = RemoteMarker(read: {
+            if reads.withLock({ $0 += 1; return $0 }) == 2 { stall.wait() }
+            return true
+        })
+        let deadline = Deadline(after: .seconds(15), clock: clock.clock)
+        let actions = FlatActions(reach: reach)
+        let action = Task {
+            try await FlatdReach.$intentBudget.withValue(deadline) { try await actions.toggleCooking() }
+        }
+        try #require(await eventually { stall.entered })
+        clock.advance(.milliseconds(1100))
+        try #require(await eventually {
+            flat.transport.requests(to: Flat.base.host()!).contains { $0.url?.path() == "/api/health" }
+        })
+        #expect(!stall.exited)
+        #expect(flat.authenticated.isEmpty)
+        stall.release.signal()
+        #expect(try await action.value.isActive)
+        #expect(flat.authenticated.map { $0.url?.host() } == [Flat.base.host(), Flat.base.host()])
+        #expect(flat.writes.count == 1)
+    }
+
     @Test func stalledMarkerAfterLockReturnsByDeadlineAndNeverDispatches() async throws {
         let flat = try RouteFixture()
         let clock = TestClock()
@@ -502,6 +535,8 @@ struct ActionDeadlineTests {
     @Test(arguments: [true, false]) func unansweredFanWriteTakesPrecedence(timeoutFirst: Bool) async throws {
         let flat = try RouteFixture()
         flat.fans()
+        flat.transport.answer("GET /api/devices", body: ["devices": [Flat.fan(1), Flat.fan(2), Flat.fan(3)]])
+        flat.transport.answer("POST /api/devices/fan:fan_3", body: Flat.fan(3, on: true))
         let clock = TestClock()
         let deadline = Deadline(after: .seconds(15), clock: clock.clock)
         flat.transport.answer("POST /api/devices/fan:fan_1", status: 500,
@@ -519,7 +554,7 @@ struct ActionDeadlineTests {
                 try await FlatActions(reach: flat.reach).setFans(on: true)
             }
         }
-        #expect(flat.writes.count == 2)
+        #expect(flat.writes.count == 3)
     }
 
     @Test func cancellingCallerKeepsCancellationAfterWrite() async throws {
@@ -595,11 +630,18 @@ struct RemoteEnrollmentTests {
         let held = HeldDispatchLock()
         defer { held.stall.release.signal() }
         let connection = FlatdConnection(defaults: nil, names: Flat.nameFile(), keychain: MemoryKeys(), lock: held.lock)
-        try connection.save(Flat.pairing())
+        var initial = Flat.pairing()
+        if holdBeyondCap {
+            let remote: RemoteListener = try #require(RemoteListener.parse(url: awayURL, pin: awayPin, homePin: initial.pin))
+            initial.remote = remote
+        }
+        try connection.save(initial)
         let (store, transport, events, _) = Flat.store(connection: connection)
         defer { store.stop() }
         transport.answer("GET /api/scenes", body: ["scenes": []])
-        transport.answer("GET /api/remote", body: ["url": awayURL, "spki_sha256": awayPin]) {
+        let enrollment: [String: Any] = holdBeyondCap
+            ? ["url": NSNull(), "spki_sha256": NSNull()] : ["url": awayURL, "spki_sha256": awayPin]
+        transport.answer("GET /api/remote", body: enrollment) {
             let savedNames = await eventually { connection.devicesVersion != nil }
             #expect(savedNames)
             await held.take()
@@ -615,7 +657,7 @@ struct RemoteEnrollmentTests {
         events.send(.state(id: fan.id, state: fan.state, source: nil))
         try #require(await eventually { store.device(fan.id)?.label == "Desk fan" && store.device(fan.id)?.state.on == true })
         #expect(!held.stall.exited)
-        #expect(connection.pairing?.remote == nil)
+        #expect(connection.pairing?.remote == initial.remote)
         #expect(connection.knownDevices.first?.label == "Fan 1")
         if holdBeyondCap {
             try await Task.sleep(for: .milliseconds(6300))
@@ -624,7 +666,14 @@ struct RemoteEnrollmentTests {
         held.stall.release.signal()
         try #require(await eventually { connection.knownDevices.first?.label == "Desk fan" })
         if holdBeyondCap {
-            #expect(connection.pairing?.remote == nil)
+            try #require(await eventually { connection.pairing?.remote == nil })
+            #expect(transport.sent.filter { $0.url?.path() == "/api/remote" }.count == 1)
+            let reach = FlatdReach(connection: connection, transport: transport, rediscover: { [] },
+                                   path: { .remoteOnly }, marker: RemoteMarker(read: { true }))
+            await #expect(throws: FlatdError.unreachable) {
+                try await FlatActions(reach: reach).setCooking(true)
+            }
+            #expect(transport.requests(to: away).isEmpty)
         } else {
             try #require(await eventually { connection.pairing?.remote?.url.absoluteString == awayURL })
         }
@@ -923,6 +972,14 @@ struct RouteIsolationTests {
 }
 
 struct LaunchTests {
+    @Test func pairedStreamRefusesAnUngatedRemoteClient() async throws {
+        let flat = try RouteFixture()
+        let client = try #require(FlatdClient(remoteOf: flat.pairing, transport: flat.transport))
+        let events = FakeEvents()
+        await #expect(throws: FlatdError.notPaired) { try await client.openEvents(using: events) }
+        #expect(events.requests.isEmpty)
+    }
+
     @Test(arguments: [false, true]) func markerIsReadAfterHTTPSAndWebSocketPreparation(socket: Bool) async throws {
         let flat = try RouteFixture()
         let client = try #require(FlatdClient(remoteOf: flat.pairing, transport: flat.transport))
@@ -932,12 +989,15 @@ struct LaunchTests {
         if socket {
             let events = FakeEvents()
             events.onPrepare = lockPhone
-            let gate = try #require(client.gate)
             await #expect(throws: FlatdGate.RemoteDenied.self) {
-                try await events.open(client.eventsRequest, pin: client.pin, admission: .gated(gate),
-                                      cap: Deadline(after: .seconds(6)), route: .remote)
+                try await client.openEvents(using: events)
             }
             #expect(events.requests.isEmpty)
+            marker.withLock { $0 = true }
+            events.onPrepare = nil
+            _ = try await client.openEvents(using: events)
+            #expect(events.requests.map { $0.url?.host() } == [away])
+            #expect(events.pins == [client.pin])
         } else {
             flat.transport.onPrepare = { _ in lockPhone() }
             await #expect(throws: FlatdGate.RemoteDenied.self) {
@@ -1267,7 +1327,102 @@ struct OutcomeTests {
     }
 }
 
+struct IntentBoundaryTests {
+    @Test func coldIntentSetupReturnsByDeadlineWhileWorkerStalls() async throws {
+        let flat = try RouteFixture()
+        let actions = FlatActions(reach: flat.reach)
+        let stall = BlockingStep()
+        defer { stall.release.signal() }
+        let clock = TestClock()
+        let errors = OSAllocatedUnfairLock<FlatIntentError?>(initialState: nil)
+        let deadline = Deadline(after: .seconds(15), clock: clock.clock)
+        let intent = Task {
+            do {
+                try await FlatActions.$liveFactory.withValue({
+                    stall.wait()
+                    return actions
+                }) {
+                    try await performFlatIntent(deadline: deadline, reloadControls: {}) {
+                        try await FlatActions.live.setCooking(true)
+                    }
+                }
+            } catch let error as FlatIntentError {
+                errors.withLock { $0 = error }
+            }
+        }
+        try #require(await eventually { stall.entered })
+        clock.advance(.seconds(16))
+        try #require(await eventually { errors.withLock { $0?.underlying is Deadline.Expired } })
+        #expect(!stall.exited)
+        #expect(flat.transport.sent.isEmpty)
+        stall.release.signal()
+        try await intent.value
+    }
+
+    @Test func intentReturnsWhileControlReloadStalls() async throws {
+        let reload = BlockingStep()
+        defer { reload.release.signal() }
+        let returned = OSAllocatedUnfairLock<Int?>(initialState: nil)
+        let intent = Task {
+            let answer = try await performFlatIntent(deadline: Deadline(after: .seconds(15)),
+                                                     reloadControls: { reload.wait() }) { 1 }
+            returned.withLock { $0 = answer }
+        }
+        try #require(await eventually { reload.entered && returned.withLock { $0 == 1 } })
+        #expect(!reload.exited)
+        try await intent.value
+    }
+
+    @Test func intentChecksCancellationAfterWorkReturnsAValue() async {
+        await #expect(throws: CancellationError.self) {
+            try await Task {
+                try await performFlatIntent(deadline: Deadline(after: .seconds(15)), reloadControls: {}) {
+                    withUnsafeCurrentTask { $0?.cancel() }
+                    return 1
+                }
+            }.value
+        }
+    }
+}
+
 struct ForgetDispatchTests {
+    @MainActor @Test(arguments: [false, true])
+    func admittedForgetFinishesAfterCancellationOrDeadline(cancel: Bool) async throws {
+        let keys = MemoryKeys()
+        let stall = BlockingStep()
+        defer { stall.release.signal() }
+        keys.beforeDelete = { stall.wait() }
+        let connection = FlatdConnection(defaults: nil, names: Flat.nameFile(), keychain: keys, lock: .processOnly)
+        try connection.save(Flat.pairing())
+        let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        let cache = ViewerPageCache(folder: folder)
+        try #require(await cache.save(Data("<p>test</p>".utf8), etag: nil, pairing: Flat.id, pin: Flat.pin) != nil)
+        let reloads = Counter()
+        let session = FlatSession(connection: connection, viewerCache: cache, reloadControls: { reloads.count += 1 })
+        let oldStore = try #require(session.store)
+        let clock = TestClock()
+        let deadline = Deadline(after: .seconds(3600), clock: clock.clock)
+        let returned = Counter()
+        let forget = Task {
+            let result = await session.forget(deadline: deadline)
+            returned.count += 1
+            return result
+        }
+        try #require(await eventually { stall.entered })
+        if cancel { forget.cancel() } else { clock.advance(.seconds(3601)) }
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(returned.count == 0)
+        #expect(session.isForgetting)
+        #expect(connection.pairing != nil)
+        stall.release.signal()
+        #expect(await forget.value)
+        #expect(connection.pairing == nil)
+        #expect(oldStore.isRetired)
+        #expect(session.store?.pairingID == nil)
+        #expect(await cache.page(pairing: Flat.id, pin: Flat.pin) == nil)
+        #expect(reloads.count == 1)
+    }
+
     @MainActor @Test func forgetTimesOutWithoutDeletingAndCanRetryAfterLockRelease() async throws {
         let held = HeldDispatchLock(timeout: 20)
         defer { held.stall.release.signal() }

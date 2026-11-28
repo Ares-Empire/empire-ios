@@ -52,7 +52,7 @@ nonisolated final class GateAction: Sendable {
 nonisolated enum GateOutcome: String, Sendable {
     case ok, cancelled, unreachable, noAnswer, refused, unknown, deviceDidNotAnswer, notPossible, failed
     case invalidAnswer, notPaired, pairingUnreadable, anotherFlat, renameNotSupported, chosenDeviceGone
-    case awayNeedsUnlock, unexpectedError
+    case awayNeedsUnlock, partialFans, unexpectedError
 
     // The transport records the HTTP result before the caller decodes it or updates its UI.
     init(_ result: Result<(Data, HTTPURLResponse), Error>, cancelled: Bool) {
@@ -84,6 +84,7 @@ nonisolated enum GateOutcome: String, Sendable {
             self = switch error {
             case .unreachable: .unreachable
             case .awayNeedsUnlock: .awayNeedsUnlock
+            case .partialFans: .partialFans
             case .noAnswer: .noAnswer
             case .refused: .refused
             case .unknown: .unknown

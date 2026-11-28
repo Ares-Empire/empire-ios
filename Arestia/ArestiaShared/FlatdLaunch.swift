@@ -92,6 +92,7 @@ nonisolated struct RemoteMarker: Sendable {
 /// Admission shares the lock used to change or delete the saved pairing.
 nonisolated struct FlatdGate: Sendable {
     struct RemoteDenied: Error {}
+    private static let markerAge: Duration = .seconds(1)
 
     let connection: FlatdConnection
     let pairing: UUID
@@ -102,25 +103,35 @@ nonisolated struct FlatdGate: Sendable {
     let remoteGeneration: UUID?
     let marker: RemoteMarker
 
-    fileprivate func admit(_ hold: Hold, rule: WriteRule, request: any SuspendedRequest) throws {
+    fileprivate func admit<Value>(_ attempt: Attempt<Value>, rule: WriteRule, request: any SuspendedRequest) throws {
         do {
-            try connection.lock.withLock(until: rule.cap, hold: hold) {
+            try connection.lock.withLock(until: rule.cap, hold: attempt) {
                 let saved = try connection.current()
                 guard saved.id == pairing else { throw FlatdError.notPaired }
                 guard saved.matches(route: route, pin: pin, url: baseURL, token: savedToken,
                                     remoteGeneration: remoteGeneration) else { throw FlatdError.unreachable }
-                try hold.check()
-                var readAt: ContinuousClock.Instant?
+                try attempt.check()
                 if route == .remote {
-                    readAt = rule.cap.clock.now()
-                    guard marker.read() else { throw RemoteDenied() }
-                }
-                try hold.commit {
-                    try rule.check()
-                    if let readAt, readAt.duration(to: rule.cap.clock.now()) > .seconds(1) {
-                        throw RemoteDenied()
+                    let clock = rule.cap.clock
+                    let freshUntil = clock.now() + Self.markerAge
+                    let timer = Task {
+                        do {
+                            try await clock.sleepUntil(freshUntil)
+                            attempt.endBeforeCommit(with: RemoteDenied())
+                        } catch {}
                     }
-                    rule.start(request)
+                    defer { timer.cancel() }
+                    guard marker.read() else { throw RemoteDenied() }
+                    try attempt.commit {
+                        try rule.check()
+                        guard clock.now() < freshUntil else { throw RemoteDenied() }
+                        rule.start(request)
+                    }
+                } else {
+                    try attempt.commit {
+                        try rule.check()
+                        rule.start(request)
+                    }
                 }
             }
         } catch is FlatdDispatchLock.Unavailable {

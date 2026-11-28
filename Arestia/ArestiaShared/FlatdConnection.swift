@@ -437,10 +437,13 @@ nonisolated struct FlatdConnection: @unchecked Sendable {
         }
     }
 
-    func forgetSavedPairing(onlyIfInvalid: Bool = false) async throws {
-        try await Deadline(after: .seconds(3600)).blocking { hold in
-            try forget(hold, lockBy: Deadline(after: .seconds(10)), onlyIfInvalid: onlyIfInvalid)
+    func forgetSavedPairing(onlyIfInvalid: Bool = false,
+                            deadline: Deadline = Deadline(after: .seconds(3600))) async throws {
+        let lockBy = deadline.capped(by: .seconds(10))
+        let outcome = await deadline.blockingOutcome(finishAdmittedWork: true) { hold in
+            try forget(hold, lockBy: lockBy, onlyIfInvalid: onlyIfInvalid)
         }
+        try outcome.result.get()
     }
 
     // MARK: the devices as last seen (names only)

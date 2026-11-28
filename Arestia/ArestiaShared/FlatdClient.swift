@@ -12,6 +12,7 @@ nonisolated enum FlatdError: Error, Equatable, Sendable {
     /// No connection at all: the Mac is asleep, flatd is not running, or the phone is not on the home network.
     case unreachable
     case awayNeedsUnlock(needsPasscode: Bool)
+    case partialFans(needsUnlock: Bool)
     /// Connected, but no answer in time: flatd may still have done it, so a command is never sent again elsewhere.
     case noAnswer
     /// 401: flatd has a new key (the app pairs again).
@@ -47,6 +48,12 @@ nonisolated enum FlatdError: Error, Equatable, Sendable {
                                                     table: "ArestiaShared"))
         case .awayNeedsUnlock(needsPasscode: false):
             language.string(LocalizedStringResource("Unlock your iPhone to control the flat from away.",
+                                                    table: "ArestiaShared"))
+        case .partialFans(needsUnlock: true):
+            language.string(LocalizedStringResource("Some fans changed. Unlock your iPhone to change the rest.",
+                                                    table: "ArestiaShared"))
+        case .partialFans(needsUnlock: false):
+            language.string(LocalizedStringResource("Some fans changed; the others didn't confirm.",
                                                     table: "ArestiaShared"))
         case .noAnswer:
             language.string(LocalizedStringResource("The flat service didn't answer in time. It may still have done it.",

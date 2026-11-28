@@ -401,5 +401,7 @@ The default policy allows remote, including on the lock screen.
 ending and whether a commit ran under the same lock. Waiting ends on a result, the cap or caller
 cancellation. Failure triggers the attempt's registered cleanups. Synchronous work runs on a
 dispatch queue and can be abandoned when a system call stalls. An ended attempt refuses a late
-commit. Tests can supply a clock. Request admission and decisions about repeating an action belong
+commit. An admission timer can end an attempt that has yet to commit. A blocking operation that
+must report the result of an admitted change can keep its waiter through cancellation and expiry
+once its commit succeeds. Tests can supply a clock. Request admission and decisions about repeating an action belong
 to the calling app.

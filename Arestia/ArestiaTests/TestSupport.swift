@@ -96,7 +96,7 @@ nonisolated struct FakeRequest: SuspendedRequest {
 }
 
 /// The event stream, fed by the test.
-nonisolated final class FakeEvents: FlatEventSource, @unchecked Sendable {
+nonisolated final class FakeEvents: FlatEventPreparing, @unchecked Sendable {
     private let lock = NSLock()
     private var continuation: AsyncThrowingStream<FlatEvent, Error>.Continuation?
     private(set) var requests: [URLRequest] = []
@@ -150,6 +150,7 @@ final class MemoryKeys: FlatdKeyStore, @unchecked Sendable {
     private let lock = NSLock()
     private var item: (value: String, label: String)?
     var failsToDelete = false
+    var beforeDelete: (@Sendable () -> Void)?
     var failsToRead = false
     /// Runs after each read: another process changing the pairing between two readings of one caller.
     var afterRead: (@Sendable () -> Void)?
@@ -177,6 +178,7 @@ final class MemoryKeys: FlatdKeyStore, @unchecked Sendable {
     /// The saved item's label (its version), for the tests.
     var label: String? { lock.withLock { item?.label } }
     func delete() throws {
+        beforeDelete?()
         if failsToDelete { throw FlatdKeychainError(status: -1) }
         lock.withLock { item = nil }
     }

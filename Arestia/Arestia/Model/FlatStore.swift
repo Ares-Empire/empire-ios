@@ -84,7 +84,7 @@ final class FlatStore {
     let connection: FlatdConnection
     /// Nil: the real transport, which accepts only a server holding the pairing's key (the tests pass a fake).
     private let transport: FlatdTransportOverride?
-    private let eventSource: any FlatEventSource
+    private let eventSource: FlatEventSource
     private let rediscover: @Sendable () async -> [URL]
     private let reloadControls: @MainActor () -> Void
     /// Tells the session that the saved pairing is no longer this store's (a first pairing was made, or the pairing
@@ -93,8 +93,8 @@ final class FlatStore {
     private var loop: Task<Void, Never>?
     /// Which loop may change the store (`run`); a stopped or replaced loop finds it changed and ends.
     private var loopGeneration = 0
-    private var enrollmentTask: Task<Void, Never>?
-    private let enrollmentOrder = OSAllocatedUnfairLock<UUID?>(initialState: nil)
+    private var enrollmentRead: Task<Void, Never>?
+    private var enrollmentCommit: Task<Void, Never>?
     /// Commands under way, cancelled when the store retires.
     private var tasks: [UUID: Task<Void, Never>] = [:]
     /// Name cache writes preserve event order independently of the stream and its UI updates.
@@ -119,7 +119,7 @@ final class FlatStore {
     }
 
     init(pairing: FlatdPairing?, connection: FlatdConnection, transport: FlatdTransportOverride? = nil,
-         eventSource: any FlatEventSource = WebSocketEvents(),
+         eventSource: FlatEventSource = WebSocketEvents(),
          rediscover: @escaping @Sendable () async -> [URL] = { await FlatdBonjour.candidates() },
          reloadControls: @escaping @MainActor () -> Void = { ArestiaControlKind.reloadAll() },
          pairingChanged: @escaping @MainActor () -> Void = {}) {
@@ -178,8 +178,6 @@ final class FlatStore {
         loopGeneration += 1
         loop?.cancel()
         loop = nil
-        enrollmentOrder.withLock { $0 = nil }
-        enrollmentTask?.cancel()
         liveBase = nil
         if link == .live { link = .connecting }
         if let troubleToken { notify_cancel(troubleToken) }
@@ -200,6 +198,8 @@ final class FlatStore {
         guard !isRetired else { return }
         isRetired = true
         stop()
+        enrollmentRead?.cancel()
+        enrollmentCommit?.cancel()
         tasks.values.forEach { $0.cancel() }
         tasks = [:]
         listeners = [:]
@@ -339,17 +339,12 @@ final class FlatStore {
         guard owns(generation) else { return }
         scenes = answered
         // The stream (with the key in its header) starts inside the gate too: only while this pairing is saved.
-        guard let gate = client.gate else { throw FlatdError.notPaired }
-        let request = client.eventsRequest
-        let prepared: any PreparedEvents
+        let stream: AsyncThrowingStream<FlatEvent, Error>
         do {
-            prepared = try await eventSource.open(request, pin: client.pin, admission: .gated(gate),
-                                                  cap: Deadline(after: .seconds(request.timeoutInterval)),
-                                                  route: client.route)
+            stream = try await client.openEvents(using: eventSource)
         } catch is Deadline.Expired {
             throw FlatdError.unreachable
         }
-        let stream = prepared.stream()
         for try await event in stream {
             guard owns(generation) else { return }
             if case .snapshot = event {
@@ -379,12 +374,9 @@ final class FlatStore {
     }
 
     private func queueEnrollment(from client: FlatdClient, moveFrom snapshotPairing: FlatdPairing) {
-        let order = UUID()
-        let latest = enrollmentOrder
-        latest.withLock { $0 = order }
-        enrollmentTask?.cancel()
+        enrollmentRead?.cancel()
         let connection = connection
-        enrollmentTask = Task {
+        enrollmentRead = Task { [weak self] in
             let deadline = Deadline(after: .seconds(client.readTimeout))
             // Move only over the snapshot's revision. For enrollment, read again after any earlier commit.
             guard let saved = try? await deadline.blocking({ hold in
@@ -395,22 +387,46 @@ final class FlatStore {
                 }
                 return current
             }) else { return }
-            await Self.enrollRemote(from: client, read: saved, connection: connection) {
-                latest.withLock { $0 == order }
+            guard case let .replace(remote)? = try? await client.remoteEnrollment(),
+                  !Task.isCancelled, let self else { return }
+            // A new enrollment answer supersedes queued work even if it agrees with the saved listener.
+            enrollmentCommit?.cancel()
+            enrollmentCommit = Task {
+                await Self.commitEnrollment(remote, over: saved, connection: connection, timeout: client.readTimeout)
             }
         }
     }
 
+    #if DEBUG
     static func enrollRemote(from client: FlatdClient, read saved: FlatdPairing, connection: FlatdConnection,
                              isLatest: @escaping @Sendable () -> Bool = { true }) async {
         guard client.route == .home, client.pairingID == saved.id, client.token == saved.token, client.pin == saved.pin,
-              case let .replace(remote)? = try? await client.remoteEnrollment(),
-              remote?.url != saved.remote?.url || remote?.pin != saved.remote?.pin else { return }
-        _ = try? await Deadline(after: .seconds(client.readTimeout)).blocking { hold in
-            var renewed = saved
-            renewed.remote = remote
-            renewed.revision = UUID()
-            return try connection.renew(saved, with: renewed, hold: hold, isLatest: isLatest)
+              case let .replace(remote)? = try? await client.remoteEnrollment() else { return }
+        await commitEnrollment(remote, over: saved, connection: connection, timeout: client.readTimeout,
+                               isLatest: isLatest)
+    }
+    #endif
+
+    private static func commitEnrollment(_ remote: RemoteListener?, over saved: FlatdPairing,
+                                         connection: FlatdConnection, timeout: TimeInterval,
+                                         isLatest: @escaping @Sendable () -> Bool = { true }) async {
+        guard remote?.url != saved.remote?.url || remote?.pin != saved.remote?.pin else { return }
+        var updated = saved
+        updated.remote = remote
+        updated.revision = UUID()
+        let renewed = updated
+        // Every retry still writes against the revision read before GET /api/remote.
+        while !Task.isCancelled, isLatest() {
+            let finished = try? await Deadline(after: .seconds(timeout)).blocking { hold in
+                switch connection.saved {
+                case .unreadable: return false
+                case let .paired(current) where current.revision == saved.revision && current.id == saved.id:
+                    return try connection.renew(saved, with: renewed, hold: hold, isLatest: isLatest)
+                default: return true
+                }
+            }
+            if finished == true { return }
+            try? await Task.sleep(for: .milliseconds(100))
         }
     }
 
@@ -1259,12 +1275,12 @@ final class FlatSession {
     /// pairing is saved, under the same lock used for deletion.
     private(set) var isForgetting = false
 
-    func forget() async -> Bool {
+    func forget(deadline: Deadline = Deadline(after: .seconds(3600))) async -> Bool {
         guard !isForgetting else { return false }
         isForgetting = true
         defer { isForgetting = false }
         do {
-            try await connection.forgetSavedPairing()
+            try await connection.forgetSavedPairing(deadline: deadline)
         } catch {
             Self.log.error("the pairing could not be forgotten")
             return false
